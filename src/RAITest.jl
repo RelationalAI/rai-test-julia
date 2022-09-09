@@ -1,5 +1,8 @@
 module RAITest
 
-# Write your package code here.
+export test_rel, @test_rel
+
+include("testrel.jl")
+
 
 end

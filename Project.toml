@@ -3,6 +3,9 @@ uuid = "c631b9c8-0012-4e76-a6f8-6f70f8f987b9"
 authors = ["Martin McGrane <martin.mcgrane@relational.ai> and contributors"]
 version = "0.1.0"
 
+[deps]
+RAI = "9c30249a-7e08-11ec-0e99-a323e937e79f"
+
 [compat]
 julia = "1.7"
 
