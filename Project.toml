@@ -1,0 +1,13 @@
+name = "RAITest"
+uuid = "c631b9c8-0012-4e76-a6f8-6f70f8f987b9"
+authors = ["Martin McGrane <martin.mcgrane@relational.ai> and contributors"]
+version = "0.1.0"
+
+[compat]
+julia = "1.7"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
