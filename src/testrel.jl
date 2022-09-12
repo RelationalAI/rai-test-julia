@@ -74,9 +74,19 @@ end
 
 """
     Transaction Step used for `test_rel`
-    the fields below represent the keyword arguments used in `test_rel`
-    for each transaction step.
-    For more information please consult the function keyword arguments
+
+    - `install::Dict{String, String}`:
+        sources to install in the database.
+
+    - `broken::Bool`: if the computed values are not currently correct (wrt the `expected`
+    results), then `broken` can be used to mark the tests as broken and prevent the test from
+    failing.
+
+    - `expected_problems::Option{Vector{<:Any}}`: expected problems. The semantics of
+      `expected_problems` is that the program must contain a super set of the specified
+      errors. When `expected_problems` is `[]` instead of `nothing`, then this means that errors
+      are allowed.
+
 """
 struct Step
     query::String
@@ -129,6 +139,31 @@ macro test_rel(args...)
     end
 end
 
+"""
+    test_rel(query; kwargs...)
+
+Run a Rel testcase.
+
+
+If `expected_problems` is not set, then no errors are
+allowed. The test fails if there are any errors in the program.
+
+It is preferred to use integrity constraints to set test conditions. If the integrity
+constraints have any compilation errors, then the test will still fail (unless
+`expected_problems` is set).
+
+!!! warning
+
+    `test_rel` creates a new schema for each test.
+
+- `query::String`: The query to use for the test
+
+- `name::String`: name of the testcase
+
+- `location::LineNumberNode`: Sourcecode location
+
+- `engine::String`: The name of an existing compute engine
+"""
 function test_rel(
     query::String;
     name::Union{String,Nothing} = nothing,
@@ -146,6 +181,31 @@ function test_rel(
     )
 end
 
+"""
+test_rel(queries; kwargs...)
+
+Run a Rel testcase.
+
+
+If `expected_problems` is not set, then no errors are
+allowed. The test fails if there are any errors in the program.
+
+It is preferred to use integrity constraints to set test conditions. If the integrity
+constraints have any compilation errors, then the test will still fail (unless
+`expected_problems` is set).
+
+!!! warning
+
+    `test_rel` creates a new schema for each test.
+
+- `queries::Vector{String}`: A series of queries to use for the test
+
+- `name::String`: name of the testcase
+
+- `location::LineNumberNode`: Sourcecode location
+
+- `engine::String`: The name of an existing compute engine
+"""
 function test_rel(
     queries::Vector{String};
     name::Union{String,Nothing} = nothing,
@@ -165,6 +225,32 @@ function test_rel(
     )
 end
 
+"""
+test_rel(query; kwargs...)
+
+Run a Rel testcase.
+
+
+If `expected_problems` is not set, then no errors are
+allowed. The test fails if there are any errors in the program.
+
+It is preferred to use integrity constraints to set test conditions. If the integrity
+constraints have any compilation errors, then the test will still fail (unless
+`expected_problems` is set).
+
+!!! warning
+
+    `test_rel` creates a new schema for each test.
+
+- `steps`::Vector{Step}: a vector of Steps that represent a series of transactions in the
+  test
+
+- `name::String`: name of the testcase
+
+- `location::LineNumberNode`: Sourcecode location
+
+- `engine::String`: The name of an existing compute engine
+"""
 function test_rel(
     steps::Vector{Step};
     name::Union{String,Nothing} = nothing,
