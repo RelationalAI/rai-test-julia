@@ -80,17 +80,20 @@ end
 """
 struct Step
     query::String
+    install::Dict{String, String}
     broken::Bool
     expected_problems::Vector{String}
 end
 
 function Step(;
     query::String = nothing,
+    install::Dict{String, String} = Dict{String, String}(),
     broken::Bool = false,
     expected_problems::Vector{String} = String[]
 )
     return Step(
         query,
+        install,
         broken,
         expected_problems,
     )
@@ -255,6 +258,10 @@ function _test_rel_step(
 
     @testset "$(string(name))$step_postfix" begin
         try
+            if !isempty(step.install)
+                response = load_model(get_context(), schema, engine, step.install)
+            end
+
             response = exec(get_context(), schema, engine, program)
             # If there are no expected problems then we expect the transaction to complete
             if isempty(step.expected_problems)
