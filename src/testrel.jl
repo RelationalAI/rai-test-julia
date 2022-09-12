@@ -179,6 +179,7 @@ function test_rel(
         engine = test_engine
     )
 
+    # Only destroy engines we created
     if isnothing(engine)
         destroy_test_engine(test_engine)
     end
@@ -189,14 +190,10 @@ end
 # This internal function executes `test_rel`
 function _test_rel(
     steps::Vector{Step};
-    name::Union{String,Nothing},
+    name::String,
     engine::String,
 )
- 
     schema = create_test_database()
-
-    # TODO: Engine selection
-    # engine = ...
 
     @testset "$(string(name))" begin
         elapsed_time = @timed begin
@@ -211,7 +208,7 @@ function _test_rel(
                 )
             end
         end
-        println(elapsed_time)
+        println("Timing: ", elapsed_time)
     end
     delete_test_database(schema)
 
@@ -228,7 +225,7 @@ function _test_rel_step(
     name::String,
     steps_length::Int,
 )
-    if step.query != nothing
+    if !isnothing(step.query)
         program = step.query
     else
         program = ""
@@ -240,6 +237,11 @@ function _test_rel_step(
         try
             response = exec(get_context(), schema, engine, program)
             @test response.transaction.state == "COMPLETED"
+            if response.transaction.state == "ABORTED"
+                for problem in response.problems
+                    println("Aborted with problem type: ", problem.type)
+                end
+            end
         catch e
             Base.display_error(stderr, current_exceptions())
         end
