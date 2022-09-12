@@ -124,6 +124,7 @@ function test_rel(
     query::String;
     name::Union{String,Nothing} = nothing,
     engine::Union{String,Nothing} = nothing,
+    location::Union{LineNumberNode,Nothing} = nothing,
 )
     steps = Step[]
     push!(steps, Step(query))
@@ -131,7 +132,8 @@ function test_rel(
     test_rel(
         steps;
         name = name,
-        engine = engine
+        engine = engine,
+        location = location,
     )
 end
 
@@ -139,6 +141,7 @@ function test_rel(
     queries::Vector{String};
     name::Union{String,Nothing} = nothing,
     engine::Union{String,Nothing} = nothing,
+    location::Union{LineNumberNode,Nothing} = nothing,
 )
     steps = Step[]
     for query in queries
@@ -148,7 +151,8 @@ function test_rel(
     test_rel(
         steps;
         name = name,
-        engine = engine
+        engine = engine,
+        location = location,
     )
 end
 
@@ -156,6 +160,7 @@ function test_rel(
     steps::Vector{Step};
     name::Union{String,Nothing} = nothing,
     engine::Union{String,Nothing} = nothing,
+    location::Union{LineNumberNode,Nothing} = nothing,
 )
     test_engine = engine
     if isnothing(engine)
@@ -176,7 +181,8 @@ function test_rel(
     _test_rel(
         steps;
         name = name,
-        engine = test_engine
+        engine = test_engine,
+        location = location,
     )
 
     # Only destroy engines we created
@@ -192,8 +198,16 @@ function _test_rel(
     steps::Vector{Step};
     name::String,
     engine::String,
+    location::Union{LineNumberNode,Nothing},
 )
     schema = create_test_database()
+
+    if !isnothing(location)
+        path = joinpath(splitpath(string(location.file))[max(1,end-2):end])
+        resolved_location = string(path, ":", location.line)
+
+        name = name * " at " * resolved_location
+    end
 
     @testset "$(string(name))" begin
         elapsed_time = @timed begin
