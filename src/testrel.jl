@@ -1,4 +1,5 @@
 using RAI
+using Arrow
 
 using Random: MersenneTwister
 using Test
@@ -73,6 +74,56 @@ function test_test_engine_is_valid(name::String)::Bool
 end
 
 """
+    equal(expected::AbstractVector, actual)
+
+Compares two containers for equivalent contents.
+"""
+function equal(expected::AbstractVector, actual)
+    if length(expected) != length(actual)
+        return false
+    end
+
+    for e in expected
+        if !(e in actual)
+            return false
+        end
+    end
+    return true
+end
+
+"""
+    test_expected(expected::AbstractDict, actual::Vector{Pair{String, Arrow.Table}})
+
+Given a Dict of expected relations, test if the actual results contain those relations.
+Types and contents of the relations must match.
+
+"""
+function test_expected(expected::AbstractDict, actual::Vector{Pair{String, Arrow.Table}}, broken::Bool)
+    for e in expected
+        rel_name = e.first
+        results = e.second
+        result_type = eltype(e.second)
+
+        expected_relation_found = false
+        for a in actual
+            if !startswith(a.first, "/:output/:" * rel_name)
+                continue
+            end
+            actual_type = SubString(a.first, findlast('/', a.first) + 1)
+            if actual_type != string(result_type)
+                continue
+            end
+            expected_relation_found = true
+
+            # Name is correct and type is correct, so now compare values
+            @test equal(results, a.second[1]) broken = broken
+            break
+        end
+        @test expected_relation_found broken = broken
+    end
+end
+
+"""
     Transaction Step used for `test_rel`
 
     - `install::Dict{String, String}`:
@@ -92,6 +143,7 @@ struct Step
     query::String
     install::Dict{String, String}
     broken::Bool
+    expected::AbstractDict
     expected_problems::Vector{String}
 end
 
@@ -99,12 +151,14 @@ function Step(;
     query::String = nothing,
     install::Dict{String, String} = Dict{String, String}(),
     broken::Bool = false,
+    expected::AbstractDict = Dict(),
     expected_problems::Vector{String} = String[]
 )
     return Step(
         query,
         install,
         broken,
+        expected,
         expected_problems,
     )
 end
@@ -346,6 +400,11 @@ function _test_rel_step(
 
     step_postfix = steps_length > 1 ? " - step$index" : ""
 
+    # If there are expected results, make sure they are in the output
+    for e in step.expected
+        program = program * " def output:" * e.first * " = " * e.first
+    end
+
     @testset "$(string(name))$step_postfix" begin
         try
             if !isempty(step.install)
@@ -360,6 +419,8 @@ function _test_rel_step(
                     for problem in response.problems
                         println("Aborted with problem type: ", problem.type)
                     end
+                else
+                    test_expected(step.expected, response.results, step.broken)
                 end
             else
                 # Check that expected problems were found
