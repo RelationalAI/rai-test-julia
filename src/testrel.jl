@@ -136,7 +136,7 @@ function test_rel(
     location::Union{LineNumberNode,Nothing} = nothing,
 )
     steps = Step[]
-    push!(steps, Step(query))
+    push!(steps, Step(query = query))
 
     test_rel(
         steps;
@@ -218,22 +218,26 @@ function _test_rel(
         name = name * " at " * resolved_location
     end
 
-    @testset "$(string(name))" begin
-        elapsed_time = @timed begin
-            for (index, step) in enumerate(steps)
-                _test_rel_step(
-                    index,
-                    step,
-                    schema,
-                    engine,
-                    name,
-                    length(steps),
-                )
+    try
+        @testset "$(string(name))" begin
+            elapsed_time = @timed begin
+                for (index, step) in enumerate(steps)
+                    _test_rel_step(
+                        index,
+                        step,
+                        schema,
+                        engine,
+                        name,
+                        length(steps),
+                    )
+                end
             end
+            println("Timing: ", elapsed_time)
         end
-        println("Timing: ", elapsed_time)
+    catch e
+    finally
+        delete_test_database(schema)
     end
-    delete_test_database(schema)
 
     return nothing
 end
