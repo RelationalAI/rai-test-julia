@@ -103,20 +103,58 @@ macro test_rel(args...)
     # in quoted code these already have a meaning.
     if args isa Tuple{String}
         quote
-            test_rel(;query = $(kwargs[1]))
+            test_rel($(kwargs[1]); location = $(QuoteNode(__source__)))
+        end
+    elseif args isa Tuple{Vector{String}}
+        quote
+            test_rel($(kwargs[1]); location = $(QuoteNode(__source__)))
+        end
+    elseif args isa Tuple{Vector{Step}}
+        quote
+            test_rel($(kwargs[1]); location = $(QuoteNode(__source__)))
         end
     else
         quote
-            test_rel(; $(kwargs...))
+            test_rel(; location = $(QuoteNode(__source__)), $(kwargs...))
         end
     end
 end
 
-
-
-function test_rel(;
+function test_rel(
+    query::String;
     name::Union{String,Nothing} = nothing,
-    query::Union{String,Nothing} = nothing,
+    engine::Union{String,Nothing} = nothing,
+)
+    steps = Step[]
+    push!(steps, Step(query))
+
+    test_rel(
+        steps;
+        name = name,
+        engine = engine
+    )
+end
+
+function test_rel(
+    queries::Vector{String};
+    name::Union{String,Nothing} = nothing,
+    engine::Union{String,Nothing} = nothing,
+)
+    steps = Step[]
+    for query in queries
+        push!(steps, Step(query))
+    end
+
+    test_rel(
+        steps;
+        name = name,
+        engine = engine
+    )
+end
+
+function test_rel(
+    steps::Vector{Step};
+    name::Union{String,Nothing} = nothing,
     engine::Union{String,Nothing} = nothing,
 )
     test_engine = engine
@@ -131,9 +169,6 @@ function test_rel(;
         return
     end
 
-    steps = Step[]
-    push!(steps, Step(query))
- 
     if isnothing(name)
         name = "Unnamed test"
     end
