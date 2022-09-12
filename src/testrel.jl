@@ -8,7 +8,7 @@ using UUIDs
 # Generates a database name for the given base name that makes it uniques between multiple
 # processing units
 function gen_safe_dbname(basename)
-    return "$(basename)-p$(getpid())-t$(Base.Threads.threadid())-$(UUIDs.uuid4(Random.MersenneTwister()))"
+    return "$(basename)-p$(getpid())-t$(Base.Threads.threadid())-$(UUIDs.uuid4(MersenneTwister()))"
 end
 
 function get_context()::Context
@@ -80,13 +80,16 @@ end
 """
 struct Step
     query::String
+    expected_problems::Vector{String}
 end
 
 function Step(;
     query::String = nothing,
+    expected_problems::Vector{String} = String[]
 )
     return Step(
         query,
+        expected_problems,
     )
 end
 
@@ -145,7 +148,7 @@ function test_rel(
 )
     steps = Step[]
     for query in queries
-        push!(steps, Step(query))
+        push!(steps, Step(query = query))
     end
 
     test_rel(
@@ -250,10 +253,19 @@ function _test_rel_step(
     @testset "$(string(name))$step_postfix" begin
         try
             response = exec(get_context(), schema, engine, program)
-            @test response.transaction.state == "COMPLETED"
-            if response.transaction.state == "ABORTED"
-                for problem in response.problems
-                    println("Aborted with problem type: ", problem.type)
+            # If there are no expected problems then we expect the transaction to complete
+            if isempty(step.expected_problems)
+                @test response.transaction.state == "COMPLETED"
+                if response.transaction.state == "ABORTED"
+                    for problem in response.problems
+                        println("Aborted with problem type: ", problem.type)
+                    end
+                end
+            else
+                # Check that expected problems were found
+                for problem in step.expected_problems
+                    expected_problem_found = any(i->(i.type == problem), response.problems)
+                    @test expected_problem_found
                 end
             end
         catch e
