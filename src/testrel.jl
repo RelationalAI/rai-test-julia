@@ -1,6 +1,6 @@
 using RAI
 
-using Random
+using Random: MersenneTwister
 using Test
 using UUIDs
 
