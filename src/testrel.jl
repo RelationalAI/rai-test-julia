@@ -80,15 +80,18 @@ end
 """
 struct Step
     query::String
+    broken::Bool
     expected_problems::Vector{String}
 end
 
 function Step(;
     query::String = nothing,
+    broken::Bool = false,
     expected_problems::Vector{String} = String[]
 )
     return Step(
         query,
+        broken,
         expected_problems,
     )
 end
@@ -255,7 +258,7 @@ function _test_rel_step(
             response = exec(get_context(), schema, engine, program)
             # If there are no expected problems then we expect the transaction to complete
             if isempty(step.expected_problems)
-                @test response.transaction.state == "COMPLETED"
+                @test response.transaction.state == "COMPLETED" broken = step.broken
                 if response.transaction.state == "ABORTED"
                     for problem in response.problems
                         println("Aborted with problem type: ", problem.type)
@@ -265,7 +268,7 @@ function _test_rel_step(
                 # Check that expected problems were found
                 for problem in step.expected_problems
                     expected_problem_found = any(i->(i.type == problem), response.problems)
-                    @test expected_problem_found
+                    @test expected_problem_found broken = step.broken
                 end
             end
         catch e
