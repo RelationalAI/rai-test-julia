@@ -1,14 +1,16 @@
 using RAI
+using RAI: TransactionResponse
+using Arrow
 
-using Random
+using Random: MersenneTwister
 using Test
 using UUIDs
 
 
-# Generates a database name for the given base name that makes it uniques between multiple
+# Generates a name for the given base name that makes it unique between multiple
 # processing units
-function gen_safe_dbname(basename)
-    return "$(basename)-p$(getpid())-t$(Base.Threads.threadid())-$(UUIDs.uuid4(Random.MersenneTwister()))"
+function gen_safe_name(basename)
+    return "$(basename)-p$(getpid())-t$(Base.Threads.threadid())-$(UUIDs.uuid4(MersenneTwister()))"
 end
 
 function get_context()::Context
@@ -18,8 +20,8 @@ end
 
 function create_test_database()::String
     # TODO: Change to 'test-' when the account is changed
-    schema = gen_safe_dbname("mm-test")
-   
+    schema = gen_safe_name("mm-test")
+
     return create_database(get_context(), schema).database.name
 end
 
@@ -27,66 +29,181 @@ function delete_test_database(name::String)
    return delete_database(get_context(), name)
 end
 
-function create_test_engine()::String
-    name = "mm-test-engine"
-    size = "XS"
-    try
-        get_engine(get_context(), name)
-        # The engine already exists so return it immediately
-        return name
-    catch
-        # There's no engine yet, so proceed to creating it
-    end
-    response = create_engine(get_context(), name, size = size)
+# Extract relation names from the inputs and adds them to the program
+# Turns a dict of name=>vector, with names of form :othername/Type
+# into a series of def name = list of tuples
+function convert_input_dict_to_string(inputs::AbstractDict)
+    program = ""
+    for input in inputs
+        name = ""
+        tokens = split(input.first, "/")
 
-    println("Created test engine: ", response.compute.name)
-    return response.compute.name
+        for token in tokens
+            if startswith(token, ":")
+                name *= token
+            else
+                break
+            end
+        end
+
+        name = SubString(name, 2)
+
+
+        program *= "\ndef " * name * " = "
+
+        first = true
+
+        for i in input.second
+            if first
+                first = false
+            else
+                program *= "; "
+            end
+            program *= string(i)
+        end
+    end
+    return program
 end
 
-function destroy_test_engine(name::String)
-    try
-        delete_engine(get_context(), name)
-    catch e
-        Base.error(current_exceptions())
-        return
+# Extract relation names from the expected output and append them to output
+# Turns a dict of name=>vector, with names of form :othername/Type
+# into a series of def output:othername = othername
+function generate_output_string_from_expected(expected::AbstractDict)
+    program = ""
+
+    for e in expected
+        # If we are already explicitly testing an output relation, we don't need to add it
+        if startswith(e.first, "/:output")
+            continue
+        end
+        name = ""
+
+        tokens = split(e.first, "/")
+
+        for token in tokens
+            if startswith(token, ":")
+                name *= token
+            else
+                break
+            end
+        end
+
+        name = SubString(name, 2)
+
+        program *= "\ndef output:" * name * " = " * name
     end
-    println("Destroyed test engine: ", name)
+    return program
 end
 
-function test_test_engine_is_valid(name::String)::Bool
-    response = ""
-    try 
-        response = get_engine(get_context(), name)
-    catch
-        # The engine could not be found
+"""
+    test_expected(expected::AbstractDict, rsp:TransactionResponse})
+
+Given a Dict of expected relations, test if the actual results contain those relations.
+Types and contents of the relations must match.
+
+"""
+function test_expected(
+        expected::AbstractDict,
+        rsp::TransactionResponse)
+    # No testing to do, return immediaely
+    isempty(expected) && return
+    if rsp.metadata === nothing
+        println("Invalid response")
+        return false
+    end
+    if rsp.results === nothing
+        println("No results")
         return false
     end
 
-    # The engine exists - now we wait until it is not in the provisioning stage
-    while (response.state == "PROVISIONING" || response.state == "REQUESTED")
-        println("Waiting for test engine to be provisioned...")
-        sleep(1)
-        response = get_engine(get_context(), name)
-    end
+    for e in expected
+        found = false
 
+        # prepend /:output if it's not present
+        name = startswith("/:output", e.first) ? e.first : "/:output/" * e.first
+
+        # Find a matching result
+        for result in rsp.results
+            id = result.first
+            if id != name
+                continue
+            end
+            found = true
+
+            # We've found a matching result, now test the contents
+            data = result.second
+            tuples = isempty(data) ? [()] : zip(data...)
+            tuples_as_vector = sort(collect(tuples))
+            sort!(e.second)
+
+            # Special case for single value tuples
+            if length(tuples_as_vector[1]) == 1
+                tuples_as_single = typeof(e.second[1])[]
+                for tuple in tuples_as_vector
+                    push!(tuples_as_single, tuple[1])
+                end
+                tuples_as_vector = tuples_as_single
+            end
+
+            if tuples_as_vector != e.second
+                println("Results do not match")
+                return false
+            end
+
+            # We've found the matching result so stop searching
+            break
+        end
+        if !found
+            println("Expected relation not found")
+            return false
+        end
+    end
     return true
 end
 
 """
     Transaction Step used for `test_rel`
-    the fields below represent the keyword arguments used in `test_rel`
-    for each transaction step.
-    For more information please consult the function keyword arguments
+
+    - `install::Dict{String, String}`:
+        sources to install in the database.
+
+    - `broken::Bool`: if the computed values are not currently correct (wrt the `expected`
+    results), then `broken` can be used to mark the tests as broken and prevent the test from
+    failing.
+
+    - `expected_problems::Option{Vector{<:Any}}`: expected problems. The semantics of
+      `expected_problems` is that the program must contain a super set of the specified
+      errors. When `expected_problems` is `[]` instead of `nothing`, then this means that errors
+      are allowed.
+
 """
 struct Step
     query::String
+    install::Dict{String, String}
+    broken::Bool
+    schema_inputs::AbstractDict
+    inputs::AbstractDict
+    expected::AbstractDict
+    expected_problems::Vector{String}
 end
 
 function Step(;
     query::String = nothing,
+    install::Dict{String, String} = Dict{String, String}(),
+    broken::Bool = false,
+    schema_inputs::AbstractDict = Dict(),
+    inputs::AbstractDict = Dict(),
+    expected::AbstractDict = Dict(),
+    expected_problems::Vector{String} = String[]
 )
     return Step(
         query,
+        install,
+        broken,
+        schema_inputs,
+        inputs,
+        expected,
+        expected_problems,
     )
 end
 
@@ -103,25 +220,109 @@ macro test_rel(args...)
     # in quoted code these already have a meaning.
     if args isa Tuple{String}
         quote
-            test_rel(;query = $(kwargs[1]))
+            test_rel(;query = $(kwargs[1]), location = $(QuoteNode(__source__)))
         end
     else
         quote
-            test_rel(; $(kwargs...))
+            test_rel(;location = $(QuoteNode(__source__)), $(kwargs...))
         end
     end
 end
 
+"""
+    test_rel(query; kwargs...)
+
+Run a single step Rel testcase.
 
 
+If `expected_problems` is not set, then no errors are
+allowed. The test fails if there are any errors in the program.
+
+It is preferred to use integrity constraints to set test conditions. If the integrity
+constraints have any compilation errors, then the test will still fail (unless
+`expected_problems` is set).
+
+!!! warning
+
+    `test_rel` creates a new schema for each test.
+
+- `query::String`: The query to use for the test
+
+- `name::String`: name of the testcase
+
+- `location::LineNumberNode`: Sourcecode location
+
+- `expected::AbstractDict`: Expected values
+
+- `engine::String`: The name of an existing compute engine
+"""
 function test_rel(;
+    query::String,
     name::Union{String,Nothing} = nothing,
-    query::Union{String,Nothing} = nothing,
     engine::Union{String,Nothing} = nothing,
+    location::Union{LineNumberNode,Nothing} = nothing,
+    include_stdlib::Bool = true,
+    abort_on_error::Bool = false,
+    debug::Bool = false,
+    debug_trace::Bool = false,
+    schema_inputs::AbstractDict = Dict(),
+    inputs::AbstractDict = Dict(),
+    expected::AbstractDict = Dict()
+)
+    steps = Step[]
+    push!(steps, Step(query = query, schema_inputs = schema_inputs, inputs = inputs, expected = expected))
+
+    test_rel_steps(;
+        steps = steps,
+        name = name,
+        engine = engine,
+        location = location,
+        include_stdlib = include_stdlib,
+        abort_on_error = abort_on_error,
+        debug = debug,
+        debug_trace = debug_trace,
+    )
+end
+
+"""
+test_rel_steps(query; kwargs...)
+
+Run a Rel testcase composed of a series of steps.
+
+
+If `expected_problems` is not set, then no errors are
+allowed. The test fails if there are any errors in the program.
+
+It is preferred to use integrity constraints to set test conditions. If the integrity
+constraints have any compilation errors, then the test will still fail (unless
+`expected_problems` is set).
+
+!!! warning
+
+    `test_rel` creates a new schema for each test.
+
+- `steps`::Vector{Step}: a vector of Steps that represent a series of transactions in the
+  test
+
+- `name::String`: name of the testcase
+
+- `location::LineNumberNode`: Sourcecode location
+
+- `engine::String`: The name of an existing compute engine
+"""
+function test_rel_steps(;
+    steps::Vector{Step},
+    name::Union{String,Nothing} = nothing,
+    engine::Union{String,Nothing} = nothing,
+    location::Union{LineNumberNode,Nothing} = nothing,
+    include_stdlib::Bool = true,
+    abort_on_error::Bool = false,
+    debug::Bool = false,
+    debug_trace::Bool = false,
 )
     test_engine = engine
     if isnothing(engine)
-        test_engine = create_test_engine()
+        test_engine = claim_test_engine()
     end
 
     try
@@ -131,54 +332,77 @@ function test_rel(;
         return
     end
 
-    steps = Step[]
-    push!(steps, Step(query))
- 
     if isnothing(name)
         name = "Unnamed test"
     end
 
-    _test_rel(
-        steps;
+    # Setup steps that run before the first testing Step
+    if !include_stdlib
+        insert!(steps, 1, Step(query="""def delete:rel:catalog:model = rel:catalog:model"""))
+    end
+
+    if debug
+        insert!(steps, 1, Step(query="""def insert:debug = "basic" """))
+    end
+
+    if debug_trace
+        insert!(steps, 1, Step(query="""def insert:debug = "trace" """))
+    end
+
+    if abort_on_error
+        insert!(steps, 1, Step(query="""def insert:relconfig:abort_on_error = true """))
+    end
+
+    _test_rel_steps(;
+        steps = steps,
         name = name,
-        engine = test_engine
+        engine = test_engine,
+        location = location,
     )
 
     if isnothing(engine)
-        destroy_test_engine(test_engine)
+        release_test_engine(test_engine)
     end
 
     return nothing
 end
 
 # This internal function executes `test_rel`
-function _test_rel(
-    steps::Vector{Step};
-    name::Union{String,Nothing},
+function _test_rel_steps(;
+    steps::Vector{Step},
+    name::String,
     engine::String,
+    location::Union{LineNumberNode,Nothing},
 )
- 
     schema = create_test_database()
 
-    # TODO: Engine selection
-    # engine = ...
+    if !isnothing(location)
+        path = joinpath(splitpath(string(location.file))[max(1,end-2):end])
+        resolved_location = string(path, ":", location.line)
 
-    @testset "$(string(name))" begin
-        elapsed_time = @timed begin
-            for (index, step) in enumerate(steps)
-                _test_rel_step(
-                    index,
-                    step,
-                    schema,
-                    engine,
-                    name,
-                    length(steps),
-                )
-            end
-        end
-        println(elapsed_time)
+        name = name * " at " * resolved_location
     end
-    delete_test_database(schema)
+
+    try
+        @testset verbose = true "$(string(name))" begin
+            elapsed_time = @timed begin
+                for (index, step) in enumerate(steps)
+                    _test_rel_step(
+                        index,
+                        step,
+                        schema,
+                        engine,
+                        name,
+                        length(steps),
+                    )
+                end
+            end
+            println("Timing: ", elapsed_time)
+        end
+    catch e
+    finally
+        delete_test_database(schema)
+    end
 
     return nothing
 end
@@ -193,18 +417,52 @@ function _test_rel_step(
     name::String,
     steps_length::Int,
 )
-    if step.query != nothing
+    if !isnothing(step.query)
         program = step.query
     else
         program = ""
     end
 
+    #Append inputs to program
+    program *= convert_input_dict_to_string(step.inputs)
+
+    # If there are expected results, make sure they are in the output
+    program *= generate_output_string_from_expected(step.expected)
+
     step_postfix = steps_length > 1 ? " - step$index" : ""
 
     @testset "$(string(name))$step_postfix" begin
         try
+            if !isempty(step.install)
+                response = load_model(get_context(), schema, engine,
+                        Dict("test_install" => step.install))
+            end
+
+            if !isempty(step.schema_inputs)
+                response = load_model(get_context(), schema, engine,
+                        Dict("test_inputs" => convert_input_dict_to_string(step.schema_inputs)))
+            end
+
             response = exec(get_context(), schema, engine, program)
-            @test response.transaction.state == "COMPLETED"
+            # If there are no expected problems then we expect the transaction to complete
+            if isempty(step.expected_problems)
+                @test response.transaction.state == "COMPLETED" broken = step.broken
+                if response.transaction.state == "ABORTED"
+                    for problem in response.problems
+                        println("Aborted with problem type: ", problem.type)
+                    end
+                else
+                    if !isempty(step.expected)
+                        @test test_expected(step.expected, response) broken = step.broken
+                    end
+                end
+            else
+                # Check that expected problems were found
+                for problem in step.expected_problems
+                    expected_problem_found = any(i->(i.type == problem), response.problems)
+                    @test expected_problem_found broken = step.broken
+                end
+            end
         catch e
             Base.display_error(stderr, current_exceptions())
         end
