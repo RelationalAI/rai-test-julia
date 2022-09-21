@@ -446,7 +446,13 @@ function _test_rel_step(
             response = exec(get_context(), schema, engine, program)
             # If there are no expected problems then we expect the transaction to complete
             if isempty(step.expected_problems)
-                @test response.transaction.state == "COMPLETED" broken = step.broken
+                problems_found = !isempty(response.problems)
+                problems_found |= response.transaction.state !== "COMPLETED"
+                for problem in response.problems
+                    println("Unexpected problem type: ", problem.type)
+                end
+                @test !problems_found broken = step.broken
+
                 if response.transaction.state == "ABORTED"
                     for problem in response.problems
                         println("Aborted with problem type: ", problem.type)
