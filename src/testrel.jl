@@ -320,50 +320,41 @@ function test_rel_steps(;
     debug::Bool = false,
     debug_trace::Bool = false,
 )
-    test_engine = engine
-    if isnothing(engine)
-        test_engine = claim_test_engine()
-    end
+    test_engine = get_or_create_test_engine(engine)
+    println("Using test engine: ", test_engine)
 
     try
-        test_test_engine_is_valid(test_engine)
-    catch
-        Base.error("Engine: ", test_engine, " is not valid")
-        return
-    end
+        if isnothing(name)
+            name = "Unnamed test"
+        end
 
-    if isnothing(name)
-        name = "Unnamed test"
-    end
+        # Setup steps that run before the first testing Step
+        if !include_stdlib
+            insert!(steps, 1, Step(query="""def delete:rel:catalog:model = rel:catalog:model"""))
+        end
 
-    # Setup steps that run before the first testing Step
-    if !include_stdlib
-        insert!(steps, 1, Step(query="""def delete:rel:catalog:model = rel:catalog:model"""))
-    end
+        if debug
+            insert!(steps, 1, Step(query="""def insert:debug = "basic" """))
+        end
 
-    if debug
-        insert!(steps, 1, Step(query="""def insert:debug = "basic" """))
-    end
+        if debug_trace
+            insert!(steps, 1, Step(query="""def insert:debug = "trace" """))
+        end
 
-    if debug_trace
-        insert!(steps, 1, Step(query="""def insert:debug = "trace" """))
-    end
+        if abort_on_error
+            insert!(steps, 1, Step(query="""def insert:relconfig:abort_on_error = true """))
+        end
 
-    if abort_on_error
-        insert!(steps, 1, Step(query="""def insert:relconfig:abort_on_error = true """))
-    end
+        _test_rel_steps(;
+            steps = steps,
+            name = name,
+            engine = test_engine,
+            location = location,
+        )
 
-    _test_rel_steps(;
-        steps = steps,
-        name = name,
-        engine = test_engine,
-        location = location,
-    )
-
-    if isnothing(engine)
+    finally
         release_test_engine(test_engine)
     end
-
     return nothing
 end
 
