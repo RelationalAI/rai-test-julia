@@ -434,7 +434,12 @@ function _test_rel_step(
                         Dict("test_inputs" => convert_input_dict_to_string(step.schema_inputs)))
             end
 
-            response = exec(get_context(), schema, engine, program)
+            response = exec_async(get_context(), schema, engine, program)
+
+            while response.transaction.state !== "COMPLETED" && response.transaction.state !== "ABORTED"
+                response = get_transaction_results(ctx, rsp_async.transaction["id"])
+            end
+
             # If there are no expected problems then we expect the transaction to complete
             if isempty(step.expected_problems)
                 problems_found = !isempty(response.problems)
