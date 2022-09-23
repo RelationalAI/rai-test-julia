@@ -119,8 +119,8 @@ function test_expected(
     for e in expected
         found = false
 
-        # prepend /:output if it's not present
-        name = startswith("/:output", e.first) ? e.first : "/:output/" * e.first
+        # prepend `/:output/` if it's not present
+        name = startswith(e.first, "/:output") ? e.first : "/:output/" * e.first
 
         # Find a matching result
         for result in rsp.results
@@ -252,7 +252,7 @@ constraints have any compilation errors, then the test will still fail (unless
 
 - `location::LineNumberNode`: Sourcecode location
 
-- `expected::AbstractDict`: Expected values
+- `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64 => [1, 2]")`
 
 - `engine::String`: The name of an existing compute engine
 """
