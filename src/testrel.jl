@@ -30,7 +30,7 @@ function delete_test_database(name::String)
 end
 
 # Extract relation names from the inputs and adds them to the program
-# Turns a dict of name=>vector, with names of form :othername/Type
+# Turns a dict of name=>vector, with names of form :othername/Type,
 # into a series of def name = list of tuples
 function convert_input_dict_to_string(inputs::AbstractDict)
     program = ""
@@ -49,7 +49,7 @@ function convert_input_dict_to_string(inputs::AbstractDict)
         name = SubString(name, 2)
 
 
-        program *= "\ndef " * name * " = "
+        program *= "\ndef insert:" * name * " = "
 
         first = true
 
