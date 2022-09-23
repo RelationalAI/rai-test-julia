@@ -417,6 +417,9 @@ function _test_rel_step(
     #Append inputs to program
     program *= convert_input_dict_to_string(step.inputs)
 
+    #Append schema inputs to program
+    program *= convert_input_dict_to_string(step.schema_inputs)
+
     # If there are expected results, make sure they are in the output
     program *= generate_output_string_from_expected(step.expected)
 
@@ -427,11 +430,6 @@ function _test_rel_step(
             if !isempty(step.install)
                 response = load_model(get_context(), schema, engine,
                         Dict("test_install" => step.install))
-            end
-
-            if !isempty(step.schema_inputs)
-                response = load_model(get_context(), schema, engine,
-                        Dict("test_inputs" => convert_input_dict_to_string(step.schema_inputs)))
             end
 
             response = exec_async(get_context(), schema, engine, program)
