@@ -104,14 +104,15 @@ Types and contents of the relations must match.
 """
 function test_expected(
         expected::AbstractDict,
-        rsp::TransactionResponse)
+        metadata,
+        results)
     # No testing to do, return immediaely
     isempty(expected) && return
-    if rsp.metadata === nothing
+    if metadata === nothing
         println("Invalid response")
         return false
     end
-    if rsp.results === nothing
+    if results === nothing
         println("No results")
         return false
     end
@@ -123,7 +124,7 @@ function test_expected(
         name = startswith(e.first, "/:output") ? e.first : "/:output/" * e.first
 
         # Find a matching result
-        for result in rsp.results
+        for result in results
             id = result.first
             if id != name
                 continue
@@ -433,33 +434,42 @@ function _test_rel_step(
             end
 
             response = exec_async(get_context(), schema, engine, program)
+            transaction_id = response.transaction.id
+            #TODO: if response was not immediate add to transaction pool and continue
 
-            while response.transaction.state !== "COMPLETED" && response.transaction.state !== "ABORTED"
-                response = get_transaction_results(ctx, rsp_async.transaction["id"])
+            transaction = get_transaction(get_context(), transaction_id)
+
+            while transaction.state !== "COMPLETED" && transaction.state !== "ABORTED"
+                transaction = get_transaction(get_context(), transaction_id)
+                sleep(1)
             end
 
+            problems = get_transaction_problems(get_context(), transaction_id)
+            metadata = get_transaction_metadata(get_context(), transaction_id)
+            results = get_transaction_results(get_context(), transaction_id)
             # If there are no expected problems then we expect the transaction to complete
             if isempty(step.expected_problems)
-                problems_found = !isempty(response.problems)
-                problems_found |= response.transaction.state !== "COMPLETED"
-                for problem in response.problems
+                problems_found = !isempty(problems)
+                problems_found |= transaction.state !== "COMPLETED"
+                for problem in problems
                     println("Unexpected problem type: ", problem.type)
+                    @info(problem)
                 end
                 @test !problems_found broken = step.broken
 
-                if response.transaction.state == "ABORTED"
-                    for problem in response.problems
+                if transaction.state == "ABORTED"
+                    for problem in problems
                         println("Aborted with problem type: ", problem.type)
                     end
                 else
                     if !isempty(step.expected)
-                        @test test_expected(step.expected, response) broken = step.broken
+                        @test test_expected(step.expected, metadata, results) broken = step.broken
                     end
                 end
             else
                 # Check that expected problems were found
                 for problem in step.expected_problems
-                    expected_problem_found = any(i->(i.type == problem), response.problems)
+                    expected_problem_found = any(i->(i.type == problem), problems)
                     @test expected_problem_found broken = step.broken
                 end
             end
