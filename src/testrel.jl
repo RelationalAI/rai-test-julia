@@ -429,7 +429,7 @@ function _test_rel_step(
     @testset "$(string(name))$step_postfix" begin
         try
             if !isempty(step.install)
-                response = load_model(get_context(), schema, engine,
+                load_model(get_context(), schema, engine,
                         Dict("test_install" => step.install))
             end
 
