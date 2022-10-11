@@ -2,6 +2,7 @@
 
 Enables developers to run tests using the RelationalAI SDK for Julia.
 
+RAITest requires a configuration file to use the RAI Julia SDK. Documentation for this can be found at https://docs.relational.ai/rkgms/sdk/julia-sdk
 
 Using a user specified engine to test with
 ```
