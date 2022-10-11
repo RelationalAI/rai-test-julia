@@ -10,20 +10,15 @@ struct TestEnginePool
     engines::Dict{String, Int64}
 end
 
-function TestEnginePool(num_servers)
-    engines = Dict{String, Int64}()
-    for i in 1:num_servers
-        #engines[gen_safe_name("mm-test")] = 0
-        engines["mm-test" * string(i)] = 0
-    end
-    return TestEnginePool(engines)
-end
-
-const TEST_ENGINE_POOL = TestEnginePool(2)
+const TEST_ENGINE_POOL = TestEnginePool(Dict{String, Int64}())
 
 function get_free_test_engine_name()::String
     while true
-        @lock TEST_SERVER_LOCK begin
+        if (length(TEST_ENGINE_POOL.engines) < 1)
+            error("No servers available!")
+        end
+
+            @lock TEST_SERVER_LOCK begin
             for e in TEST_ENGINE_POOL.engines
                 if e.second == 0
                     TEST_ENGINE_POOL.engines[e.first] = Base.Threads.threadid()
@@ -31,6 +26,7 @@ function get_free_test_engine_name()::String
                 end
             end
         end
+        # Very naive wait protocol
         sleep(5)
         println("No free engine found, trying again")
     end
@@ -54,6 +50,8 @@ function get_or_create_test_engine(name::Union{String, Nothing})
             return nothing
         end
     end
+
+    #TODO: Replace detectably faulty engines
 
     # The engine does not exist yet, so create it
     create_engine(get_context(), engine_name, size = size)
@@ -126,11 +124,15 @@ function list_test_engines()
 end
 
 function resize_test_engine_pool(size::Int64)
+    if size < 0
+        size = 0
+    end
+
     @lock TEST_SERVER_LOCK begin
         engines = TEST_ENGINE_POOL.engines
-        while(length(engines) < size)
-            #engines[gen_safe_name("mm-test-$(length(engines))")] = 0
-            engines["mm-test-$(length(engines))"] = 0
+        while (length(engines) < size)
+            #engines[gen_safe_name("julia-sdk-test-$(length(engines))")] = 0
+            engines["julia-sdk-test-$(length(engines))"] = 0
         end
         for engine in engines
             if length(engines) > size
