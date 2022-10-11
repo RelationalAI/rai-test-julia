@@ -84,15 +84,7 @@ function release_test_engine(name::Union{String, Nothing})
 end
 
 function destroy_test_engines()
-    @lock TEST_SERVER_LOCK begin
-        for e in TEST_ENGINE_POOL.engines
-            try
-                delete_engine(get_context(), e.first)
-            catch
-                # The engines may not exist
-            end
-        end
-    end
+    resize_test_engine_pool(0)
     println("Destroyed all test engine: ")
 end
 
@@ -136,7 +128,11 @@ function resize_test_engine_pool(size::Int64)
         end
         for engine in engines
             if length(engines) > size
-                delete_engine(get_context(), engine.first)
+                try
+                    delete_engine(get_context(), engine.first)
+                catch
+                    # The engine may not exist if it hasn't been used yet
+                end
                 delete!(engines, engine.first)
             end
         end
