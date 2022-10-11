@@ -443,7 +443,9 @@ function _test_rel_step(
                         Dict("test_install" => step.install))
             end
 
-            response = exec_async(get_context(), schema, engine, program)
+            #TODO: Currently this fails on the first run of a fresh engine
+            #response = exec_async(get_context(), schema, engine, program)
+            response = exec(get_context(), schema, engine, program)
             transaction_id = response.transaction.id
 
             try
