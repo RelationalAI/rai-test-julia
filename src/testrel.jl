@@ -435,29 +435,31 @@ function _test_rel_step(
 
             response = exec_async(get_context(), schema, engine, program)
             transaction_id = response.transaction.id
-            #TODO: if response was not immediate add to transaction pool and continue
 
-            transaction = get_transaction(get_context(), transaction_id)
-
-            while transaction.state !== "COMPLETED" && transaction.state !== "ABORTED"
-                transaction = get_transaction(get_context(), transaction_id)
-                sleep(1)
+            try
+                wait_until_done(get_context(), response)
+            catch
+                # Errors thrown may be due to both ICs or system, so keep going
             end
+
+            response = get_transaction(get_context(), transaction_id)
+            state = response.state
 
             problems = get_transaction_problems(get_context(), transaction_id)
             metadata = get_transaction_metadata(get_context(), transaction_id)
             results = get_transaction_results(get_context(), transaction_id)
+
             # If there are no expected problems then we expect the transaction to complete
             if isempty(step.expected_problems)
                 problems_found = !isempty(problems)
-                problems_found |= transaction.state !== "COMPLETED"
+                problems_found |= state !== "COMPLETED"
                 for problem in problems
                     println("Unexpected problem type: ", problem.type)
                     @info(problem)
                 end
                 @test !problems_found broken = step.broken
 
-                if transaction.state == "ABORTED"
+                if state == "ABORTED"
                     for problem in problems
                         println("Aborted with problem type: ", problem.type)
                     end
