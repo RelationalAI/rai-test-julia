@@ -310,6 +310,16 @@ constraints have any compilation errors, then the test will still fail (unless
 - `location::LineNumberNode`: Sourcecode location
 
 - `engine::String`: The name of an existing compute engine
+
+- `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
+
+- `abort_on_error::Bool`: boolean that specifies whether to abort on any
+    triggered error.
+
+- `debug::Bool`: boolean that specifies debugging mode.
+
+- `debug_trace::Bool`: boolean that specifies printing out the debug_trace
+
 """
 function test_rel_steps(;
     steps::Vector{Step},
