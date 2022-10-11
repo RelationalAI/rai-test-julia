@@ -455,7 +455,6 @@ function _test_rel_step(
                 problems_found |= state !== "COMPLETED"
                 for problem in problems
                     println("Unexpected problem type: ", problem.type)
-                    @info(problem)
                 end
                 @test !problems_found broken = step.broken
 
