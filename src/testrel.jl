@@ -255,6 +255,11 @@ constraints have any compilation errors, then the test will still fail (unless
 
 - `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64 => [1, 2]")`
 
+- `expected_problems::Vector{String}`: expected problems. The semantics of
+  `expected_problems` is that the program must contain a super set of the specified
+  error codes. When `expected_problems` is `[]` instead of `nothing`, then this means that errors
+  are allowed.
+
 - `engine::String`: The name of an existing compute engine
 """
 function test_rel(;
