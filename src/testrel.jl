@@ -268,10 +268,17 @@ function test_rel(;
     debug_trace::Bool = false,
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
-    expected::AbstractDict = Dict()
+    expected::AbstractDict = Dict(),
+    expected_problems::Vector{String} = String[],
 )
     steps = Step[]
-    push!(steps, Step(query = query, schema_inputs = schema_inputs, inputs = inputs, expected = expected))
+    push!(steps, Step(
+        query = query,
+        schema_inputs = schema_inputs,
+        inputs = inputs,
+        expected = expected,
+        expected_problems = expected_problems,
+        ))
 
     test_rel_steps(;
         steps = steps,
