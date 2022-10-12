@@ -73,12 +73,12 @@ function generate_output_string_from_expected(expected::AbstractDict)
 
     for e in expected
         # If we are already explicitly testing an output relation, we don't need to add it
-        if startswith(e.first, "/:output")
+        if startswith(string(e.first), "/:output")
             continue
         end
         name = ""
 
-        tokens = split(e.first, "/")
+        tokens = split(string(e.first), "/")
 
         for token in tokens
             if startswith(token, ":")
@@ -121,8 +121,8 @@ function test_expected(
         found = false
 
         # prepend `/:output/` if it's not present
-        name = startswith(e.first, "/:output") ? e.first : "/:output/" * e.first
-
+        name = string(e.first)
+        name = startswith(name, "/:output") ? name : "/:output/" * name
         # Find a matching result
         for result in results
             id = result.first
