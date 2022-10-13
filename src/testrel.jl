@@ -162,6 +162,15 @@ function test_expected(
     return true
 end
 
+struct Problem
+    code::String
+    line::Union{Int64, Nothing}
+end
+
+function Problem(code::String)
+    return Problem(code, nothing)
+end
+
 """
     Transaction Step used for `test_rel`
 
@@ -185,7 +194,7 @@ struct Step
     schema_inputs::AbstractDict
     inputs::AbstractDict
     expected::AbstractDict
-    expected_problems::Vector{String}
+    expected_problems::Vector{Problem}
 end
 
 function Step(;
@@ -195,7 +204,7 @@ function Step(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_problems::Vector{String} = String[]
+    expected_problems::Vector{Problem} = Problem[]
 )
     return Step(
         query,
@@ -274,7 +283,7 @@ function test_rel(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_problems::Vector{String} = String[],
+    expected_problems::Vector{Problem} = Problem[],
 )
     steps = Step[]
     push!(steps, Step(
@@ -469,22 +478,26 @@ function _test_rel_step(
             response = get_transaction(get_context(), transaction_id)
             state = response.state
 
-            problems = get_transaction_problems(get_context(), transaction_id)
+            # problems is deprecated, replaced by the results
+            # /:rel/:catalog/:diagnostic/*
+            #problems = get_transaction_problems(get_context(), transaction_id)
             metadata = get_transaction_metadata(get_context(), transaction_id)
             results = get_transaction_results(get_context(), transaction_id)
+
+            problems = extract_problems(results)
 
             # If there are no expected problems then we expect the transaction to complete
             if isempty(step.expected_problems)
                 problems_found = !isempty(problems)
                 problems_found |= state !== "COMPLETED"
                 for problem in problems
-                    println("Unexpected problem type: ", problem.type)
+                    println("Unexpected problem type: ", problem.code)
                 end
                 @test !problems_found broken = step.broken
 
                 if state == "ABORTED"
                     for problem in problems
-                        println("Aborted with problem type: ", problem.type)
+                        println("Aborted with problem type: ", problem.code)
                     end
                 else
                     if !isempty(step.expected)
@@ -493,8 +506,8 @@ function _test_rel_step(
                 end
             else
                 # Check that expected problems were found
-                for problem in step.expected_problems
-                    expected_problem_found = any(i->(i.type == problem), problems)
+                for expected_problem in step.expected_problems
+                    expected_problem_found = any(p->(p.code == expected_problem.code), problems)
                     @test expected_problem_found broken = step.broken
                 end
             end
@@ -503,4 +516,31 @@ function _test_rel_step(
         end
         return nothing
     end
+end
+
+
+function extract_problems(results)
+    problems = Problem[]
+    # [index, code]
+    problem_codes = Arrow.Table[]
+    # [index, ?, line]
+    problem_lines = Arrow.Table[]
+
+    # Extract rows from column indexed table
+    for result in results
+        if result.first == "/:rel/:catalog/:diagnostic/:code/Int64/String"
+            problem_codes = result.second
+            continue
+        end
+        if result.first == "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"
+            problem_lines = result.second
+            continue
+        end
+    end
+
+    for i = 1:1:length(problem_codes[1])
+        push!(problems, Problem(problem_codes[2][i], problem_lines[3][i]))
+    end
+
+    return problems
 end
