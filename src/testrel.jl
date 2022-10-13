@@ -195,6 +195,7 @@ struct Step
     inputs::AbstractDict
     expected::AbstractDict
     expected_problems::Vector{Problem}
+    expect_abort::Bool
 end
 
 function Step(;
@@ -204,7 +205,8 @@ function Step(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_problems::Vector{Problem} = Problem[]
+    expected_problems::Vector{Problem} = Problem[],
+    expect_abort::Bool = false,
 )
     return Step(
         query,
@@ -214,6 +216,7 @@ function Step(;
         inputs,
         expected,
         expected_problems,
+        expect_abort,
     )
 end
 
@@ -284,6 +287,7 @@ function test_rel(;
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
     expected_problems::Vector{Problem} = Problem[],
+    expect_abort::Bool = false,
 )
     steps = Step[]
     push!(steps, Step(
@@ -292,6 +296,7 @@ function test_rel(;
         inputs = inputs,
         expected = expected,
         expected_problems = expected_problems,
+        expect_abort = expect_abort,
         ))
 
     test_rel_steps(;
@@ -487,7 +492,7 @@ function _test_rel_step(
             problems = extract_problems(results)
 
             # If there are no expected problems then we expect the transaction to complete
-            if isempty(step.expected_problems)
+            if isempty(step.expected_problems) && !step.expect_abort
                 problems_found = !isempty(problems)
                 problems_found |= state !== "COMPLETED"
                 for problem in problems
@@ -505,6 +510,7 @@ function _test_rel_step(
                     end
                 end
             else
+                @test step.expect_abort && state == "ABORTED" broken = step.broken
                 # Check that expected problems were found
                 for expected_problem in step.expected_problems
                     expected_problem_found = any(p->(p.code == expected_problem.code), problems)
