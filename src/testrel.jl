@@ -78,18 +78,21 @@ function generate_output_string_from_expected(expected::AbstractDict)
         end
         name = ""
 
-        tokens = split(string(e.first), "/")
-
-        for token in tokens
-            if startswith(token, ":")
-                name *= token
-            else
-                break
+        if e.first isa Symbol
+            name = string(e.first)
+        else
+            # rel path, e.g. ":a/:b/Int64"
+            tokens = split(string(e.first), "/")
+            for token in tokens
+                if startswith(token, ":")
+                    name *= token
+                else
+                    break
+                end
             end
+
+            name = SubString(name, 2)
         end
-
-        name = SubString(name, 2)
-
         program *= "\ndef output:" * name * " = " * name
     end
     return program
