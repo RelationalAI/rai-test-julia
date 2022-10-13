@@ -118,46 +118,39 @@ function test_expected(
     end
 
     for e in expected
-        found = false
-
         # prepend `/:output/` if it's not present
         name = string(e.first)
         name = startswith(name, "/:output") ? name : "/:output/" * name
-        # Find a matching result
-        for result in results
-            id = result.first
-            if id != name
-                continue
-            end
-            found = true
 
-            # We've found a matching result, now test the contents
-            data = result.second
-            tuples = isempty(data) ? [()] : zip(data...)
-            tuples_as_vector = sort(collect(tuples))
-            sort!(e.second)
-
-            # Special case for single value tuples
-            if length(tuples_as_vector[1]) == 1
-                tuples_as_single = typeof(e.second[1])[]
-                for tuple in tuples_as_vector
-                    push!(tuples_as_single, tuple[1])
-                end
-                tuples_as_vector = tuples_as_single
-            end
-
-            if tuples_as_vector != e.second
-                println("Results do not match")
-                return false
-            end
-
-            # We've found the matching result so stop searching
-            break
-        end
-        if !found
+        # Check result key exists
+        if !haskey(results, name)
             println("Expected relation not found")
             return false
         end
+
+        result = results[name]
+
+        # We've found a matching result, now test the contents
+        tuples = isempty(result) ? [()] : zip(result...)
+        tuples_as_vector = sort(collect(tuples))
+        sort!(e.second)
+
+        # Special case for single value tuples
+        if length(tuples_as_vector[1]) == 1
+            tuples_as_single = typeof(e.second[1])[]
+            for tuple in tuples_as_vector
+                push!(tuples_as_single, tuple[1])
+            end
+            tuples_as_vector = tuples_as_single
+        end
+
+        if tuples_as_vector != e.second
+            println("Results do not match")
+            @info(tuples_as_vector)
+            @info(e.second)
+            return false
+        end
+
     end
     return true
 end
@@ -491,7 +484,8 @@ function _test_rel_step(
             metadata = get_transaction_metadata(get_context(), transaction_id)
             results = get_transaction_results(get_context(), transaction_id)
 
-            problems = extract_problems(results)
+            results_dict = result_table_to_dict(results)
+            problems = extract_problems(results_dict)
 
             # If there are no expected problems then we expect the transaction to complete
             if isempty(step.expected_problems) && !step.expect_abort
@@ -508,7 +502,7 @@ function _test_rel_step(
                     end
                 else
                     if !isempty(step.expected)
-                        @test test_expected(step.expected, metadata, results) broken = step.broken
+                        @test test_expected(step.expected, metadata, results_dict) broken = step.broken
                     end
                 end
             else
@@ -529,26 +523,30 @@ end
 
 function extract_problems(results)
     problems = Problem[]
-    # [index, code]
-    problem_codes = Arrow.Table[]
-    # [index, ?, line]
-    problem_lines = Arrow.Table[]
 
-    # Extract rows from column indexed table
-    for result in results
-        if result.first == "/:rel/:catalog/:diagnostic/:code/Int64/String"
-            problem_codes = result.second
-            continue
-        end
-        if result.first == "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"
-            problem_lines = result.second
-            continue
-        end
+    if !haskey(results, "/:rel/:catalog/:diagnostic/:code/Int64/String") ||
+        !haskey(results, "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64")
+        return problems
     end
 
-    for i = 1:1:length(problem_codes[1])
-        push!(problems, Problem(problem_codes[2][i], problem_lines[3][i]))
+    # [index, code]
+    problem_codes = results["/:rel/:catalog/:diagnostic/:code/Int64/String"]
+    # [index, ?, line]
+    problem_lines = results["/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"]
+
+    if length(problem_codes) > 0
+        for i = 1:1:length(problem_codes[1])
+            push!(problems, Problem(problem_codes[2][i], problem_lines[3][i]))
+        end
     end
 
     return problems
+end
+
+function result_table_to_dict(results)
+    dict_results = Dict{String, Arrow.Table}()
+    for result in results
+        dict_results[result[1]] = result[2]
+    end
+    return dict_results
 end
