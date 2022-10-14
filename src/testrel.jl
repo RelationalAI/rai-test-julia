@@ -116,9 +116,7 @@ function test_expected(
     end
 
     for e in expected
-        # prepend `/:output/` if it's not present
         name = string(e.first)
-        name = startswith(name, "/:output") ? name : "/:output/" * name
 
         # Check result key exists
         if !haskey(results, name)
@@ -449,9 +447,6 @@ function _test_rel_step(
 
     #Append schema inputs to program
     program *= convert_input_dict_to_string(step.schema_inputs)
-
-    # If there are expected results, make sure they are in the output
-    program *= generate_output_string_from_expected(step.expected)
 
     step_postfix = steps_length > 1 ? " - step$index" : ""
 
