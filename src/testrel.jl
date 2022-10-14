@@ -278,6 +278,7 @@ function test_rel(;
     expected::AbstractDict = Dict(),
     expected_problems::Vector{Problem} = Problem[],
     expect_abort::Bool = false,
+    broken::Bool = false,
 )
     steps = Step[]
     push!(steps, Step(
@@ -288,6 +289,7 @@ function test_rel(;
         expected = expected,
         expected_problems = expected_problems,
         expect_abort = expect_abort,
+        broken = broken,
         ))
 
     test_rel_steps(;
