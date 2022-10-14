@@ -99,7 +99,7 @@ function generate_output_string_from_expected(expected::AbstractDict)
 end
 
 """
-    test_expected(expected::AbstractDict, rsp:TransactionResponse})
+    test_expected(expected::AbstractDict, results})
 
 Given a Dict of expected relations, test if the actual results contain those relations.
 Types and contents of the relations must match.
@@ -107,14 +107,9 @@ Types and contents of the relations must match.
 """
 function test_expected(
         expected::AbstractDict,
-        metadata,
         results)
     # No testing to do, return immediaely
     isempty(expected) && return
-    if metadata === nothing
-        println("Invalid response")
-        return false
-    end
     if results === nothing
         println("No results")
         return false
@@ -484,7 +479,6 @@ function _test_rel_step(
             # problems is deprecated, replaced by the results
             # /:rel/:catalog/:diagnostic/*
             #problems = get_transaction_problems(get_context(), transaction_id)
-            metadata = get_transaction_metadata(get_context(), transaction_id)
             results = get_transaction_results(get_context(), transaction_id)
 
             results_dict = result_table_to_dict(results)
@@ -505,7 +499,7 @@ function _test_rel_step(
                     end
                 else
                     if !isempty(step.expected)
-                        @test test_expected(step.expected, metadata, results_dict) broken = step.broken
+                        @test test_expected(step.expected, results_dict) broken = step.broken
                     end
                 end
             else
