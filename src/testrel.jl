@@ -35,18 +35,7 @@ end
 function convert_input_dict_to_string(inputs::AbstractDict)
     program = ""
     for input in inputs
-        name = ""
-        tokens = split(input.first, "/")
-
-        for token in tokens
-            if startswith(token, ":")
-                name *= token
-            else
-                break
-            end
-        end
-
-        name = SubString(name, 2)
+        name = string(input.first)
 
 
         program *= "\ndef insert:" * name * " = "
