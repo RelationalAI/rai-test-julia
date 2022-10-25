@@ -6,6 +6,7 @@ using Random: MersenneTwister
 using Test
 using UUIDs
 
+using Dates
 
 # Generates a name for the given base name that makes it unique between multiple
 # processing units
@@ -113,11 +114,51 @@ function test_expected(
             return false
         end
 
-        result = results[name]
+        actual_result = results[name]
+
+        # Existence check
+        e.second == [()] && return true
+
+        #WIP
+        # expected results can be single variable, tuple, or vector of either
+        # actual results are an arrow table, which we treat as an iterable container of iterables
+        # - with the added complication that they might be serialised versions of the expected values
+
+        # First, convert an expected tuple to a vector of tuples so we can iterate
+        expected_result = e.second
+        if expected_result isa Tuple
+            println("Converting expected tuple result to vector of tyuples")
+            expected_result = [expected_result]
+        end
+
+        actual_result_tuples = isempty(actual_result) ? [()] : zip(actual_result...)
 
         # We've found a matching result, now test the contents
-        tuples = isempty(result) ? [()] : zip(result...)
-        tuples_as_vector = sort(collect(tuples))
+        for (i, v) in enumerate(actual_result_tuples)
+            length(v) != length(expected_result[i]) && return false
+
+            for
+
+
+        # Convert the results into a nice iterable container of tuples
+        # First a special case for tests of presence, rather than content
+        tuples = isempty(actual_result) ? [()] : zip(actual_result...)
+
+        for (i, v) in enumerate(tuples)
+            actual_v = convert_to_type(expected_result[i], v)
+            expected_v = expected_result[i]
+            println("ccomparing ", actual_v, " and ", expected_v)
+            println("using ", sort(collect(zip(actual_v))), " and ", collect(zip(expected_v)))
+            if collect(zip(actual_v)) != collect(zip(expected_v))
+                return false
+            end
+        end
+
+        return false
+
+
+#=         # Convert to the expected format of a vector of tuples of the appropriate type
+        tuples_as_vector = convert_to_type(e.second, sort(collect(tuples)))
         sort!(e.second)
 
         # Special case for single value tuples
@@ -134,7 +175,7 @@ function test_expected(
             @info(tuples_as_vector)
             @info(e.second)
             return false
-        end
+        end =#
 
     end
     return true
@@ -532,4 +573,105 @@ function result_table_to_dict(results)
         dict_results[result[1]] = result[2]
     end
     return dict_results
+end
+
+
+function convert_to_type(expected::Dates.Date, value)
+    println("ctt(d")
+    if value isa Tuple
+        value = value[1]
+    end
+    return Dates.rata2datetime(value)
+end
+
+function convert_to_type(expected::Dates.DateTime, value)
+    println("ctt(dt", typeof(value))
+    if value isa Tuple
+        value = value[1]
+    end
+    year_zero = Dates.datetime2epochms(Dates.DateTime(0,12,31))
+    return Dates.epochms2datetime(value + year_zero)
+end
+
+function convert_to_type(expected, value)
+    println("ctt(-", typeof(expected))
+    return value
+end
+
+function convert_to_type(expected::Tuple, values::Tuple)
+    println("ctt(t")
+    converted_values =
+
+    for (index, type) in enumerate(expected)
+        converted_values[index] = convert_to_type(typeof(expected[index]), values[index])
+    end
+
+    return converted_values
+end
+
+function convert_to_type(expected::AbstractVector, values)
+    println("ctt(v", typeof(expected), typeof(values))
+    result = typeof(expected)()
+    for value in values
+        push!(result, convert_to_type(expected[1], value))
+    end
+    return result
+end
+
+function convert_to_type(expected::AbstractVector{Tuple}, values)
+    println("ctt(vt")
+    result = Tuple[]()
+    for value in values
+        push!(result, convert_to_type(expected[1], value))
+    end
+    return result
+end
+
+function convert_to_type_old(expected::AbstractVector, values)
+    type = eltype(expected)
+    if type == Dates.Date
+        result = Tuple[]
+        for value_tuple in values
+            converted_tuple_values = Dates.Date[]
+            for value in value_tuple
+                push!(converted_tuple_values, Dates.rata2datetime(value))
+            end
+            push!(result, Tuple(converted_tuple_values))
+        end
+        return result
+    elseif type == Dates.DateTime
+        result = Tuple[]
+
+        # The offset used when serialising DateTimes is year 1, vs the year 0 used by
+        # Dates.epochms2datetime
+        year_zero = Dates.datetime2epochms(Dates.DateTime(0,12,31))
+        for value_tuple in values
+            converted_tuple_values = Dates.DateTime[]
+            for value in value_tuple
+                push!(converted_tuple_values, Dates.epochms2datetime(value + year_zero))
+            end
+            push!(result, Tuple(converted_tuple_values))
+        end
+        return result
+    end
+
+    return values
+end
+
+
+function compare(expected::Dates.Date, actual)
+    try
+        return expected == Dates.rata2datetime(actual)
+    catch
+        return false
+    end
+end
+
+function compare(expected::Dates.DateTime, actual)
+    try
+        year_zero = Dates.datetime2epochms(Dates.DateTime(0,12,31))
+        return expected == Dates.epochms2datetime(value + year_zero)
+    catch
+        return false
+    end
 end
