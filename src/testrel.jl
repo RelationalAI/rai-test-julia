@@ -504,19 +504,27 @@ end
 function extract_problems(results)
     problems = Problem[]
 
-    if !haskey(results, "/:rel/:catalog/:diagnostic/:code/Int64/String") ||
-        !haskey(results, "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64")
+    if !haskey(results, "/:rel/:catalog/:diagnostic/:code/Int64/String")
         return problems
     end
 
     # [index, code]
     problem_codes = results["/:rel/:catalog/:diagnostic/:code/Int64/String"]
-    # [index, ?, line]
-    problem_lines = results["/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"]
+
+    problem_lines = Dict()
+    if haskey(results, "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64")
+        # [index, ?, line]
+        problem_lines = results["/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"]
+    end
 
     if length(problem_codes) > 0
         for i = 1:1:length(problem_codes[1])
-            push!(problems, Problem(problem_codes[2][i], problem_lines[3][i]))
+            # Not all problems have a line number
+            problem_line = nothing
+            if haskey(results, "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64")
+                problem_line = problem_lines[3][i]
+            end
+            push!(problems, Problem(problem_codes[2][i], problem_line))
         end
     end
 
