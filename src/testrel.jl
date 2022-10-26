@@ -48,7 +48,7 @@ function convert_input_dict_to_string(inputs::AbstractDict)
             values = [values]
         end
 
-        for i in input.second
+        for i in values
             if first
                 first = false
             else
@@ -121,7 +121,13 @@ function test_expected(
             if e.first != :output
                 name = "/:output/:"
             end
-            name *= string(e.first) * "/" * string(eltype(e.second[1]))
+
+            name *= string(e.first)
+
+            # Now determine types
+            for v in e.second
+                name *= "/" * string(typeof(v))
+            end
         end
 
         # Check result key exists
@@ -190,7 +196,7 @@ end
 
 """
 struct Step
-    query::String
+    query::Union{String, Nothing}
     install::Dict{String, String}
     broken::Bool
     schema_inputs::AbstractDict
@@ -201,7 +207,7 @@ struct Step
 end
 
 function Step(;
-    query::String = nothing,
+    query::Union{String, Nothing} = nothing,
     install::Dict{String, String} = Dict{String, String}(),
     broken::Bool = false,
     schema_inputs::AbstractDict = Dict(),
@@ -277,7 +283,8 @@ constraints have any compilation errors, then the test will still fail (unless
 - `engine::String`: The name of an existing compute engine
 """
 function test_rel(;
-    query::String,
+    query::Union{String, Nothing} = nothing,
+    steps::Vector{Step} = Step[],
     name::Union{String,Nothing} = nothing,
     engine::Union{String,Nothing} = nothing,
     location::Union{LineNumberNode,Nothing} = nothing,
@@ -293,15 +300,20 @@ function test_rel(;
     expect_abort::Bool = false,
     broken::Bool = false,
 )
-    steps = Step[]
-    push!(steps, Step(
+    query !== nothing && insert!(steps, 1, Step(
         query = query,
-        schema_inputs = schema_inputs,
-        inputs = inputs,
-        install = install,
         expected = expected,
         expected_problems = expected_problems,
         expect_abort = expect_abort,
+        broken = broken,
+        ))
+
+    # Perform all inserts before other tests
+    insert!(steps, 1, Step(
+        query = "",
+        schema_inputs = schema_inputs,
+        inputs = inputs,
+        install = install,
         broken = broken,
         ))
 
