@@ -14,9 +14,10 @@ function gen_safe_name(basename)
     return "$(basename)-p$(getpid())-t$(Base.Threads.threadid())-$(UUIDs.uuid4(MersenneTwister()))"
 end
 
+context::Context = Context(load_config())
+
 function get_context()::Context
-    conf = load_config()
-    return Context(conf)
+    return context
 end
 
 function create_test_database()::String
