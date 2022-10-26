@@ -43,6 +43,11 @@ function convert_input_dict_to_string(inputs::AbstractDict)
 
         first = true
 
+        values = input.second
+        if values isa Tuple
+            values = [values]
+        end
+
         for i in input.second
             if first
                 first = false
