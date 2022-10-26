@@ -71,6 +71,10 @@ function generate_output_string_from_expected(expected::AbstractDict)
         if startswith(string(e.first), "/:output")
             continue
         end
+        if e.first == :output
+            continue
+        end
+
         name = ""
 
         if e.first isa Symbol
@@ -112,6 +116,13 @@ function test_expected(
 
     for e in expected
         name = string(e.first)
+        if e.first isa Symbol
+            name = "/:"
+            if e.first != :output
+                name = "/:output/:"
+            end
+            name *= string(e.first) * "/" * string(eltype(e.second[1]))
+        end
 
         # Check result key exists
         if !haskey(results, name)
@@ -133,10 +144,21 @@ function test_expected(
             expected_result = [expected_result]
         end
 
+        # That would be too easy. We also accept a vector of non-tuples.
+        expected_result_tuple_vector = []
+
+        if expected_result[1] isa Tuple
+            expected_result_tuple_vector = expected_result
+        else
+            for v in expected_result
+                push!(expected_result_tuple_vector, Tuple(v))
+            end
+        end
+
         # convert actual results to a vector for comparison
         actual_result_vector = collect(zip(actual_result...))
 
-        return expected_result == actual_result_vector
+        return expected_result_tuple_vector == actual_result_vector
     end
 
     return true
