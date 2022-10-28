@@ -338,13 +338,24 @@ function test_rel(;
         ))
 
     # Perform all inserts before other tests
-    insert!(steps, 1, Step(
-        query = "",
-        schema_inputs = schema_inputs,
-        inputs = inputs,
-        install = install,
-        broken = broken,
-        ))
+    if !isempty(install)
+        insert!(steps, 1, Step(
+            install = install,
+            broken = broken,
+            ))
+    end
+    if !isempty(schema_inputs)
+        insert!(steps, 1, Step(
+            schema_inputs = schema_inputs,
+            broken = broken,
+            ))
+    end
+    if !isempty(inputs)
+        insert!(steps, 1, Step(
+            inputs = inputs,
+            broken = broken,
+            ))
+    end
 
     test_rel_steps(;
         steps = steps,
@@ -516,6 +527,11 @@ function _test_rel_step(
             if !isempty(step.install)
                 load_model(get_context(), schema, engine,
                         Dict("test_install" => step.install))
+            end
+
+            # Don't test empty strings
+            if program == ""
+                return nothing
             end
 
             #TODO: Currently this fails on the first run of a fresh engine
