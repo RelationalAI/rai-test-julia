@@ -22,7 +22,7 @@ end
 
 function create_test_database()::String
     # TODO: Change to 'test-' when the account is changed
-    schema = gen_safe_name("mm-test")
+    schema = gen_safe_name("julia-sdk-test")
 
     return create_database(get_context(), schema).database.name
 end
