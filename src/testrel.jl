@@ -224,6 +224,7 @@ struct Step
     schema_inputs::AbstractDict
     inputs::AbstractDict
     expected::AbstractDict
+    expected_output::AbstractDict
     expected_problems::Vector{Problem}
     expect_abort::Bool
 end
@@ -235,6 +236,7 @@ function Step(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
+    expected_output::AbstractDict = Dict(),
     expected_problems::Vector{Problem} = Problem[],
     expect_abort::Bool = false,
 )
@@ -245,6 +247,7 @@ function Step(;
         schema_inputs,
         inputs,
         expected,
+        expected_output,
         expected_problems,
         expect_abort,
     )
@@ -295,7 +298,9 @@ constraints have any compilation errors, then the test will still fail (unless
 
 - `location::LineNumberNode`: Sourcecode location
 
-- `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64 => [1, 2]")`
+- `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64" => [1, 2])`
+
+- `expected_output::AbstractDict`: Expected output values in the form `Dict(:a => [1, 2])`
 
 - `expected_problems::Vector{String}`: expected problems. The semantics of
   `expected_problems` is that the program must contain a super set of the specified
@@ -318,6 +323,7 @@ function test_rel(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
+    expected_output::AbstractDict = Dict(),
     expected_problems::Vector{Problem} = Problem[],
     expect_abort::Bool = false,
     broken::Bool = false,
@@ -325,6 +331,7 @@ function test_rel(;
     query !== nothing && insert!(steps, 1, Step(
         query = query,
         expected = expected,
+        expected_output = expected_output,
         expected_problems = expected_problems,
         expect_abort = expect_abort,
         broken = broken,
@@ -496,6 +503,11 @@ function _test_rel_step(
 
     #Append schema inputs to program
     program *= convert_input_dict_to_string(step.schema_inputs)
+
+    program *= generate_output_string_from_expected(step.expected_output)
+
+    #TODO: Remove this when the incoming tests are appropriately rewritten
+    program *= generate_output_string_from_expected(step.expected)
 
     step_postfix = steps_length > 1 ? " - step$index" : ""
 
