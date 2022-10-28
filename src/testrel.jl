@@ -98,6 +98,44 @@ function generate_output_string_from_expected(expected::AbstractDict)
     return program
 end
 
+function type_string(input::Vector)
+    if isempty(input)
+        return ""
+    end
+    return type_string(input[1])
+end
+
+function type_string(input::Tuple)
+    result = ""
+    for t in input
+        result *= type_string(t)
+    end
+    return result
+end
+
+function type_string(input)
+    return "/" * string(typeof(input))
+end
+
+function to_vector_of_tuples(input::Vector)
+    isempty(input) && return []
+    input[1] isa Tuple && return input
+
+    result = []
+    for v in input
+        push!(result, (v,))
+    end
+    return result
+end
+
+function to_vector_of_tuples(input::Tuple)
+    return [input]
+end
+
+function to_vector_of_tuples(input)
+    return [(input,)]
+end
+
 """
     test_expected(expected::AbstractDict, results})
 
@@ -126,11 +164,7 @@ function test_expected(
             name *= string(e.first)
 
             # Now determine types
-            if !isempty(e.second)
-                for v in e.second[1]
-                    name *= "/" * string(typeof(v))
-                end
-            end
+            name *= type_string(e.second)
         end
 
         # Check result key exists
@@ -147,22 +181,7 @@ function test_expected(
         # Expected results can be a tuple, or a vector of tuples
         # Actual results are an arrow table that can be iterated over
 
-        # Convert an expected tuple to a vector of tuples
-        expected_result = e.second
-        if expected_result isa Tuple
-            expected_result = [expected_result]
-        end
-
-        # That would be too easy. We also accept a vector of non-tuples.
-        expected_result_tuple_vector = []
-
-        if expected_result[1] isa Tuple
-            expected_result_tuple_vector = expected_result
-        else
-            for v in expected_result
-                push!(expected_result_tuple_vector, Tuple(v))
-            end
-        end
+        expected_result_tuple_vector = to_vector_of_tuples(e.second)
 
         # convert actual results to a vector for comparison
         actual_result_vector = collect(zip(actual_result...))
