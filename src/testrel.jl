@@ -126,14 +126,16 @@ function test_expected(
             name *= string(e.first)
 
             # Now determine types
-            for v in e.second
-                name *= "/" * string(typeof(v))
+            if !isempty(e.second)
+                for v in e.second[1]
+                    name *= "/" * string(typeof(v))
+                end
             end
         end
 
         # Check result key exists
         if !haskey(results, name)
-            println("Expected relation not found")
+            println("Expected relation ", name, " not found")
             return false
         end
 
