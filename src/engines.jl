@@ -6,13 +6,19 @@ using Base: @lock
 
 const TEST_SERVER_LOCK = ReentrantLock()
 
+mutable struct NextId; id::Int; end
 struct TestEnginePool
     engines::Dict{String, Int64}
+    # This is used to enable unique, simple, naming of engines
+    # Switching to randomly generated UUIDs would be needed if tests are run independently
+    next_id::NextId
 end
 
-const TEST_ENGINE_POOL = TestEnginePool(Dict{String, Int64}())
+TEST_ENGINE_POOL = TestEnginePool(Dict{String, Int64}(), NextId(0))
+
 
 function get_free_test_engine_name()::String
+    delay = 1
     while true
         if (length(TEST_ENGINE_POOL.engines) < 1)
             error("No servers available!")
@@ -27,8 +33,23 @@ function get_free_test_engine_name()::String
             end
         end
         # Very naive wait protocol
-        sleep(5)
-        println("No free engine found, trying again")
+        sleep(delay)
+    end
+end
+
+function replace_engine(name::String)
+    @lock TEST_SERVER_LOCK begin
+        remove!(TEST_ENGINE_POOL.engines, name)
+    end
+    try
+        delete_engine(get_context(), name)
+    catch
+        println("Could not delete engine: ", name)
+    end
+
+    new_name = getNextEngineName()
+    @lock TEST_SERVER_LOCK begin
+        TEST_ENGINE_POOL.engines[new_name] = 0
     end
 end
 
@@ -38,7 +59,7 @@ function get_or_create_test_engine(name::Union{String, Nothing})
         engine_name = get_free_test_engine_name()
     end
 
-    size = "XS"
+    const size = "XS"
     try
         get_engine(get_context(), engine_name)
         # The engine already exists so return it immediately
@@ -51,7 +72,7 @@ function get_or_create_test_engine(name::Union{String, Nothing})
         end
     end
 
-    #TODO: Replace detectably faulty engines
+    #TODO: Replace detectably faulty engines - but it seems that transient errors are common
 
     # The engine does not exist yet, so create it
     create_engine(get_context(), engine_name, size = size)
@@ -115,6 +136,20 @@ function list_test_engines()
     end
 end
 
+function get_next_engine_name()
+    id = TEST_ENGINE_POOL.next_id.id
+    TEST_ENGINE_POOL.next_id.id += 1
+    return "julia-sdk-test-$(id)"
+end
+
+function provision_all_test_engines()
+    @lock TEST_SERVER_LOCK begin
+        for engine in TEST_ENGINE_POOL.engines
+            get_or_create_test_engine(engine)
+        end
+    end
+end
+
 function resize_test_engine_pool(size::Int64)
     if size < 0
         size = 0
@@ -123,8 +158,7 @@ function resize_test_engine_pool(size::Int64)
     @lock TEST_SERVER_LOCK begin
         engines = TEST_ENGINE_POOL.engines
         while (length(engines) < size)
-            #engines[gen_safe_name("julia-sdk-test-$(length(engines))")] = 0
-            engines["julia-sdk-test-$(length(engines))"] = 0
+            engines[get_next_engine_name()] = 0
         end
         for engine in engines
             if length(engines) > size
