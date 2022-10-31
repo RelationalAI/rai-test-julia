@@ -583,24 +583,11 @@ function _test_rel_step(
                 return nothing
             end
 
-            #TODO: Currently this fails on the first run of a fresh engine
-            #response = exec_async(get_context(), schema, engine, program)
             response = exec(get_context(), schema, engine, program)
-            transaction_id = response.transaction.id
 
-            try
-                wait_until_done(get_context(), response)
-            catch
-                # Errors thrown may be due to both ICs or system, so keep going
-            end
+            state = response.transaction.state
 
-            response = get_transaction(get_context(), transaction_id)
-            state = response.state
-
-            # problems is deprecated, replaced by the results
-            # /:rel/:catalog/:diagnostic/*
-            #problems = get_transaction_problems(get_context(), transaction_id)
-            results = get_transaction_results(get_context(), transaction_id)
+            results = response.results
 
             results_dict = result_table_to_dict(results)
             problems = extract_problems(results_dict)
