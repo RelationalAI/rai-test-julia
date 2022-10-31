@@ -55,7 +55,14 @@ function convert_input_dict_to_string(inputs::AbstractDict)
             else
                 program *= "; "
             end
-            program *= string(i)
+
+            if i isa String
+                program *= '"' * i * '"'
+            elseif i isa Char
+                program *= "'" * i * "'"
+            else
+                program *= string(i)
+            end
         end
     end
     return program
