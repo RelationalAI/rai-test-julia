@@ -8,6 +8,44 @@ using UUIDs
 
 using Dates
 
+
+import Test: Test, record, finish
+using Test: AbstractTestSet
+
+mutable struct BreakableTestSet <: Test.AbstractTestSet
+    broken::Bool
+    broken_found::Bool
+    dts::Test.DefaultTestSet
+
+    BreakableTestSet(desc; broken = false) = new(broken, false, Test.DefaultTestSet(desc))
+end
+
+record(ts::BreakableTestSet, child::AbstractTestSet) = record(ts.dts, child)
+record(ts::BreakableTestSet, res::Test.Result) = record(ts.dts, res)
+
+function record(ts::BreakableTestSet, t::Union{Test.Fail, Test.Error})
+    if ts.broken
+        ts.broken_found = true
+        push!(ts.dts.results, Test.Broken(t.test_type, t.orig_expr))
+    else
+        record(ts.dts, t)
+    end
+end
+
+function finish(ts::BreakableTestSet)
+    if ts.broken && !ts.broken_found
+        # If we expect broken tests and everything passes, drop the results and replace with an unbroken Error
+        println(" Unexpected Pass")
+        println(" Got correct result, please change to broken = false if no longer broken.")
+
+        ts.dts.n_passed = 0
+        empty!(ts.dts.results)
+        push!(ts.dts.results, Test.Error(:test_unbroken, "orig_expr", "Thing after orig_expr", "the other one", LineNumberNode(0)))
+    end
+    finish(ts.dts)
+end
+
+
 # Generates a name for the given base name that makes it unique between multiple
 # processing units
 function gen_safe_name(basename)
@@ -201,11 +239,12 @@ end
 
 struct Problem
     code::String
+    severity::Union{String, Nothing}
     line::Union{Int64, Nothing}
 end
 
 function Problem(code::String)
-    return Problem(code, nothing)
+    return Problem(code, nothing, nothing)
 end
 
 """
@@ -348,19 +387,16 @@ function test_rel(;
     if !isempty(install)
         insert!(steps, 1, Step(
             install = install,
-            broken = broken,
             ))
     end
     if !isempty(schema_inputs)
         insert!(steps, 1, Step(
             schema_inputs = schema_inputs,
-            broken = broken,
             ))
     end
     if !isempty(inputs)
         insert!(steps, 1, Step(
             inputs = inputs,
-            broken = broken,
             ))
     end
 
@@ -529,7 +565,7 @@ function _test_rel_step(
 
     step_postfix = steps_length > 1 ? " - step$index" : ""
 
-    @testset "$(string(name))$step_postfix" begin
+    @testset BreakableTestSet "$(string(name))$step_postfix" broken = step.broken begin
         try
             if !isempty(step.install)
                 load_model(get_context(), schema, engine,
@@ -563,31 +599,27 @@ function _test_rel_step(
             results_dict = result_table_to_dict(results)
             problems = extract_problems(results_dict)
 
+            # Check that expected problems were found
+            for expected_problem in step.expected_problems
+                expected_problem_found = any(p->(p.code == expected_problem.code), problems)
+                @test expected_problem_found
+            end
+
             # If there are no expected problems then we expect the transaction to complete
-            if isempty(step.expected_problems) && !step.expect_abort
-                problems_found = !isempty(problems)
-                problems_found |= state !== "COMPLETED"
+            if !step.expect_abort
+                is_error = false
                 for problem in problems
+                    is_error |= problem.severity == "error"
                     println("Unexpected problem type: ", problem.code)
                 end
-                @test !problems_found broken = step.broken
 
-                if state == "ABORTED"
-                    for problem in problems
-                        println("Aborted with problem type: ", problem.code)
-                    end
-                else
-                    if !isempty(step.expected)
-                        @test test_expected(step.expected, results_dict) broken = step.broken
-                    end
+                @test state == "COMPLETED" && is_error == false
+
+                if !isempty(step.expected)
+                    @test test_expected(step.expected, results_dict)
                 end
             else
-                @test step.expect_abort && state == "ABORTED" broken = step.broken
-                # Check that expected problems were found
-                for expected_problem in step.expected_problems
-                    expected_problem_found = any(p->(p.code == expected_problem.code), problems)
-                    @test expected_problem_found broken = step.broken
-                end
+                @test state == "ABORTED"
             end
         catch e
             Base.display_error(stderr, current_exceptions())
@@ -613,6 +645,12 @@ function extract_problems(results)
         problem_lines = results["/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"]
     end
 
+    problem_severities = Dict()
+    if haskey(results, "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64")
+        # [index, severity]
+        problem_severities = results["/:rel/:catalog/:diagnostic/:severity/Int64/String"]
+    end
+
     if length(problem_codes) > 0
         for i = 1:1:length(problem_codes[1])
             # Not all problems have a line number
@@ -620,7 +658,11 @@ function extract_problems(results)
             if haskey(results, "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64")
                 problem_line = problem_lines[3][i]
             end
-            push!(problems, Problem(problem_codes[2][i], problem_line))
+            problem_severity = nothing
+            if haskey(results, "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64")
+                problem_severity = problem_severities[2][i]
+            end
+            push!(problems, Problem(problem_codes[2][i], problem_severity, problem_line))
         end
     end
 
