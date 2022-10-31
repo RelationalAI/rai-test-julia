@@ -181,6 +181,11 @@ function to_vector_of_tuples(input)
     return [(input,)]
 end
 
+# Chars are serialized as UInt32
+function Base.isequal(c::Char, u::UInt32)
+    return isequal(UInt32(c), u)
+end
+
 """
     test_expected(expected::AbstractDict, results})
 
@@ -222,6 +227,7 @@ function test_expected(
 
         # Existence check
         e.second == [()] && return true
+        e.second == () && return true
 
         # Expected results can be a tuple, or a vector of tuples
         # Actual results are an arrow table that can be iterated over
@@ -231,7 +237,7 @@ function test_expected(
         # convert actual results to a vector for comparison
         actual_result_vector = collect(zip(actual_result...))
 
-        return expected_result_tuple_vector == actual_result_vector
+        return isequal(expected_result_tuple_vector, actual_result_vector)
     end
 
     return true
