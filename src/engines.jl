@@ -59,7 +59,7 @@ function get_or_create_test_engine(name::Union{String, Nothing})
         engine_name = get_free_test_engine_name()
     end
 
-    const size = "XS"
+    size = "XS"
     try
         get_engine(get_context(), engine_name)
         # The engine already exists so return it immediately
