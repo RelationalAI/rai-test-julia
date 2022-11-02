@@ -83,9 +83,13 @@ function convert_input_dict_to_string(inputs::AbstractDict)
         first = true
 
         values = input.second
-        if values isa Tuple
-            values = [values]
+
+        if isempty(values)
+            program *= "{ }"
+            continue
         end
+
+        values = to_vector_of_tuples( values)
 
         for i in values
             if first
@@ -162,9 +166,9 @@ function type_string(input)
     return "/" * string(typeof(input))
 end
 
-function to_vector_of_tuples(input::Vector)
+function to_vector_of_tuples(input::Union{Set, Vector})
     isempty(input) && return []
-    input[1] isa Tuple && return input
+    first(input) isa Tuple && return input
 
     result = []
     for v in input
