@@ -65,11 +65,7 @@ function get_or_create_test_engine(name::Union{String, Nothing})
         # The engine already exists so return it immediately
         return engine_name
     catch
-        # Don't try to create engines from supplied names
-        if !isnothing(name)
-            println("Engine does not exist!")
-            return nothing
-        end
+        # Engine does not exist yet so we'll need to create it
     end
 
     #TODO: Replace detectably faulty engines - but it seems that transient errors are common
@@ -145,7 +141,8 @@ end
 function provision_all_test_engines()
     @lock TEST_SERVER_LOCK begin
         for engine in TEST_ENGINE_POOL.engines
-            get_or_create_test_engine(engine)
+            #TODO: This should be concurrent
+            get_or_create_test_engine(engine.first)
         end
     end
 end
