@@ -487,15 +487,15 @@ function test_rel_steps(;
         end
 
         if debug
-            insert!(steps, 1, Step(query="""def insert:debug = "basic" """))
+            insert!(steps, 1, Step(query="""def insert:rel:config:debug = "basic" """))
         end
 
         if debug_trace
-            insert!(steps, 1, Step(query="""def insert:debug = "trace" """))
+            insert!(steps, 1, Step(query="""def insert:rel:config:debug = "trace" """))
         end
 
         if abort_on_error
-            insert!(steps, 1, Step(query="""def insert:relconfig:abort_on_error = true """))
+            insert!(steps, 1, Step(query="""def insert:rel:config:abort_on_error = true """))
         end
 
         _test_rel_steps(;
