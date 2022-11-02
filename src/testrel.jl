@@ -199,7 +199,8 @@ Types and contents of the relations must match.
 """
 function test_expected(
         expected::AbstractDict,
-        results)
+        results,
+        debug::Bool = false)
     # No testing to do, return immediaely
     isempty(expected) && return
     if results === nothing
@@ -241,6 +242,10 @@ function test_expected(
         # convert actual results to a vector for comparison
         actual_result_vector = collect(zip(actual_result...))
 
+        if debug
+            @info("expected", expected_result_tuple_vector)
+            @info("actual", actual_result_vector)
+        end
         return isequal(expected_result_tuple_vector, actual_result_vector)
     end
 
@@ -498,6 +503,7 @@ function test_rel_steps(;
             name = name,
             engine = test_engine,
             location = location,
+            debug = debug,
         )
 
     finally
@@ -512,6 +518,7 @@ function _test_rel_steps(;
     name::String,
     engine::String,
     location::Union{LineNumberNode,Nothing},
+    debug::Bool = false,
 )
     schema = create_test_database()
 
@@ -533,6 +540,7 @@ function _test_rel_steps(;
                         engine,
                         name,
                         length(steps),
+                        debug,
                     )
                 end
             end
@@ -555,6 +563,7 @@ function _test_rel_step(
     engine::String,
     name::String,
     steps_length::Int,
+    debug::Bool,
 )
     if !isnothing(step.query)
         program = step.query
@@ -573,6 +582,7 @@ function _test_rel_step(
     #TODO: Remove this when the incoming tests are appropriately rewritten
     program *= generate_output_string_from_expected(step.expected)
 
+    debug && println(">>>>\n", program, "\n<<<<")
     step_postfix = steps_length > 1 ? " - step$index" : ""
 
     @testset BreakableTestSet "$(string(name))$step_postfix" broken = step.broken begin
@@ -613,7 +623,7 @@ function _test_rel_step(
                 @test state == "COMPLETED" && is_error == false
 
                 if !isempty(step.expected)
-                    @test test_expected(step.expected, results_dict)
+                    @test test_expected(step.expected, results_dict, debug)
                 end
             else
                 @test state == "ABORTED"
