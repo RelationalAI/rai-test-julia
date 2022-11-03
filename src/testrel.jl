@@ -265,10 +265,10 @@ function test_expected(
         # Expected results can be a tuple, or a vector of tuples
         # Actual results are an arrow table that can be iterated over
 
-        expected_result_tuple_vector = Set{Tuple}(to_vector_of_tuples(e.second))
+        expected_result_tuple_vector = sort(to_vector_of_tuples(e.second))
 
         # convert actual results to a vector for comparison
-        actual_result_vector = Set{Tuple}(collect(zip(actual_result...)))
+        actual_result_vector = sort(collect(zip(actual_result...)))
 
         if debug
             @info("expected", expected_result_tuple_vector)
