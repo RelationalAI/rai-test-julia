@@ -77,7 +77,7 @@ function convert_input_dict_to_string(inputs::AbstractDict)
 
         # Dict values represent a functional dependency
         if input.second isa Dict
-            program *= "@function"
+            program *= "\n@function"
         end
         program *= "\ndef insert:" * name * " = "
 
