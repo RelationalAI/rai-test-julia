@@ -132,6 +132,16 @@ function list_test_engines()
     end
 end
 
+function add_test_engine!(name::String)
+    @lock TEST_SERVER_LOCK begin
+        # TODO maybe check it does not exist yet in the pool?
+        engines = TEST_ENGINE_POOL.engines
+        engines[name] = 0
+    end
+
+    return nothing
+end
+
 function get_next_engine_name()
     id = TEST_ENGINE_POOL.next_id.id
     TEST_ENGINE_POOL.next_id.id += 1
