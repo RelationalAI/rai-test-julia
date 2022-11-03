@@ -6,8 +6,6 @@ using Random: MersenneTwister
 using Test
 using UUIDs
 
-using Dates
-
 
 import Test: Test, record, finish
 using Test: AbstractTestSet
@@ -77,7 +75,10 @@ function convert_input_dict_to_string(inputs::AbstractDict)
     for input in inputs
         name = string(input.first)
 
-
+        # Dict values represent a functional dependency
+        if input.second isa Dict
+            program *= "\n@function"
+        end
         program *= "\ndef insert:" * name * " = "
 
         first = true
@@ -166,13 +167,40 @@ function type_string(input)
     return "/" * string(typeof(input))
 end
 
-function to_vector_of_tuples(input::Union{Set, Vector})
+function key_to_array(input::Tuple)
+    return collect(input)
+end
+
+function key_to_array(input)
+    return [input]
+end
+
+function value_to_array(input::Pair)
+    result = value_to_array(input.first)
+    append!(result, value_to_array(input.second))
+    return result
+end
+
+function to_vector_of_tuples(input::Dict)
     isempty(input) && return []
-    first(input) isa Tuple && return input
 
     result = []
     for v in input
-        push!(result, (v,))
+        value_array = v.first isa Tuple ? collect(v.first) : [v.first]
+        # Value is always singular
+        push!(value_array, v.second)
+
+        push!(result, Tuple(value_array))
+    end
+    return result
+end
+
+function to_vector_of_tuples(input::Union{Set, Vector})
+    isempty(input) && return []
+
+    result = []
+    for v in input
+        push!(result, v isa Tuple ? v : (v,))
     end
     return result
 end
@@ -237,10 +265,10 @@ function test_expected(
         # Expected results can be a tuple, or a vector of tuples
         # Actual results are an arrow table that can be iterated over
 
-        expected_result_tuple_vector = to_vector_of_tuples(e.second)
+        expected_result_tuple_vector = sort(to_vector_of_tuples(e.second))
 
         # convert actual results to a vector for comparison
-        actual_result_vector = collect(zip(actual_result...))
+        actual_result_vector = sort(collect(zip(actual_result...)))
 
         if debug
             @info("expected", expected_result_tuple_vector)
