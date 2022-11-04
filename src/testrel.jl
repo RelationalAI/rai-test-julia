@@ -10,12 +10,67 @@ using UUIDs
 import Test: Test, record, finish
 using Test: AbstractTestSet
 
+mutable struct ConcurrentTestSet <: Test.AbstractTestSet
+    dts::Test.DefaultTestSet
+    tests::Vector{Task}
+
+    ConcurrentTestSet(desc) = new(Test.DefaultTestSet(desc), [])
+end
+
+function record(ts::ConcurrentTestSet, child::AbstractTestSet)
+    record(ts.dts, child)
+end
+
+function record(ts::ConcurrentTestSet, res::Test.Result)
+    record(ts.dts, res)
+end
+
+function finish(ts::ConcurrentTestSet)
+    if Test.get_testset_depth() > 0
+        # Attach this test set to the parent test set
+        parent_ts = Test.get_testset()
+        record(parent_ts, ts.dts)
+        return ts
+    end
+    for t in ts.tests
+        record(ts.dts, fetch(t))
+    end
+    finish(ts.dts)
+    return ts.dts
+end
+
+function add_test_ref(testset::ConcurrentTestSet, test_ref)
+    push!(testset.tests, test_ref)
+end
+
+function add_test_ref(testset::AbstractTestSet, test_ref)
+end
+
+mutable struct QuietTestSet <: AbstractTestSet
+    dts::Test.DefaultTestSet
+
+    QuietTestSet(desc) = new(Test.DefaultTestSet(desc))
+end
+
+record(ts::QuietTestSet, child::AbstractTestSet) = record(ts.dts, child)
+record(ts::QuietTestSet, res::Test.Result) = record(ts.dts, res)
+
+function finish(ts::QuietTestSet)
+    if Test.get_testset_depth() > 0
+        # Attach this test set to the parent test set
+        parent_ts = Test.get_testset()
+        record(parent_ts, ts.dts)
+    end
+    return ts.dts
+end
+
 mutable struct BreakableTestSet <: Test.AbstractTestSet
     broken::Bool
     broken_found::Bool
+    quiet::Bool
     dts::Test.DefaultTestSet
 
-    BreakableTestSet(desc; broken = false) = new(broken, false, Test.DefaultTestSet(desc))
+    BreakableTestSet(desc; broken = false, quiet = false) = new(broken, false, quiet, Test.DefaultTestSet(desc))
 end
 
 record(ts::BreakableTestSet, child::AbstractTestSet) = record(ts.dts, child)
@@ -33,14 +88,18 @@ end
 function finish(ts::BreakableTestSet)
     if ts.broken && !ts.broken_found
         # If we expect broken tests and everything passes, drop the results and replace with an unbroken Error
-        println(" Unexpected Pass")
-        println(" Got correct result, please change to broken = false if no longer broken.")
 
         ts.dts.n_passed = 0
         empty!(ts.dts.results)
-        push!(ts.dts.results, Test.Error(:test_unbroken, "orig_expr", "Thing after orig_expr", "the other one", LineNumberNode(0)))
+
+        push!(ts.dts.results, Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0)))
     end
-    finish(ts.dts)
+    if Test.get_testset_depth() > 0
+        # Attach this test set to the parent test set
+        parent_ts = Test.get_testset()
+        record(parent_ts, ts.dts)
+    end
+
 end
 
 
@@ -501,53 +560,59 @@ function test_rel_steps(;
     debug::Bool = false,
     debug_trace::Bool = false,
 )
-    test_engine = get_or_create_test_engine(engine)
-    println("Using test engine: ", test_engine)
+    if isnothing(name)
+        name = "Unnamed test"
+    end
 
-    try
-        if isnothing(name)
-            name = "Unnamed test"
-        end
+    # Setup steps that run before the first testing Step
+    if !include_stdlib
+        insert!(steps, 1, Step(query="""def delete:rel:catalog:model = rel:catalog:model"""))
+    end
 
-        # Setup steps that run before the first testing Step
-        if !include_stdlib
-            insert!(steps, 1, Step(query="""def delete:rel:catalog:model = rel:catalog:model"""))
-        end
+    if debug
+        insert!(steps, 1, Step(query="""def insert:rel:config:debug = "basic" """))
+    end
 
-        if debug
-            insert!(steps, 1, Step(query="""def insert:rel:config:debug = "basic" """))
-        end
+    if debug_trace
+        insert!(steps, 1, Step(query="""def insert:rel:config:debug = "trace" """))
+    end
 
-        if debug_trace
-            insert!(steps, 1, Step(query="""def insert:rel:config:debug = "trace" """))
-        end
+    if abort_on_error
+        insert!(steps, 1, Step(query="""def insert:rel:config:abort_on_error = true """))
+    end
 
-        if abort_on_error
-            insert!(steps, 1, Step(query="""def insert:rel:config:abort_on_error = true """))
-        end
-
-        _test_rel_steps(;
+    parent = Test.get_testset()
+    if parent isa ConcurrentTestSet
+        ref = Threads.@spawn _test_rel_steps(;
             steps = steps,
             name = name,
-            engine = test_engine,
+            engine = engine,
             location = location,
             debug = debug,
         )
-
-    finally
-        release_test_engine(test_engine)
+        add_test_ref(parent, ref)
+    else
+        _test_rel_steps(;
+        steps = steps,
+        name = name,
+        engine = engine,
+        location = location,
+        debug = debug,
+    )
     end
-    return nothing
 end
 
 # This internal function executes `test_rel`
 function _test_rel_steps(;
     steps::Vector{Step},
     name::String,
-    engine::String,
+    engine::Union{String,Nothing},
     location::Union{LineNumberNode,Nothing},
     debug::Bool = false,
 )
+    test_engine = get_or_create_test_engine(engine)
+    println(name, " using test engine: ", test_engine)
+
     schema = create_test_database()
 
     if !isnothing(location)
@@ -558,14 +623,14 @@ function _test_rel_steps(;
     end
 
     try
-        @testset verbose = true "$(string(name))" begin
+        @testset QuietTestSet "$(string(name))" begin
             elapsed_time = @timed begin
                 for (index, step) in enumerate(steps)
                     _test_rel_step(
                         index,
                         step,
                         schema,
-                        engine,
+                        test_engine,
                         name,
                         length(steps),
                         debug,
@@ -574,12 +639,10 @@ function _test_rel_steps(;
             end
             println("Timing: ", elapsed_time)
         end
-    catch e
     finally
         delete_test_database(schema)
+        release_test_engine(test_engine)
     end
-
-    return nothing
 end
 
 
