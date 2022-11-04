@@ -29,14 +29,14 @@ end
 # Record any results directly stored and fetch results from any listed concurrent tests
 # If this is the parent then show results
 function finish(ts::ConcurrentTestSet)
+    for t in ts.tests
+        record(ts.dts, fetch(t))
+    end
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
         parent_ts = Test.get_testset()
         record(parent_ts, ts.dts)
         return ts
-    end
-    for t in ts.tests
-        record(ts.dts, fetch(t))
     end
     finish(ts.dts)
     return ts.dts
