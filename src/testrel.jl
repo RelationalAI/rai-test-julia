@@ -10,12 +10,76 @@ using UUIDs
 import Test: Test, record, finish
 using Test: AbstractTestSet
 
+# Wraps a DefaultTestSet and adds a list of Tasks for concurrent tests
+mutable struct ConcurrentTestSet <: Test.AbstractTestSet
+    dts::Test.DefaultTestSet
+    tests::Vector{Task}
+
+    ConcurrentTestSet(desc) = new(Test.DefaultTestSet(desc), [])
+end
+
+function record(ts::ConcurrentTestSet, child::AbstractTestSet)
+    record(ts.dts, child)
+end
+
+function record(ts::ConcurrentTestSet, res::Test.Result)
+    record(ts.dts, res)
+end
+
+# Record any results directly stored and fetch results from any listed concurrent tests
+# If this is the parent then show results
+function finish(ts::ConcurrentTestSet)
+    for t in ts.tests
+        record(ts.dts, fetch(t))
+    end
+    if Test.get_testset_depth() > 0
+        # Attach this test set to the parent test set
+        parent_ts = Test.get_testset()
+        record(parent_ts, ts.dts)
+        return ts
+    end
+    finish(ts.dts)
+    return ts.dts
+end
+
+function add_test_ref(testset::ConcurrentTestSet, test_ref)
+    push!(testset.tests, test_ref)
+end
+
+# Handle attempted use outside of a ConcurrentTestSEt
+function add_test_ref(testset::AbstractTestSet, test_ref)
+    fetch(test_ref)
+end
+
+# Wrap a DefaultTestSet. Results are recorded, but not printed.
+# This is helpful when used with a separate environment
+mutable struct QuietTestSet <: AbstractTestSet
+    dts::Test.DefaultTestSet
+
+    QuietTestSet(desc) = new(Test.DefaultTestSet(desc))
+end
+
+record(ts::QuietTestSet, child::AbstractTestSet) = record(ts.dts, child)
+record(ts::QuietTestSet, res::Test.Result) = record(ts.dts, res)
+
+function finish(ts::QuietTestSet)
+    if Test.get_testset_depth() > 0
+        # Attach this test set to the parent test set
+        parent_ts = Test.get_testset()
+        record(parent_ts, ts.dts)
+    end
+    return ts.dts
+end
+
+# TestSet that can be marked as broken.
+# This allows the broken status to be applied to a group of tests.
 mutable struct BreakableTestSet <: Test.AbstractTestSet
     broken::Bool
     broken_found::Bool
+    quiet::Bool
     dts::Test.DefaultTestSet
 
-    BreakableTestSet(desc; broken = false) = new(broken, false, Test.DefaultTestSet(desc))
+    BreakableTestSet(desc; broken = false, quiet = false) = new(broken, false, quiet, Test.DefaultTestSet(desc))
 end
 
 record(ts::BreakableTestSet, child::AbstractTestSet) = record(ts.dts, child)
@@ -33,14 +97,18 @@ end
 function finish(ts::BreakableTestSet)
     if ts.broken && !ts.broken_found
         # If we expect broken tests and everything passes, drop the results and replace with an unbroken Error
-        println(" Unexpected Pass")
-        println(" Got correct result, please change to broken = false if no longer broken.")
 
         ts.dts.n_passed = 0
         empty!(ts.dts.results)
-        push!(ts.dts.results, Test.Error(:test_unbroken, "orig_expr", "Thing after orig_expr", "the other one", LineNumberNode(0)))
+
+        push!(ts.dts.results, Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0)))
     end
-    finish(ts.dts)
+    if Test.get_testset_depth() > 0
+        # Attach this test set to the parent test set
+        parent_ts = Test.get_testset()
+        record(parent_ts, ts.dts)
+    end
+
 end
 
 
@@ -147,6 +215,9 @@ function generate_output_string_from_expected(expected::AbstractDict)
     end
     return program
 end
+
+# Generate a string representing the Rel type for the input
+# Expected inputs are a vector of types, a tuple of types, or a type
 
 function type_string(input::Vector)
     if isempty(input)
@@ -393,10 +464,32 @@ constraints have any compilation errors, then the test will still fail (unless
 
 - `expected_problems::Vector{String}`: expected problems. The semantics of
   `expected_problems` is that the program must contain a super set of the specified
-  error codes. When `expected_problems` is `[]` instead of `nothing`, then this means that errors
-  are allowed.
+  error codes.
 
 - `engine::String`: The name of an existing compute engine
+
+- `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
+
+- `install::Dict{String, String}`: source files to install in the database.
+
+- `schema_inputs::AbstractDict`: input schema for the transaction
+
+- `inputs::AbstractDict`: input data to the transaction
+
+- `abort_on_error::Bool`: boolean that specifies whether to abort on any
+    triggered error.
+
+- `debug::Bool`: boolean that specifies debugging mode.
+
+- `debug_trace::Bool`: boolean that specifies printing out the debug_trace
+
+- `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it is
+  expected to abort, but it does not, then the test fails.
+
+- `broken::Bool`: if the test is not currently correct (wrt the `expected`
+  results), then `broken` can be used to mark the tests as broken and prevent the test from
+  failing.
+
 """
 function test_rel(;
     query::Union{String, Nothing} = nothing,
@@ -501,53 +594,59 @@ function test_rel_steps(;
     debug::Bool = false,
     debug_trace::Bool = false,
 )
-    test_engine = get_or_create_test_engine(engine)
-    println("Using test engine: ", test_engine)
+    if isnothing(name)
+        name = "Unnamed test"
+    end
 
-    try
-        if isnothing(name)
-            name = "Unnamed test"
-        end
+    # Setup steps that run before the first testing Step
+    if !include_stdlib
+        insert!(steps, 1, Step(query="""def delete:rel:catalog:model = rel:catalog:model"""))
+    end
 
-        # Setup steps that run before the first testing Step
-        if !include_stdlib
-            insert!(steps, 1, Step(query="""def delete:rel:catalog:model = rel:catalog:model"""))
-        end
+    if debug
+        insert!(steps, 1, Step(query="""def insert:rel:config:debug = "basic" """))
+    end
 
-        if debug
-            insert!(steps, 1, Step(query="""def insert:rel:config:debug = "basic" """))
-        end
+    if debug_trace
+        insert!(steps, 1, Step(query="""def insert:rel:config:debug = "trace" """))
+    end
 
-        if debug_trace
-            insert!(steps, 1, Step(query="""def insert:rel:config:debug = "trace" """))
-        end
+    if abort_on_error
+        insert!(steps, 1, Step(query="""def insert:rel:config:abort_on_error = true """))
+    end
 
-        if abort_on_error
-            insert!(steps, 1, Step(query="""def insert:rel:config:abort_on_error = true """))
-        end
-
-        _test_rel_steps(;
+    parent = Test.get_testset()
+    if parent isa ConcurrentTestSet
+        ref = Threads.@spawn _test_rel_steps(;
             steps = steps,
             name = name,
-            engine = test_engine,
+            engine = engine,
             location = location,
             debug = debug,
         )
-
-    finally
-        release_test_engine(test_engine)
+        add_test_ref(parent, ref)
+    else
+        _test_rel_steps(;
+        steps = steps,
+        name = name,
+        engine = engine,
+        location = location,
+        debug = debug,
+    )
     end
-    return nothing
 end
 
 # This internal function executes `test_rel`
 function _test_rel_steps(;
     steps::Vector{Step},
     name::String,
-    engine::String,
+    engine::Union{String,Nothing},
     location::Union{LineNumberNode,Nothing},
     debug::Bool = false,
 )
+    test_engine = get_or_create_test_engine(engine)
+    println(name, " using test engine: ", test_engine)
+
     schema = create_test_database()
 
     if !isnothing(location)
@@ -558,14 +657,14 @@ function _test_rel_steps(;
     end
 
     try
-        @testset verbose = true "$(string(name))" begin
+        @testset QuietTestSet "$(string(name))" begin
             elapsed_time = @timed begin
                 for (index, step) in enumerate(steps)
                     _test_rel_step(
                         index,
                         step,
                         schema,
-                        engine,
+                        test_engine,
                         name,
                         length(steps),
                         debug,
@@ -574,12 +673,10 @@ function _test_rel_steps(;
             end
             println("Timing: ", elapsed_time)
         end
-    catch e
     finally
         delete_test_database(schema)
+        release_test_engine(test_engine)
     end
-
-    return nothing
 end
 
 
