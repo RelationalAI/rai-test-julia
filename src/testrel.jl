@@ -10,6 +10,7 @@ using UUIDs
 import Test: Test, record, finish
 using Test: AbstractTestSet
 
+# Wraps a DefaultTestSet and adds a list of Tasks for concurrent tests
 mutable struct ConcurrentTestSet <: Test.AbstractTestSet
     dts::Test.DefaultTestSet
     tests::Vector{Task}
@@ -25,6 +26,8 @@ function record(ts::ConcurrentTestSet, res::Test.Result)
     record(ts.dts, res)
 end
 
+# Record any results directly stored and fetch results from any listed concurrent tests
+# If this is the parent then show results
 function finish(ts::ConcurrentTestSet)
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
@@ -43,9 +46,13 @@ function add_test_ref(testset::ConcurrentTestSet, test_ref)
     push!(testset.tests, test_ref)
 end
 
+# Handle attempted use outside of a ConcurrentTestSEt
 function add_test_ref(testset::AbstractTestSet, test_ref)
+    fetch(test_ref)
 end
 
+# Wrap a DefaultTestSet. Results are recorded, but not printed.
+# This is helpful when used with a separate environment
 mutable struct QuietTestSet <: AbstractTestSet
     dts::Test.DefaultTestSet
 
@@ -64,6 +71,8 @@ function finish(ts::QuietTestSet)
     return ts.dts
 end
 
+# TestSet that can be marked as broken.
+# This allows the broken status to be applied to a group of tests.
 mutable struct BreakableTestSet <: Test.AbstractTestSet
     broken::Bool
     broken_found::Bool
@@ -206,6 +215,9 @@ function generate_output_string_from_expected(expected::AbstractDict)
     end
     return program
 end
+
+# Generate a string representing the Rel type for the input
+# Expected inputs are a vector of types, a tuple of types, or a type
 
 function type_string(input::Vector)
     if isempty(input)
@@ -452,10 +464,32 @@ constraints have any compilation errors, then the test will still fail (unless
 
 - `expected_problems::Vector{String}`: expected problems. The semantics of
   `expected_problems` is that the program must contain a super set of the specified
-  error codes. When `expected_problems` is `[]` instead of `nothing`, then this means that errors
-  are allowed.
+  error codes.
 
 - `engine::String`: The name of an existing compute engine
+
+- `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
+
+- `install::Dict{String, String}`: source files to install in the database.
+
+- `schema_inputs::AbstractDict`: input schema for the transaction
+
+- `inputs::AbstractDict`: input data to the transaction
+
+- `abort_on_error::Bool`: boolean that specifies whether to abort on any
+    triggered error.
+
+- `debug::Bool`: boolean that specifies debugging mode.
+
+- `debug_trace::Bool`: boolean that specifies printing out the debug_trace
+
+- `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it is
+  expected to abort, but it does not, then the test fails.
+
+- `broken::Bool`: if the test is not currently correct (wrt the `expected`
+  results), then `broken` can be used to mark the tests as broken and prevent the test from
+  failing.
+
 """
 function test_rel(;
     query::Union{String, Nothing} = nothing,
