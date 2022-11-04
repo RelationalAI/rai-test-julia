@@ -150,9 +150,9 @@ end
 
 function provision_all_test_engines()
     @lock TEST_SERVER_LOCK begin
-        for engine in TEST_ENGINE_POOL.engines
+        Threads.@sync for engine in TEST_ENGINE_POOL.engines
             #TODO: This should be concurrent
-            get_or_create_test_engine(engine.first)
+            Threads.@async get_or_create_test_engine(engine.first)
         end
     end
 end
