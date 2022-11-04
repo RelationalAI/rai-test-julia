@@ -98,8 +98,27 @@ struct Problem
     line::Union{Int64, Nothing}
 end
 
-function Problem(code::String)
-    return Problem(code, nothing, nothing)
+Problem(problem::Problem) = problem
+
+function Problem(;code::String, severity::Union{String, Nothing} = nothing, line::Union{Int64, Nothing} = nothing)
+    return Problem(code, severity, line)
+end
+
+function Problem(problem::Tuple)
+    code = nothing
+    severity = nothing
+    line = nothing
+    for (k, v) in problem
+        if k === :code
+            code = string(v)
+        elseif k === string(:severity)
+            severity = v
+        elseif k === :line
+            line = v
+        end
+    end
+
+    return Problem(code = code, severity = severity, line = line)
 end
 
 """
@@ -126,7 +145,7 @@ struct Step
     inputs::AbstractDict
     expected::AbstractDict
     expected_output::AbstractDict
-    expected_problems::Vector{Problem}
+    expected_problems::Vector
     expect_abort::Bool
 end
 
@@ -138,7 +157,7 @@ function Step(;
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
     expected_output::AbstractDict = Dict(),
-    expected_problems::Vector{Problem} = Problem[],
+    expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
 )
     return Step(
@@ -247,7 +266,7 @@ function test_rel(;
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
     expected_output::AbstractDict = Dict(),
-    expected_problems::Vector{Problem} = Problem[],
+    expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
     broken::Bool = false,
 )
@@ -477,7 +496,9 @@ function _test_rel_step(
 
             # Check that expected problems were found
             for expected_problem in step.expected_problems
-                expected_problem_found = any(p->(p.code == expected_problem.code), problems)
+                ep = Problem(expected_problem)
+
+                expected_problem_found = any(p->(p.code == ep.code), problems)
                 @test expected_problem_found
             end
 
@@ -485,6 +506,7 @@ function _test_rel_step(
             if !step.expect_abort
                 is_error = false
                 for problem in problems
+                    any(p->(p.code == problem.code), step.expected_problems) && continue
                     is_error |= problem.severity == "error"
                     println("Unexpected problem type: ", problem.code)
                 end
