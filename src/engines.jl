@@ -97,7 +97,6 @@ function release_test_engine(name::Union{String, Nothing})
         end
         TEST_ENGINE_POOL.engines[name] = 0
     end
-    println("Released test engine: ", name)
 end
 
 function destroy_test_engines()
