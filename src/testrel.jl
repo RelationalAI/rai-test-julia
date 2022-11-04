@@ -367,6 +367,7 @@ function test_rel_steps(;
             engine = engine,
             location = location,
             debug = debug,
+            quiet = true
         )
         add_test_ref(parent, ref)
     else
@@ -387,6 +388,7 @@ function _test_rel_steps(;
     engine::Union{String,Nothing},
     location::Union{LineNumberNode,Nothing},
     debug::Bool = false,
+    quiet::Bool = false
 )
     test_engine = get_or_create_test_engine(engine)
     println(name, " using test engine: ", test_engine)
@@ -401,7 +403,8 @@ function _test_rel_steps(;
     end
 
     try
-        @testset QuietTestSet "$(string(name))" begin
+        type = quiet ? QuietTestSet : Test.DefaultTestSet
+        @testset type "$(string(name))" begin
             elapsed_time = @timed begin
                 for (index, step) in enumerate(steps)
                     _test_rel_step(
