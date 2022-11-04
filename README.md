@@ -47,6 +47,7 @@ Run multiple tests concurrently.
 
 ```
 using RAITest
+using Test
 
 resize_engine_pool(3)
 
