@@ -7,8 +7,6 @@ using Test
 using UUIDs
 
 
-
-
 # Generates a name for the given base name that makes it unique between multiple
 # processing units
 function gen_safe_name(basename)
@@ -31,7 +29,6 @@ end
 function delete_test_database(name::String)
    return delete_database(get_context(), name)
 end
-
 
 """
     test_expected(expected::AbstractDict, results})
