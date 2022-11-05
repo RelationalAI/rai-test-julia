@@ -434,7 +434,7 @@ function _test_rel_steps(;
                     )
                 end
             end
-            println("Timing: ", elapsed_time)
+            println(name, ": ", elapsed_time)
         end
     finally
         delete_test_database(schema)
