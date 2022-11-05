@@ -2,6 +2,7 @@ module RAITest
 
 export test_rel, @test_rel
 export Step
+export ConcurrentTestSet
 export destroy_test_engines, resize_test_engine_pool, provision_all_test_engines, add_test_engine!
 
 include("testsets.jl")
