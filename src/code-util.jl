@@ -120,7 +120,8 @@ function to_vector_of_tuples(input::Dict)
 
     result = []
     for v in input
-        value_array = v.first isa Tuple ? collect(v.first) : [v.first]
+        value_array = []
+        append!(value_array, v.first isa Tuple ? collect(v.first) : [v.first])
         # Value is always singular
         push!(value_array, v.second)
 
