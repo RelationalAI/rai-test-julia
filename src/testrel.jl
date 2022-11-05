@@ -99,6 +99,7 @@ struct Problem
 end
 
 Problem(problem::Problem) = problem
+Problem(problem::Pair) = Problem((problem,))
 
 function Problem(;code::String, severity::Union{String, Nothing} = nothing, line::Union{Int64, Nothing} = nothing)
     return Problem(code, severity, line)
