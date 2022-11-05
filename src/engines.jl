@@ -77,7 +77,7 @@ function get_or_create_test_engine(name::Union{String, Nothing})
     response = get_engine(get_context(), engine_name)
 
     # The engine exists - now we wait until it is not in the provisioning stage
-    while (response.state == "PROVISIONING" || response.state == "REQUESTED")
+    while (response.state != "PROVISIONED")
         println("Waiting for test engine to be provisioned...")
         sleep(5)
         response = get_engine(get_context(), engine_name)
