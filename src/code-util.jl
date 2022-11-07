@@ -153,6 +153,24 @@ function Base.isequal(c::Char, u::UInt32)
     return isequal(UInt32(c), u)
 end
 
+# The intermediate Arrow format encodes Int128/UInt128 as a tuple of Int64s
+function Base.isequal(i::Int128, t::Tuple{UInt64, UInt64})
+    sign = Int128(t[2] >> 63)
+
+    a = Int128(t[2] - (sign << 63))
+    a <<= 64
+    a += t[1]
+    a |= (sign << 127)
+    return isequal(i, a)
+
+end
+
+function Base.isequal(expected::UInt128, actual::Tuple{UInt64, UInt64})
+    a = UInt128(actual[1]) + UInt128(actual[2]) << 64
+    return isequal(expected, a)
+
+end
+
 function extract_problems(results)
     problems = Problem[]
 
