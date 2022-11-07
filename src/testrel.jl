@@ -505,16 +505,32 @@ function _test_rel_step(
                 @test expected_problem_found
             end
 
-            # If there are no expected problems then we expect the transaction to complete
+            # PASS:
+            #    No abort is expected, no problems are expected, and no problems found
+            #    are errors
+            #    No abort is expected, errors are expected and found (regardless of
+            #    whether more are found
+            #    Abort is expected, and happens
             if !step.expect_abort
-                is_error = false
+                expected_errors_found = isempty(eps)
+                unexpected_errors_found = false
+                expected_problems_found = isempty(eps)
                 for problem in problems
-                    any(p->(p.code == problem.code), eps) && continue
-                    is_error |= problem.severity == "error"
-                    println("Unexpected problem type: ", problem.code)
+                    if any(p->(p.code == problem.code), eps)
+                        # If it's an error, record that one was found
+                        expected_errors_found |= problem.severity == "error"
+                        expected_problems_found
+                    else
+                        unexpected_errors_found |= problem.severity == "error"
+                        println("Unexpected problem type: ", problem.code)
+                    end
                 end
 
-                @test state == "COMPLETED" && is_error == !isempty(step.expected_problems)
+                if expected_errors_found
+                    unexpected_errors_found = false
+                end
+
+                @test state == "COMPLETED" && expected_errors_found && !unexpected_errors_found
 
                 if !isempty(step.expected)
                     @test test_expected(step.expected, results_dict, debug)
