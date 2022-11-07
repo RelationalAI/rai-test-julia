@@ -6,16 +6,13 @@ using Base: @lock
 
 const TEST_SERVER_LOCK = ReentrantLock()
 
-mutable struct NextId; id::Int; end
-struct TestEnginePool
+mutable struct TestEnginePool
     engines::Dict{String, Int64}
     # This is used to enable unique, simple, naming of engines
     # Switching to randomly generated UUIDs would be needed if tests are run independently
-    next_id::NextId
+    next_id::Int64
+    generator::Function
 end
-
-TEST_ENGINE_POOL = TestEnginePool(Dict{String, Int64}(), NextId(0))
-
 
 function get_free_test_engine_name()::String
     delay = 1
@@ -78,7 +75,7 @@ function get_or_create_test_engine(name::Union{String, Nothing})
 
     # The engine exists - now we wait until it is not in the provisioning stage
     while (response.state != "PROVISIONED")
-        println("Waiting for test engine to be provisioned...")
+        println("Waiting for test engine " * engine_name * " to be provisioned...")
         sleep(5)
         response = get_engine(get_context(), engine_name)
     end
@@ -99,6 +96,9 @@ function release_test_engine(name::Union{String, Nothing})
     end
 end
 
+"""
+Call delete for any provisioned engines and resize the engine pool to zero.
+"""
 function destroy_test_engines()
     resize_test_engine_pool(0)
     println("Destroyed all test engine: ")
@@ -131,9 +131,11 @@ function list_test_engines()
     end
 end
 
+"""
+Add an engine to the pool of test engines
+"""
 function add_test_engine!(name::String)
     @lock TEST_SERVER_LOCK begin
-        # TODO maybe check it does not exist yet in the pool?
         engines = TEST_ENGINE_POOL.engines
         engines[name] = 0
     end
@@ -141,12 +143,15 @@ function add_test_engine!(name::String)
     return nothing
 end
 
-function get_next_engine_name()
-    id = TEST_ENGINE_POOL.next_id.id
-    TEST_ENGINE_POOL.next_id.id += 1
+function get_next_engine_name(id::Int64)
     return "julia-sdk-test-$(id)"
 end
 
+"""
+Engines are provisioned on first use by default. Calling this method will provision
+all engines in the current pool.
+
+"""
 function provision_all_test_engines()
     @lock TEST_SERVER_LOCK begin
         Threads.@sync for engine in TEST_ENGINE_POOL.engines
@@ -156,19 +161,36 @@ function provision_all_test_engines()
     end
 end
 
-function resize_test_engine_pool(size::Int64)
+"""
+    resize_test_engine_pool(5)
+    resize_test_engine_pool(5, get_next_engine_name)
+
+Resize the engine pool using the given name generator
+
+If an name generator is given it will be passed a unique id each time it is called.
+If the pool size is smaller than the current size, engines will be de-provisioned and
+removed from the list until the desired size is reached.
+"""
+function resize_test_engine_pool(size::Int64, generator::Function = get_next_engine_name)
     if size < 0
         size = 0
     end
 
+    TEST_ENGINE_POOL.generator = generator
+
     @lock TEST_SERVER_LOCK begin
         engines = TEST_ENGINE_POOL.engines
         while (length(engines) < size)
-            engines[get_next_engine_name()] = 0
+            new_name = TEST_ENGINE_POOL.generator(TEST_ENGINE_POOL.next_id)
+            if haskey(engines, new_name)
+                throw(ArgumentError("Engine name already exists"))
+            end
+            engines[new_name] = 0
+            TEST_ENGINE_POOL.next_id += 1
         end
-        for engine in engines
+        Threads.@sync for engine in engines
             if length(engines) > size
-                try
+                @async try
                     delete_engine(get_context(), engine.first)
                 catch
                     # The engine may not exist if it hasn't been used yet
@@ -178,3 +200,5 @@ function resize_test_engine_pool(size::Int64)
         end
     end
 end
+
+TEST_ENGINE_POOL = TestEnginePool(Dict{String, Int64}(), 0, get_next_engine_name)
