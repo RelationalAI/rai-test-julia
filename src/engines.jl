@@ -5,6 +5,7 @@ using Base: @lock
 # Okay, so there could be more, but that would be a different test
 
 const TEST_SERVER_LOCK = ReentrantLock()
+const TEST_SERVER_ACQUISITION_LOCK = ReentrantLock()
 
 mutable struct TestEnginePool
     engines::Dict{String, Int64}
@@ -16,17 +17,17 @@ end
 
 function get_free_test_engine_name()::String
     delay = 1
-    while true
+    # One lock guards name acquisition, forming a queue
+    # The second lock guards modification of the engine pool
+    @lock TEST_SERVER_ACQUISITION_LOCK while true
         if (length(TEST_ENGINE_POOL.engines) < 1)
             error("No servers available!")
         end
 
-            @lock TEST_SERVER_LOCK begin
-            for e in TEST_ENGINE_POOL.engines
-                if e.second == 0
-                    TEST_ENGINE_POOL.engines[e.first] = Base.Threads.threadid()
-                    return e.first
-                end
+        @lock TEST_SERVER_LOCK for e in TEST_ENGINE_POOL.engines
+            if e.second == 0
+                TEST_ENGINE_POOL.engines[e.first] = Base.Threads.threadid()
+                return e.first
             end
         end
         # Very naive wait protocol
@@ -50,7 +51,8 @@ function replace_engine(name::String)
     end
 end
 
-function get_or_create_test_engine(name::Union{String, Nothing})
+function get_or_create_test_engine(name::Union{String, Nothing}, max_wait_time_s = 240)
+    time_waited = 1
     engine_name = name
     if isnothing(name)
         engine_name = get_free_test_engine_name()
@@ -75,8 +77,12 @@ function get_or_create_test_engine(name::Union{String, Nothing})
 
     # The engine exists - now we wait until it is not in the provisioning stage
     while (response.state != "PROVISIONED")
+        if (time_waited > max_wait_time_s)
+            error("Engine was not provisioned within $max_wait_time_s seconds.")
+        end
         println("Waiting for test engine " * engine_name * " to be provisioned...")
-        sleep(5)
+        sleep(1)
+        time_waited += 1
         response = get_engine(get_context(), engine_name)
     end
 

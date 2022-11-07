@@ -495,9 +495,11 @@ function _test_rel_step(
             results_dict = result_table_to_dict(results)
             problems = extract_problems(results_dict)
 
+            eps = Problem[]
             # Check that expected problems were found
             for expected_problem in step.expected_problems
                 ep = Problem(expected_problem)
+                push!(eps, ep)
 
                 expected_problem_found = any(p->(p.code == ep.code), problems)
                 @test expected_problem_found
@@ -507,12 +509,12 @@ function _test_rel_step(
             if !step.expect_abort
                 is_error = false
                 for problem in problems
-                    any(p->(p.code == problem.code), step.expected_problems) && continue
+                    any(p->(p.code == problem.code), eps) && continue
                     is_error |= problem.severity == "error"
                     println("Unexpected problem type: ", problem.code)
                 end
 
-                @test state == "COMPLETED" && is_error == false
+                @test state == "COMPLETED" && is_error == !isempty(step.expected_problems)
 
                 if !isempty(step.expected)
                     @test test_expected(step.expected, results_dict, debug)
