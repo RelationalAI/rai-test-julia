@@ -360,20 +360,27 @@ function test_rel_steps(;
     end
 
     # Setup steps that run before the first testing Step
+    config_query = ""
     if !include_stdlib
-        insert!(steps, 1, Step(query="""def delete:rel:catalog:model = rel:catalog:model"""))
+        config_query *= """def delete:rel:catalog:model = rel:catalog:model\n"""
     end
 
-    if debug
-        insert!(steps, 1, Step(query="""def insert:rel:config:debug = "basic" """))
+    if debug && !debug_trace
+        config_query *= """def insert:rel:config:debug = "basic"\n"""
     end
 
     if debug_trace
-        insert!(steps, 1, Step(query="""def insert:rel:config:debug = "trace" """))
+        # Also set debug for its use in tracing test_rel execution
+        debug = true
+        config_query *= """def insert:rel:config:debug = "trace"\n"""
     end
 
     if abort_on_error
-        insert!(steps, 1, Step(query="""def insert:rel:config:abort_on_error = true """))
+        config_query *= """def insert:rel:config:abort_on_error = true\n"""
+    end
+
+    if config_query != ""
+        insert!(steps, 1, Step(query=config_query))
     end
 
     parent = Test.get_testset()
