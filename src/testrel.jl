@@ -506,37 +506,57 @@ function _test_rel_step(
             end
 
             # PASS:
-            #    No abort is expected, no problems are expected, and no problems found
-            #    are errors
-            #    No abort is expected, errors are expected and found (regardless of
-            #    whether more are found
-            #    Abort is expected, and happens
-            if !step.expect_abort
-                expected_errors_found = isempty(eps)
+            #   If an abort is expected it is encountered
+            #   If no abort is expected it is not encountered
+            #   If results are expected, they are found (other results are ignored)
+            #   If problems are expected, they are found (other problems are ignored)
+            #   If errors are expected, they are found (more errors are okay)
+            #   If no errors are expected, no errors are found
+
+            expected_errors_found = false
+            unexpected_errors_found = false
+
+            # Check for any expected problems
+            expected_problems_found = true
+            for ep in eps
+                if !any(p->(p.code == ep.code), problems)
+                    expected_problems_found = false
+                end
+            end
+
+            # Check if there were any unexpected errors/exceptions
+            for problem in problems
+                if any(p->(p.code == problem.code), eps)
+                    # If it's an error, record that one was found
+                    expected_errors_found |= problem.severity == "error"
+                    expected_errors_found |= problem.severity == "exception"
+                    debug && @info("Expected problem", problem)
+                else
+                    unexpected_errors_found |= problem.severity == "error"
+                    unexpected_errors_found |= problem.severity == "exception"
+                    println("Unexpected problem type: ", problem.code)
+                    debug && @info("Unexpected problem", problem)
+                end
+            end
+
+            # Unexpected errors are accepted if expected errors were found
+            if expected_errors_found
                 unexpected_errors_found = false
-                expected_problems_found = isempty(eps)
-                for problem in problems
-                    if any(p->(p.code == problem.code), eps)
-                        # If it's an error, record that one was found
-                        expected_errors_found |= problem.severity == "error"
-                        expected_problems_found
-                    else
-                        unexpected_errors_found |= problem.severity == "error"
-                        println("Unexpected problem type: ", problem.code)
-                    end
-                end
+            end
 
-                if expected_errors_found
-                    unexpected_errors_found = false
-                end
+            # If no errors are expected, it's okay to not find them
+            expected_errors_found |= isempty(eps)
 
-                @test state == "COMPLETED" && expected_errors_found && !unexpected_errors_found
+            if !isempty(step.expected)
+                @test test_expected(step.expected, results_dict, debug)
+            end
 
-                if !isempty(step.expected)
-                    @test test_expected(step.expected, results_dict, debug)
-                end
+            if !step.expect_abort
+                @test state == "COMPLETED" && expected_problems_found && !unexpected_errors_found
+
             else
-                @test state == "ABORTED"
+                @test state == "ABORTED" && expected_problems_found
+
             end
         catch e
             Base.display_error(stderr, current_exceptions())

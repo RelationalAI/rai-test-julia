@@ -188,11 +188,10 @@ function extract_problems(results)
     end
 
     problem_severities = Dict()
-    if haskey(results, "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64")
+    if haskey(results, "/:rel/:catalog/:diagnostic/:severity/Int64/String")
         # [index, severity]
         problem_severities = results["/:rel/:catalog/:diagnostic/:severity/Int64/String"]
     end
-
     if length(problem_codes) > 0
         for i = 1:1:length(problem_codes[1])
             # Not all problems have a line number
@@ -201,7 +200,7 @@ function extract_problems(results)
                 problem_line = problem_lines[3][i]
             end
             problem_severity = nothing
-            if haskey(results, "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64")
+            if haskey(results, "/:rel/:catalog/:diagnostic/:severity/Int64/String")
                 problem_severity = problem_severities[2][i]
             end
             push!(problems, Problem(problem_codes[2][i], problem_severity, problem_line))
