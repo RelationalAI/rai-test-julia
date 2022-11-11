@@ -227,8 +227,6 @@ constraints have any compilation errors, then the test will still fail (unless
   `expected_problems` is that the program must contain a super set of the specified
   error codes.
 
-- `engine::String`: The name of an existing compute engine
-
 - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
 
 - `install::Dict{String, String}`: source files to install in the database.
@@ -256,7 +254,6 @@ function test_rel(;
     query::Union{String, Nothing} = nothing,
     steps::Vector{Step} = Step[],
     name::Union{String,Nothing} = nothing,
-    engine::Union{String,Nothing} = nothing,
     location::Union{LineNumberNode,Nothing} = nothing,
     include_stdlib::Bool = true,
     install::Dict{String, String} = Dict{String, String}(),
@@ -300,7 +297,6 @@ function test_rel(;
     test_rel_steps(;
         steps = steps,
         name = name,
-        engine = engine,
         location = location,
         include_stdlib = include_stdlib,
         abort_on_error = abort_on_error,
@@ -333,8 +329,6 @@ constraints have any compilation errors, then the test will still fail (unless
 
 - `location::LineNumberNode`: Sourcecode location
 
-- `engine::String`: The name of an existing compute engine
-
 - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
 
 - `abort_on_error::Bool`: boolean that specifies whether to abort on any
@@ -348,17 +342,12 @@ constraints have any compilation errors, then the test will still fail (unless
 function test_rel_steps(;
     steps::Vector{Step},
     name::Union{String,Nothing} = nothing,
-    engine::Union{String,Nothing} = nothing,
     location::Union{LineNumberNode,Nothing} = nothing,
     include_stdlib::Bool = true,
     abort_on_error::Bool = false,
     debug::Bool = false,
     debug_trace::Bool = false,
 )
-    if isnothing(name)
-        name = "Unnamed test"
-    end
-
     # Setup steps that run before the first testing Step
     config_query = ""
     if !include_stdlib
@@ -388,7 +377,6 @@ function test_rel_steps(;
         ref = Threads.@spawn _test_rel_steps(;
             steps = steps,
             name = name,
-            engine = engine,
             location = location,
             debug = debug,
             quiet = true
@@ -398,7 +386,6 @@ function test_rel_steps(;
         _test_rel_steps(;
         steps = steps,
         name = name,
-        engine = engine,
         location = location,
         debug = debug,
     )
@@ -408,23 +395,27 @@ end
 # This internal function executes `test_rel`
 function _test_rel_steps(;
     steps::Vector{Step},
-    name::String,
-    engine::Union{String,Nothing},
+    name::Union{String,Nothing},
     location::Union{LineNumberNode,Nothing},
     debug::Bool = false,
     quiet::Bool = false
 )
-    test_engine = get_or_create_test_engine(engine)
-    println(name, " using test engine: ", test_engine)
-
-    schema = create_test_database()
-
+    if isnothing(name)
+        name = ""
+    else
+        name = name * " at "
+    end
     if !isnothing(location)
         path = joinpath(splitpath(string(location.file))[max(1,end-2):end])
         resolved_location = string(path, ":", location.line)
 
-        name = name * " at " * resolved_location
+        name *= resolved_location
     end
+
+    #TODO: use the engine name if provided - or remove the option
+    test_engine = get_test_engine()
+    println(name, " using test engine: ", test_engine)
+    schema = create_test_database()
 
     try
         type = quiet ? QuietTestSet : Test.DefaultTestSet
@@ -442,11 +433,17 @@ function _test_rel_steps(;
                     )
                 end
             end
-            println(name, ": ", elapsed_time)
+            println(name, ": time", elapsed_time)
         end
     finally
-        delete_test_database(schema)
+        # If database deletion fails
+        try
+            delete_test_database(schema)
+        catch
+            println("Could not delete test database: ", schema)
+        end
         release_test_engine(test_engine)
+
     end
 end
 
@@ -541,7 +538,7 @@ function _test_rel_step(
                 else
                     unexpected_errors_found |= problem.severity == "error"
                     unexpected_errors_found |= problem.severity == "exception"
-                    println("Unexpected problem type: ", problem.code)
+                    println(name, " - Unexpected problem type: ", problem.code)
                     debug && @info("Unexpected problem", problem)
                 end
             end

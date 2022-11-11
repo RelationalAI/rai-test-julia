@@ -7,6 +7,13 @@ using Base: @lock
 const TEST_SERVER_LOCK = ReentrantLock()
 const TEST_SERVER_ACQUISITION_LOCK = ReentrantLock()
 
+mutable struct TestEngineProvision
+    # Returns the name of a provisioned, currently valid, engine
+    provider::Function
+    # Sends a notification that the engine represented by a string name is no longer in use
+    releaser::Function
+end
+
 mutable struct TestEnginePool
     engines::Dict{String, Int64}
     # This is used to enable unique, simple, naming of engines
@@ -37,8 +44,9 @@ end
 
 function replace_engine(name::String)
     @lock TEST_SERVER_LOCK begin
-        remove!(TEST_ENGINE_POOL.engines, name)
+        delete!(TEST_ENGINE_POOL.engines, name)
     end
+    # If the engine could not be deleted, notify and continue
     try
         delete_engine(get_context(), name)
     catch
@@ -51,8 +59,31 @@ function replace_engine(name::String)
     end
 end
 
-function get_or_create_test_engine(name::Union{String, Nothing}, max_wait_time_s = 240)
-    time_waited = 1
+function _wait_till_provisioned(engine_name,  max_wait_time_s = 240)
+    start_time = time()
+    # This should be a rare event, so a coarse-grained period is acceptable
+    # Current provisioning time is ~60s
+    time_delta_s = 1
+
+    response = get_engine(get_context(), engine_name)
+
+    # The engine exists - now we wait until it is not in the provisioning stage
+    while (response.state != "PROVISIONED")
+        if (time() - start_time) > max_wait_time_s
+            error("Engine was not provisioned within $max_wait_time_s seconds.")
+        end
+        if response.state == "PROVISION_FAILED"
+            error("Provision failed")
+        end
+
+        sleep(time_delta_s)
+        response = get_engine(get_context(), engine_name)
+    end
+
+    return response.name
+end
+
+function get_or_create_test_engine(name::Union{String, Nothing} = nothing, max_wait_time_s = 120)
     engine_name = name
     if isnothing(name)
         engine_name = get_free_test_engine_name()
@@ -72,28 +103,16 @@ function get_or_create_test_engine(name::Union{String, Nothing}, max_wait_time_s
     # The engine does not exist yet, so create it
     create_engine(get_context(), engine_name, size = size)
 
-    # Note that the response format is different from create_engine
-    response = get_engine(get_context(), engine_name)
-
-    # The engine exists - now we wait until it is not in the provisioning stage
-    while (response.state != "PROVISIONED")
-        if (time_waited > max_wait_time_s)
-            error("Engine was not provisioned within $max_wait_time_s seconds.")
-        end
-        println("Waiting for test engine " * engine_name * " to be provisioned...")
-        sleep(1)
-        time_waited += 1
-        response = get_engine(get_context(), engine_name)
+    try
+        return _wait_till_provisioned(engine_name, max_wait_time_s)
+    catch
+        #TODO: Provisioning failed - try again, or give up? For now, give up
+        delete!(TEST_ENGINE_POOL.engines, engine_name)
+        rethrow()
     end
-
-    return response.name
 end
 
-function release_test_engine(name::Union{String, Nothing})
-    if isnothing(name)
-        return
-    end
-
+function release_pooled_test_engine(name::String)
     @lock TEST_SERVER_LOCK begin
         if !haskey(TEST_ENGINE_POOL.engines, name)
             return
@@ -207,4 +226,26 @@ function resize_test_engine_pool(size::Int64, generator::Function = get_next_eng
     end
 end
 
+# Get test engine. If a name is provided, the corresponding engine will be provided.
+function get_test_engine(name::Union{String, Nothing} = nothing)::String
+    if isnothing(name)
+        return TEST_ENGINE_PROVISION.provider()
+    end
+
+    return get_or_create_test_engine(name)
+end
+
+# Release test engine. Notifies the provider that this engine is no longer in use.
+release_test_engine(name::String) = TEST_ENGINE_PROVISION.releaser(name)
+
+function set_engine_name_provider(provider::Function)
+    TEST_ENGINE_PROVISION.provider = provider
+end
+
+function set_engine_name_releaser(releaser::Function)
+    TEST_ENGINE_PROVISION.releaser = releaser
+end
+
 TEST_ENGINE_POOL = TestEnginePool(Dict{String, Int64}(), 0, get_next_engine_name)
+
+TEST_ENGINE_PROVISION = TestEngineProvision(get_or_create_test_engine, release_pooled_test_engine)
