@@ -63,3 +63,21 @@ end
 
 destroy_test_engines()
 ```
+
+Run multiple tests concurrently with a custom engine provider.
+
+```
+using RAITest
+using Test
+
+set_engine_name_provider(()->"my_custom_engine_name")
+set_engine_name_releaser((name::String)->return)
+
+@testset "My tests" begin
+    for i in 1:10
+        query = "def output = $i ic { output = $i }"
+        @test_rel(query = query, debug = true)
+    end
+end
+
+```

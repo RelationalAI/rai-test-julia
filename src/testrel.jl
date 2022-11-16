@@ -358,25 +358,28 @@ function test_rel_steps(;
     debug_trace::Bool = false,
     clone_db::Union{String, Nothing} = nothing
 )
-    if isnothing(name)
-        name = "Unnamed test"
-    end
-
     # Setup steps that run before the first testing Step
+    config_query = ""
     if !include_stdlib
-        insert!(steps, 1, Step(query="""def delete:rel:catalog:model = rel:catalog:model"""))
+        config_query *= """def delete:rel:catalog:model = rel:catalog:model\n"""
     end
 
-    if debug
-        insert!(steps, 1, Step(query="""def insert:rel:config:debug = "basic" """))
+    if debug && !debug_trace
+        config_query *= """def insert:rel:config:debug = "basic"\n"""
     end
 
     if debug_trace
-        insert!(steps, 1, Step(query="""def insert:rel:config:debug = "trace" """))
+        # Also set debug for its use in tracing test_rel execution
+        debug = true
+        config_query *= """def insert:rel:config:debug = "trace"\n"""
     end
 
     if abort_on_error
-        insert!(steps, 1, Step(query="""def insert:rel:config:abort_on_error = true """))
+        config_query *= """def insert:rel:config:abort_on_error = true\n"""
+    end
+
+    if config_query != ""
+        insert!(steps, 1, Step(query=config_query))
     end
 
     parent = Test.get_testset()
@@ -406,24 +409,29 @@ end
 # This internal function executes `test_rel`
 function _test_rel_steps(;
     steps::Vector{Step},
-    name::String,
+    name::Union{String,Nothing},
     engine::Union{String,Nothing},
     location::Union{LineNumberNode,Nothing},
     debug::Bool = false,
     quiet::Bool = false,
     clone_db::Union{String, Nothing} = nothing
 )
-    test_engine = get_or_create_test_engine(engine)
-    println(name, " using test engine: ", test_engine)
-
-    schema = create_test_database(clone_db)
-
+    if isnothing(name)
+        name = ""
+    else
+        name = name * " at "
+    end
     if !isnothing(location)
         path = joinpath(splitpath(string(location.file))[max(1,end-2):end])
         resolved_location = string(path, ":", location.line)
 
-        name = name * " at " * resolved_location
+        name *= resolved_location
     end
+
+    #TODO: use the engine name if provided - or remove the option
+    test_engine = get_or_create_test_engine(engine)
+    println(name, " using test engine: ", test_engine)
+    schema = create_test_database(clone_db)
 
     try
         type = quiet ? QuietTestSet : Test.DefaultTestSet
@@ -441,11 +449,17 @@ function _test_rel_steps(;
                     )
                 end
             end
-            println(name, ": ", elapsed_time)
+            println(name, ": time", elapsed_time)
         end
     finally
-        delete_test_database(schema)
+        # If database deletion fails
+        try
+            delete_test_database(schema)
+        catch
+            println("Could not delete test database: ", schema)
+        end
         release_test_engine(test_engine)
+
     end
 end
 
@@ -540,7 +554,7 @@ function _test_rel_step(
                 else
                     unexpected_errors_found |= problem.severity == "error"
                     unexpected_errors_found |= problem.severity == "exception"
-                    println("Unexpected problem type: ", problem.code)
+                    println(name, " - Unexpected problem type: ", problem.code)
                     debug && @info("Unexpected problem", problem)
                 end
             end
