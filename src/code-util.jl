@@ -49,39 +49,28 @@ function generate_output_string_from_expected(expected::AbstractDict)
     program = ""
 
     for e in expected
-        # If we are already explicitly testing an output relation, we don't need to add it
-        if startswith(string(e.first), "/:output")
-            continue
-        end
-        if e.first == :output
-            continue
-        end
+        # Only handle symbols. For anything else, assume the path is already as intended
+        !isa(e.first, Symbol) && continue
+        is_special_symbol(e.first) && continue
 
-        name = ""
-
-        if e.first isa Symbol
-            name = string(e.first)
-        else
-            # rel path, e.g. ":a/:b/Int64"
-            tokens = split(string(e.first), "/")
-            for token in tokens
-                if startswith(token, ":")
-                    name *= token
-                else
-                    break
-                end
-            end
-
-            name = SubString(name, 2)
-        end
+        name = string(e.first)
         program *= "\ndef output:" * name * " = " * name
     end
     return program
 end
 
+# Test if the given symbol is one with special significance, such as :output for output
+function is_special_symbol(symbol::Symbol)::Bool
+    # Used to mark an abort
+    return symbol == :abort ||
+        # Output is placed into :output
+        symbol == :output ||
+        # rel diagnostics
+        symbol == :rel
+end
+
 # Generate a string representing the Rel type for the input
 # Expected inputs are a vector of types, a tuple of types, or a type
-
 function type_string(input::Vector)
     if isempty(input)
         return ""

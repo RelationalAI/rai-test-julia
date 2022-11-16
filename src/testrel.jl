@@ -52,7 +52,7 @@ function test_expected(
         name = string(e.first)
         if e.first isa Symbol
             name = "/:"
-            if e.first != :output
+            if !is_special_symbol(e.first)
                 name = "/:output/:"
             end
 
@@ -62,31 +62,36 @@ function test_expected(
             name *= type_string(e.second)
         end
 
-        # Check result key exists
+        # Expected results can be a tuple, or a vector of tuples
+        # Actual results are an arrow table that can be iterated over
+        expected_result_tuple_vector = sort(to_vector_of_tuples(e.second))
+
+        # Empty results will not be in the output so check for non-presence
+        if isempty(expected_result_tuple_vector)
+            if haskey(results, name)
+                println("Expected empty " * name * " not empty")
+                return false
+            end
+            continue
+        end
         if !haskey(results, name)
             println("Expected relation ", name, " not found")
+            debug && @info("results", results)
             return false
         end
 
-        actual_result = results[name]
-
-        # Existence check
-        e.second == [()] && return true
-        e.second == () && return true
-
-        # Expected results can be a tuple, or a vector of tuples
-        # Actual results are an arrow table that can be iterated over
-
-        expected_result_tuple_vector = sort(to_vector_of_tuples(e.second))
+        # Existence check only
+        expected_result_tuple_vector == [()] && continue
 
         # convert actual results to a vector for comparison
+        actual_result = results[name]
         actual_result_vector = sort(collect(zip(actual_result...)))
 
         if debug
             @info("expected", expected_result_tuple_vector)
             @info("actual", actual_result_vector)
         end
-        return isequal(expected_result_tuple_vector, actual_result_vector)
+        !isequal(expected_result_tuple_vector, actual_result_vector) && return false
     end
 
     return true
@@ -145,7 +150,6 @@ struct Step
     schema_inputs::AbstractDict
     inputs::AbstractDict
     expected::AbstractDict
-    expected_output::AbstractDict
     expected_problems::Vector
     expect_abort::Bool
 end
@@ -157,7 +161,6 @@ function Step(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_output::AbstractDict = Dict(),
     expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
 )
@@ -168,7 +171,6 @@ function Step(;
         schema_inputs,
         inputs,
         expected,
-        expected_output,
         expected_problems,
         expect_abort,
     )
@@ -219,9 +221,9 @@ constraints have any compilation errors, then the test will still fail (unless
 
 - `location::LineNumberNode`: Sourcecode location
 
-- `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64" => [1, 2])`
-
-- `expected_output::AbstractDict`: Expected output values in the form `Dict(:a => [1, 2])`
+- `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64" => [1, 2])`.
+    Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the values.
+    or a type that can be converted to string and used as relation path.
 
 - `expected_problems::Vector{String}`: expected problems. The semantics of
   `expected_problems` is that the program must contain a super set of the specified
@@ -469,8 +471,6 @@ function _test_rel_step(
 
     #Append schema inputs to program
     program *= convert_input_dict_to_string(step.schema_inputs)
-
-    program *= generate_output_string_from_expected(step.expected_output)
 
     #TODO: Remove this when the incoming tests are appropriately rewritten
     program *= generate_output_string_from_expected(step.expected)
