@@ -19,11 +19,11 @@ function get_context()::Context
     return context
 end
 
-function create_test_database()::String
+function create_test_database(clone_db::Union{Nothing,String} = nothing)::String
     # TODO: Change to 'test-' when the account is changed
     schema = gen_safe_name("julia-sdk-test")
 
-    return create_database(get_context(), schema).database.name
+    return create_database(get_context(), schema, source = clone_db).database.name
 end
 
 function delete_test_database(name::String)
@@ -270,6 +270,7 @@ function test_rel(;
     expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
     broken::Bool = false,
+    clone_db::Union{String, Nothing} = nothing,
 )
     query !== nothing && insert!(steps, 1, Step(
         query = query,
@@ -306,6 +307,7 @@ function test_rel(;
         abort_on_error = abort_on_error,
         debug = debug,
         debug_trace = debug_trace,
+        clone_db = clone_db,
     )
 end
 
@@ -354,6 +356,7 @@ function test_rel_steps(;
     abort_on_error::Bool = false,
     debug::Bool = false,
     debug_trace::Bool = false,
+    clone_db::Union{String, Nothing} = nothing
 )
     if isnothing(name)
         name = "Unnamed test"
@@ -384,17 +387,19 @@ function test_rel_steps(;
             engine = engine,
             location = location,
             debug = debug,
-            quiet = true
+            quiet = true,
+            clone_db = clone_db
         )
         add_test_ref(parent, ref)
     else
         _test_rel_steps(;
-        steps = steps,
-        name = name,
-        engine = engine,
-        location = location,
-        debug = debug,
-    )
+            steps = steps,
+            name = name,
+            engine = engine,
+            location = location,
+            debug = debug,
+            clone_db = clone_db
+        )
     end
 end
 
@@ -405,12 +410,13 @@ function _test_rel_steps(;
     engine::Union{String,Nothing},
     location::Union{LineNumberNode,Nothing},
     debug::Bool = false,
-    quiet::Bool = false
+    quiet::Bool = false,
+    clone_db::Union{String, Nothing} = nothing
 )
     test_engine = get_or_create_test_engine(engine)
     println(name, " using test engine: ", test_engine)
 
-    schema = create_test_database()
+    schema = create_test_database(clone_db)
 
     if !isnothing(location)
         path = joinpath(splitpath(string(location.file))[max(1,end-2):end])
