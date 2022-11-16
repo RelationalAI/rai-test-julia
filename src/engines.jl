@@ -1,4 +1,6 @@
 using Base: @lock
+using HTTP: HTTPError
+using JSON3
 
 #TODO: Redo this as a pool of workers and a queue of jobs. each worker has an engine.
 # The below approach has a pool of works and a pool of engines, but there can be only one worker per engine
@@ -83,13 +85,21 @@ function _wait_till_provisioned(engine_name,  max_wait_time_s = 240)
     return response.name
 end
 
-function get_or_create_test_engine(name::Union{String, Nothing} = nothing, max_wait_time_s = 120)
+function get_or_create_test_engine(
+        name::Union{String, Nothing} = nothing,
+        max_wait_time_s = 120;
+        size::String="XS",
+        num_workers::Union{Integer, Nothing}=nothing,
+        pager_disk_size::Union{Nothing,String}=nothing,
+        use_transient_container::Bool=true,
+        raicode_commit::Union{String, Nothing}=nothing,
+    )
     engine_name = name
+
     if isnothing(name)
         engine_name = get_free_test_engine_name()
     end
 
-    size = "XS"
     try
         get_engine(get_context(), engine_name)
         # The engine already exists so return it immediately
@@ -100,16 +110,98 @@ function get_or_create_test_engine(name::Union{String, Nothing} = nothing, max_w
 
     #TODO: Replace detectably faulty engines - but it seems that transient errors are common
 
-    # The engine does not exist yet, so create it
-    create_engine(get_context(), engine_name, size = size)
+    create_engine(
+        engine_name;
+        max_wait_time_s,
+        size,
+        num_workers,
+        pager_disk_size,
+        use_transient_container,
+        raicode_commit
+    )
+
+    return engine_name
+end
+
+"""
+    function create_engine(
+        name::String;
+        max_wait_time_s = 120,
+        size::String="XS",
+        num_workers::Union{Integer, Nothing}=nothing,
+        pager_disk_size::Union{Nothing,String}=nothing,
+        use_transient_container::Bool=true,
+        raicode_commit::Union{String, Nothing}=nothing,
+    )::Nothing
+
+Create an engine with the given name and features. The function will synchrounously wait
+for up to `max_wait_time_s` seconds for the engine to become available.
+"""
+function create_engine(
+    name::String;
+    max_wait_time_s = 120,
+    size::String="XS",
+    num_workers::Union{Integer, Nothing}=nothing,
+    pager_disk_size::Union{Nothing,String}=nothing,
+    use_transient_container::Bool=true,
+    raicode_commit::Union{String, Nothing}=nothing,
+)::Nothing
+    headers=[]
+    if raicode_commit !== nothing
+        push!(headers, "x-rai-parameter-compute-version" => raicode_commit)
+    end
+    push!(
+        headers,
+        "x-rai-parameter-engine-spec" => build_engine_spec(
+            num_workers=num_workers,
+            pager_disk_size=pager_disk_size,
+            use_transient_container=use_transient_container,
+        )
+    )
+
+    RAI.create_engine(get_context(), name; size=size, headers=headers)
 
     try
-        return _wait_till_provisioned(engine_name, max_wait_time_s)
+        _wait_till_provisioned(name, max_wait_time_s)
     catch
         #TODO: Provisioning failed - try again, or give up? For now, give up
-        delete!(TEST_ENGINE_POOL.engines, engine_name)
+        delete!(TEST_ENGINE_POOL.engines, name)
         rethrow()
     end
+
+    return nothing
+end
+
+"""
+    build_engine_spec(;
+        num_workers::Union{Nothing,Int}=nothing,
+        pager_disk_size::Union{Nothing,String}=nothing,
+        use_transient_container::Bool=false,
+    )
+
+Creates a JSON object suitabel for use in the `x-rai-parameter-engine-spec` header and
+supports a number of experimental engine features which are useful for benchmarking.
+"""
+function build_engine_spec(;
+    num_workers::Union{Nothing,Int}=nothing,
+    pager_disk_size::Union{Nothing,String}=nothing,
+    use_transient_container::Bool=false,
+)
+    engine_spec = Dict()
+    if !isnothing(num_workers)
+        experimental_features = get!(engine_spec, "experimentalFeatures", Dict())
+        experimental_features["distributed"] = Dict("workers" => num_workers)
+    end
+    if !isnothing(pager_disk_size)
+        resources = get!(engine_spec, "resources", Dict())
+        resources["diskSize"] = pager_disk_size
+    end
+    if use_transient_container
+        experimental_features = get!(engine_spec, "experimentalFeatures", Dict())
+        experimental_features["useTransientContainer"] = true
+    end
+    engine_spec = JSON3.write(engine_spec)
+    return engine_spec
 end
 
 function release_pooled_test_engine(name::String)
