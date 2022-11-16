@@ -50,6 +50,7 @@ function test_expected(
 
     for e in expected
         name = string(e.first)
+        debug && println("looking for expected result for " * name)
         if e.first isa Symbol
             name = "/:"
             if !is_special_symbol(e.first)
@@ -414,9 +415,8 @@ function _test_rel_steps(;
         name *= resolved_location
     end
 
-    #TODO: use the engine name if provided - or remove the option
     test_engine = get_test_engine()
-    println(name, " using test engine: ", test_engine)
+    debug && println(name, " using test engine: ", test_engine)
     schema = create_test_database()
 
     try
@@ -538,7 +538,7 @@ function _test_rel_step(
                 else
                     unexpected_errors_found |= problem.severity == "error"
                     unexpected_errors_found |= problem.severity == "exception"
-                    println(name, " - Unexpected problem type: ", problem.code)
+                    println(name, " - Unexpected: ", problem.code)
                     debug && @info("Unexpected problem", problem)
                 end
             end
@@ -557,10 +557,8 @@ function _test_rel_step(
 
             if !step.expect_abort
                 @test state == "COMPLETED" && expected_problems_found && !unexpected_errors_found
-
             else
                 @test state == "ABORTED" && expected_problems_found
-
             end
         catch e
             Base.display_error(stderr, current_exceptions())
