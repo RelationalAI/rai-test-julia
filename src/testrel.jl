@@ -266,7 +266,6 @@ function test_rel(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_output::AbstractDict = Dict(),
     expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
     broken::Bool = false,
@@ -274,7 +273,6 @@ function test_rel(;
     query !== nothing && insert!(steps, 1, Step(
         query = query,
         expected = expected,
-        expected_output = expected_output,
         expected_problems = expected_problems,
         expect_abort = expect_abort,
         broken = broken,
