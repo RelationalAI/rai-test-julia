@@ -50,9 +50,10 @@ function test_expected(
 
     for e in expected
         name = string(e.first)
+        debug && println("looking for expected result for " * name)
         if e.first isa Symbol
             name = "/:"
-            if e.first != :output
+            if !is_special_symbol(e.first)
                 name = "/:output/:"
             end
 
@@ -62,31 +63,36 @@ function test_expected(
             name *= type_string(e.second)
         end
 
-        # Check result key exists
+        # Expected results can be a tuple, or a vector of tuples
+        # Actual results are an arrow table that can be iterated over
+        expected_result_tuple_vector = sort(to_vector_of_tuples(e.second))
+
+        # Empty results will not be in the output so check for non-presence
+        if isempty(expected_result_tuple_vector)
+            if haskey(results, name)
+                println("Expected empty " * name * " not empty")
+                return false
+            end
+            continue
+        end
         if !haskey(results, name)
             println("Expected relation ", name, " not found")
+            debug && @info("results", results)
             return false
         end
 
-        actual_result = results[name]
-
-        # Existence check
-        e.second == [()] && return true
-        e.second == () && return true
-
-        # Expected results can be a tuple, or a vector of tuples
-        # Actual results are an arrow table that can be iterated over
-
-        expected_result_tuple_vector = sort(to_vector_of_tuples(e.second))
+        # Existence check only
+        expected_result_tuple_vector == [()] && continue
 
         # convert actual results to a vector for comparison
+        actual_result = results[name]
         actual_result_vector = sort(collect(zip(actual_result...)))
 
         if debug
             @info("expected", expected_result_tuple_vector)
             @info("actual", actual_result_vector)
         end
-        return isequal(expected_result_tuple_vector, actual_result_vector)
+        !isequal(expected_result_tuple_vector, actual_result_vector) && return false
     end
 
     return true
@@ -145,7 +151,6 @@ struct Step
     schema_inputs::AbstractDict
     inputs::AbstractDict
     expected::AbstractDict
-    expected_output::AbstractDict
     expected_problems::Vector
     expect_abort::Bool
 end
@@ -157,7 +162,6 @@ function Step(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_output::AbstractDict = Dict(),
     expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
 )
@@ -168,7 +172,6 @@ function Step(;
         schema_inputs,
         inputs,
         expected,
-        expected_output,
         expected_problems,
         expect_abort,
     )
@@ -219,15 +222,13 @@ constraints have any compilation errors, then the test will still fail (unless
 
 - `location::LineNumberNode`: Sourcecode location
 
-- `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64" => [1, 2])`
-
-- `expected_output::AbstractDict`: Expected output values in the form `Dict(:a => [1, 2])`
+- `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64" => [1, 2])`.
+    Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the values.
+    or a type that can be converted to string and used as relation path.
 
 - `expected_problems::Vector{String}`: expected problems. The semantics of
   `expected_problems` is that the program must contain a super set of the specified
   error codes.
-
-- `engine::String`: The name of an existing compute engine
 
 - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
 
@@ -256,7 +257,6 @@ function test_rel(;
     query::Union{String, Nothing} = nothing,
     steps::Vector{Step} = Step[],
     name::Union{String,Nothing} = nothing,
-    engine::Union{String,Nothing} = nothing,
     location::Union{LineNumberNode,Nothing} = nothing,
     include_stdlib::Bool = true,
     install::Dict{String, String} = Dict{String, String}(),
@@ -266,7 +266,6 @@ function test_rel(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_output::AbstractDict = Dict(),
     expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
     broken::Bool = false,
@@ -275,7 +274,6 @@ function test_rel(;
     query !== nothing && insert!(steps, 1, Step(
         query = query,
         expected = expected,
-        expected_output = expected_output,
         expected_problems = expected_problems,
         expect_abort = expect_abort,
         broken = broken,
@@ -301,7 +299,6 @@ function test_rel(;
     test_rel_steps(;
         steps = steps,
         name = name,
-        engine = engine,
         location = location,
         include_stdlib = include_stdlib,
         abort_on_error = abort_on_error,
@@ -335,8 +332,6 @@ constraints have any compilation errors, then the test will still fail (unless
 
 - `location::LineNumberNode`: Sourcecode location
 
-- `engine::String`: The name of an existing compute engine
-
 - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
 
 - `abort_on_error::Bool`: boolean that specifies whether to abort on any
@@ -350,7 +345,6 @@ constraints have any compilation errors, then the test will still fail (unless
 function test_rel_steps(;
     steps::Vector{Step},
     name::Union{String,Nothing} = nothing,
-    engine::Union{String,Nothing} = nothing,
     location::Union{LineNumberNode,Nothing} = nothing,
     include_stdlib::Bool = true,
     abort_on_error::Bool = false,
@@ -387,7 +381,6 @@ function test_rel_steps(;
         ref = Threads.@spawn _test_rel_steps(;
             steps = steps,
             name = name,
-            engine = engine,
             location = location,
             debug = debug,
             quiet = true,
@@ -398,10 +391,9 @@ function test_rel_steps(;
         _test_rel_steps(;
             steps = steps,
             name = name,
-            engine = engine,
             location = location,
             debug = debug,
-            clone_db = clone_db
+            clone_db = clone_db,
         )
     end
 end
@@ -410,17 +402,17 @@ end
 function _test_rel_steps(;
     steps::Vector{Step},
     name::Union{String,Nothing},
-    engine::Union{String,Nothing},
     location::Union{LineNumberNode,Nothing},
     debug::Bool = false,
     quiet::Bool = false,
-    clone_db::Union{String, Nothing} = nothing
+    clone_db::Union{String, Nothing} = nothing,
 )
     if isnothing(name)
         name = ""
     else
         name = name * " at "
     end
+
     if !isnothing(location)
         path = joinpath(splitpath(string(location.file))[max(1,end-2):end])
         resolved_location = string(path, ":", location.line)
@@ -428,9 +420,8 @@ function _test_rel_steps(;
         name *= resolved_location
     end
 
-    #TODO: use the engine name if provided - or remove the option
-    test_engine = get_or_create_test_engine(engine)
-    println(name, " using test engine: ", test_engine)
+    test_engine = get_test_engine()
+    debug && println(name, " using test engine: ", test_engine)
     schema = create_test_database(clone_db)
 
     try
@@ -485,8 +476,6 @@ function _test_rel_step(
 
     #Append schema inputs to program
     program *= convert_input_dict_to_string(step.schema_inputs)
-
-    program *= generate_output_string_from_expected(step.expected_output)
 
     #TODO: Remove this when the incoming tests are appropriately rewritten
     program *= generate_output_string_from_expected(step.expected)
@@ -554,7 +543,7 @@ function _test_rel_step(
                 else
                     unexpected_errors_found |= problem.severity == "error"
                     unexpected_errors_found |= problem.severity == "exception"
-                    println(name, " - Unexpected problem type: ", problem.code)
+                    println(name, " - Unexpected: ", problem.code)
                     debug && @info("Unexpected problem", problem)
                 end
             end
@@ -573,10 +562,8 @@ function _test_rel_step(
 
             if !step.expect_abort
                 @test state == "COMPLETED" && expected_problems_found && !unexpected_errors_found
-
             else
                 @test state == "ABORTED" && expected_problems_found
-
             end
         catch e
             Base.display_error(stderr, current_exceptions())
