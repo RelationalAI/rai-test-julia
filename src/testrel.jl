@@ -146,7 +146,7 @@ end
 """
 struct Step
     query::Union{String, Nothing}
-    install::Dict{String, String}
+    install::Union{Vector{String}, Dict{String, String}}
     broken::Bool
     schema_inputs::AbstractDict
     inputs::AbstractDict
@@ -157,7 +157,7 @@ end
 
 function Step(;
     query::Union{String, Nothing} = nothing,
-    install::Dict{String, String} = Dict{String, String}(),
+    install::Union{Vector{String}, Dict{String, String}} = Dict{String, String}(),
     broken::Bool = false,
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
@@ -259,7 +259,7 @@ function test_rel(;
     name::Union{String,Nothing} = nothing,
     location::Union{LineNumberNode,Nothing} = nothing,
     include_stdlib::Bool = true,
-    install::Dict{String, String} = Dict{String, String}(),
+    install::Union{Vector{String}, Dict{String, String}} = Dict{String, String}(),
     abort_on_error::Bool = false,
     debug::Bool = false,
     debug_trace::Bool = false,
@@ -486,8 +486,17 @@ function _test_rel_step(
     @testset BreakableTestSet "$(string(name))$step_postfix" broken = step.broken begin
         try
             if !isempty(step.install)
-                load_model(get_context(), schema, engine,
-                        Dict("test_install" => step.install))
+                if step.install isa Dict
+                    for i in step.install
+                        load_model(get_context(), schema, engine,
+                        Dict(i.first => i.second))
+                    end
+                else
+                    for i in enumerate(step.install)
+                        load_model(get_context(), schema, engine,
+                        Dict("test_install" * string(i[1]) => i[2]))
+                    end
+                end
             end
 
             # Don't test empty strings
