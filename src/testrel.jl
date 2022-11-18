@@ -545,6 +545,8 @@ function _test_rel_step(
                 if any(p->(p.code == problem.code), eps)
                     debug && @info("Expected problem", problem)
                 else
+                    unexpected_errors_found |= problem.severity == "error"
+                    unexpected_errors_found |= problem.severity == "exception"
                     println(name, " - Unexpected: ", problem.code)
                     debug && @info("Unexpected problem", problem)
                 end
