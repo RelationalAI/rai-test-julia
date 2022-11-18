@@ -528,10 +528,8 @@ function _test_rel_step(
             #   If no abort is expected it is not encountered
             #   If results are expected, they are found (other results are ignored)
             #   If problems are expected, they are found (other problems are ignored)
-            #   If errors are expected, they are found (more errors are okay)
-            #   If no errors are expected, no errors are found
+            #   If no problems are expected, warning level problems are ignored
 
-            expected_errors_found = false
             unexpected_errors_found = false
 
             # Check for any expected problems
@@ -545,28 +543,20 @@ function _test_rel_step(
             # Check if there were any unexpected errors/exceptions
             for problem in problems
                 if any(p->(p.code == problem.code), eps)
-                    # If it's an error, record that one was found
-                    expected_errors_found |= problem.severity == "error"
-                    expected_errors_found |= problem.severity == "exception"
                     debug && @info("Expected problem", problem)
                 else
-                    unexpected_errors_found |= problem.severity == "error"
-                    unexpected_errors_found |= problem.severity == "exception"
                     println(name, " - Unexpected: ", problem.code)
                     debug && @info("Unexpected problem", problem)
                 end
             end
 
-            # Unexpected errors are accepted if expected errors were found
-            if expected_errors_found
-                unexpected_errors_found = false
-            end
-
-            # If no errors are expected, it's okay to not find them
-            expected_errors_found |= isempty(eps)
-
             if !isempty(step.expected)
                 @test test_expected(step.expected, results_dict, debug)
+            end
+
+            # Allow all errors if any problems were expected
+            if !isempty(eps)
+                unexpected_errors_found = false
             end
 
             if !step.expect_abort
