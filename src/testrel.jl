@@ -6,6 +6,9 @@ using Random: MersenneTwister
 using Test
 using UUIDs
 
+mutable struct ContextWrapper
+    context::Context
+end
 
 # Generates a name for the given base name that makes it unique between multiple
 # processing units
@@ -13,10 +16,14 @@ function gen_safe_name(basename)
     return "$(basename)-p$(getpid())-t$(Base.Threads.threadid())-$(UUIDs.uuid4(MersenneTwister()))"
 end
 
-context::Context = Context(load_config())
+TEST_CONTEXT_WRAPPER::ContextWrapper = ContextWrapper(Context(load_config()))
 
 function get_context()::Context
-    return context
+    return TEST_CONTEXT_WRAPPER.context
+end
+
+function set_context(new_context::Context)
+    TEST_CONTEXT_WRAPPER.context = new_context
 end
 
 function create_test_database(clone_db::Union{Nothing,String} = nothing)::String
