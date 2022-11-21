@@ -98,36 +98,6 @@ function test_expected(
     return true
 end
 
-struct Problem
-    code::String
-    severity::Union{String, Nothing}
-    line::Union{Int64, Nothing}
-end
-
-Problem(problem::Problem) = problem
-Problem(problem::Pair) = Problem((problem,))
-
-function Problem(;code::String, severity::Union{String, Nothing} = nothing, line::Union{Int64, Nothing} = nothing)
-    return Problem(code, severity, line)
-end
-
-function Problem(problem::Tuple)
-    code = nothing
-    severity = nothing
-    line = nothing
-    for (k, v) in problem
-        if k === :code
-            code = string(v)
-        elseif k === string(:severity)
-            severity = v
-        elseif k === :line
-            line = v
-        end
-    end
-
-    return Problem(code = code, severity = severity, line = line)
-end
-
 """
     Transaction Step used for `test_rel`
 
@@ -162,7 +132,7 @@ function Step(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_problems::Vector = Problem[],
+    expected_problems::Vector = [],
     expect_abort::Bool = false,
 )
     return Step(
@@ -266,7 +236,7 @@ function test_rel(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_problems::Vector = Problem[],
+    expected_problems::Vector = [],
     expect_abort::Bool = false,
     broken::Bool = false,
     clone_db::Union{String, Nothing} = nothing,
@@ -513,13 +483,9 @@ function _test_rel_step(
             results_dict = result_table_to_dict(results)
             problems = extract_problems(results_dict)
 
-            eps = Problem[]
             # Check that expected problems were found
             for expected_problem in step.expected_problems
-                ep = Problem(expected_problem)
-                push!(eps, ep)
-
-                expected_problem_found = any(p->(p.code == ep.code), problems)
+                expected_problem_found = contains_problem(problems, expected_problem)
                 @test expected_problem_found
             end
 
@@ -531,23 +497,14 @@ function _test_rel_step(
             #   If no problems are expected, warning level problems are ignored
 
             unexpected_errors_found = false
-
-            # Check for any expected problems
-            expected_problems_found = true
-            for ep in eps
-                if !any(p->(p.code == ep.code), problems)
-                    expected_problems_found = false
-                end
-            end
-
             # Check if there were any unexpected errors/exceptions
             for problem in problems
-                if any(p->(p.code == problem.code), eps)
+                if contains_problem(step.expected_problems, problem)
                     debug && @info("Expected problem", problem)
                 else
-                    unexpected_errors_found |= problem.severity == "error"
-                    unexpected_errors_found |= problem.severity == "exception"
-                    println(name, " - Unexpected: ", problem.code)
+                    unexpected_errors_found |= problem[:severity] == "error"
+                    unexpected_errors_found |= problem[:severity] == "exception"
+                    println(name, " - Unexpected: ", problem[:code])
                     debug && @info("Unexpected problem", problem)
                 end
             end
@@ -557,14 +514,14 @@ function _test_rel_step(
             end
 
             # Allow all errors if any problems were expected
-            if !isempty(eps)
+            if !isempty(step.expected_problems)
                 unexpected_errors_found = false
             end
 
             if !step.expect_abort
-                @test state == "COMPLETED" && expected_problems_found && !unexpected_errors_found
+                @test state == "COMPLETED" && !unexpected_errors_found
             else
-                @test state == "ABORTED" && expected_problems_found
+                @test state == "ABORTED"
             end
         catch e
             Base.display_error(stderr, current_exceptions())
