@@ -209,6 +209,8 @@ end
 
 function matches_problem(actual::Dict, expected::Dict)::Bool
     match = string(actual[:code]) == string(expected[:code])
+    # TODO: behaviour of line numbering in problem reports needs verification before
+    # enabling line number tests
     #haskey(expected, :line) && match &= actual[:line] = expected[:line]
 
     return match
