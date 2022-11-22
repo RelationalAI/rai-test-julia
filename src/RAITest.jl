@@ -14,6 +14,8 @@ include("code-util.jl")
 
 include("testrel.jl")
 
+include("testpool.jl")
+
 include("engines.jl")
 
 end
