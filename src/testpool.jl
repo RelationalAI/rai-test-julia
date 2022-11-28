@@ -14,13 +14,8 @@ function get_pooled_test_engine(engine_name::Union{String, Nothing} = nothing)
         engine_name = get_free_test_engine_name()
     end
 
-    try
-        get_engine(get_context(), engine_name)
-        # The engine already exists so return it immediately
-        return engine_name
-    catch
-        # Engine does not exist yet so we'll need to create it
-    end
+    # If the engine already exists, return it
+    is_valid_engine(engine_name) && return engine_name
 
     # The engine does not exist yet, so create it
     try
@@ -31,7 +26,6 @@ function get_pooled_test_engine(engine_name::Union{String, Nothing} = nothing)
         rethrow()
     end
 end
-
 
 const TEST_SERVER_LOCK = ReentrantLock()
 const TEST_SERVER_ACQUISITION_LOCK = ReentrantLock()
@@ -61,6 +55,21 @@ function get_free_test_engine_name()::String
         end
         # Very naive wait protocol
         sleep(delay)
+    end
+end
+
+"""
+Test if an engine has been created and can be returned via the API.
+
+"""
+function is_valid_engine(name::String)
+    try
+        get_engine(get_context(), name)
+        # The engine exists and does not immediately return an error
+        return true
+    catch
+        # Engine does not exist
+        return false
     end
 end
 
