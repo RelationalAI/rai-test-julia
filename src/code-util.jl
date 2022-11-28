@@ -192,7 +192,7 @@ function extract_problems(results)
             if haskey(results, "/:rel/:catalog/:diagnostic/:severity/Int64/String")
                 problem_severity = problem_severities[2][i]
             end
-            push!(problems, Dict(:code=>problem_codes[2][i], :severity => problem_severity, :line => problem_line))
+            push!(problems, Problem(:code=>problem_codes[2][i], :severity => problem_severity, :line => problem_line))
         end
     end
 

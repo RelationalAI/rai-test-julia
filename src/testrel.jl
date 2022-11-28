@@ -99,6 +99,12 @@ function test_expected(
 end
 
 """
+Expected problems are defined by a code and an optional starting line number
+    Dict(:code => "name" [, :line => <number>])
+"""
+const Problem = Dict{Symbol, Any}
+
+"""
     Transaction Step used for `test_rel`
 
     - `install::Dict{String, String}`:
