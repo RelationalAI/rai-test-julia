@@ -12,7 +12,7 @@ UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
 Arrow = "2"
-RAI = "0.2"
+RAI = "0.2.2"
 julia = "1.8.2"
 
 [extras]
