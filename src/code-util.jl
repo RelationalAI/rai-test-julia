@@ -161,7 +161,7 @@ function Base.isequal(expected::UInt128, actual::Tuple{UInt64, UInt64})
 end
 
 function extract_problems(results)
-    problems = Problem[]
+    problems = []
 
     if !haskey(results, "/:rel/:catalog/:diagnostic/:code/Int64/String")
         return problems
@@ -192,11 +192,28 @@ function extract_problems(results)
             if haskey(results, "/:rel/:catalog/:diagnostic/:severity/Int64/String")
                 problem_severity = problem_severities[2][i]
             end
-            push!(problems, Problem(problem_codes[2][i], problem_severity, problem_line))
+            push!(problems, Problem(:code=>problem_codes[2][i], :severity => problem_severity, :line => problem_line))
         end
     end
 
     return problems
+end
+
+function contains_problem(problems, problem_needle)::Bool
+    return any(p->matches_problem(p, problem_needle), problems)
+end
+
+function matches_problem(actual, expected)::Bool
+    return matches_problem(Dict(actual), Dict(expected))
+end
+
+function matches_problem(actual::Dict, expected::Dict)::Bool
+    match = string(actual[:code]) == string(expected[:code])
+    # TODO: behaviour of line numbering in problem reports needs verification before
+    # enabling line number tests
+    #haskey(expected, :line) && match &= actual[:line] = expected[:line]
+
+    return match
 end
 
 function result_table_to_dict(results)
