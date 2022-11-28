@@ -494,15 +494,13 @@ function _test_rel_step(
         try
             if !isempty(step.install)
                 if step.install isa Dict
-                    for i in step.install
-                        load_model(get_context(), schema, engine,
-                        Dict(i.first => i.second))
-                    end
+                    load_models(get_context(), schema, engine, step.install)
                 else
+                    models = Dict{String, String}()
                     for i in enumerate(step.install)
-                        load_model(get_context(), schema, engine,
-                        Dict("test_install" * string(i[1]) => i[2]))
+                        models["test_install" * string(i[1])] = i[2]
                     end
+                    load_models(get_context(), schema, engine, models)
                 end
             end
 
