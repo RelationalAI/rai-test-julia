@@ -21,7 +21,7 @@ function convert_input_dict_to_string(inputs::AbstractDict)
             continue
         end
 
-        values = to_vector_of_tuples( values)
+        values = to_vector_of_tuples(values)
 
         for i in values
             if first
@@ -59,14 +59,15 @@ function generate_output_string_from_expected(expected::AbstractDict)
     return program
 end
 
-# Test if the given symbol is one with special significance, such as :output for output
+"""
+Test if the given symbol is one with special significance for a rel relation.
+Current symbols of significance are
+:output - standard output relation
+:abort - marks the presence of an abort
+:rel - used for rel diagnostics
+"""
 function is_special_symbol(symbol::Symbol)::Bool
-    # Used to mark an abort
-    return symbol == :abort ||
-        # Output is placed into :output
-        symbol == :output ||
-        # rel diagnostics
-        symbol == :rel
+    return symbol == :abort || symbol == :output || symbol == :rel
 end
 
 # Generate a string representing the Rel type for the input
@@ -151,13 +152,11 @@ function Base.isequal(i::Int128, t::Tuple{UInt64, UInt64})
     a += t[1]
     a |= (sign << 127)
     return isequal(i, a)
-
 end
 
 function Base.isequal(expected::UInt128, actual::Tuple{UInt64, UInt64})
     a = UInt128(actual[1]) + UInt128(actual[2]) << 64
     return isequal(expected, a)
-
 end
 
 function extract_problems(results)
@@ -173,7 +172,8 @@ function extract_problems(results)
     problem_lines = Dict()
     if haskey(results, "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64")
         # [index, ?, line]
-        problem_lines = results["/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"]
+        problem_lines =
+            results["/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"]
     end
 
     problem_severities = Dict()
@@ -182,17 +182,25 @@ function extract_problems(results)
         problem_severities = results["/:rel/:catalog/:diagnostic/:severity/Int64/String"]
     end
     if length(problem_codes) > 0
-        for i = 1:1:length(problem_codes[1])
+        for i in 1:1:length(problem_codes[1])
             # Not all problems have a line number
             problem_line = nothing
-            if haskey(results, "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64")
+            if haskey(
+                results,
+                "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64",
+            )
                 problem_line = problem_lines[3][i]
             end
             problem_severity = nothing
             if haskey(results, "/:rel/:catalog/:diagnostic/:severity/Int64/String")
                 problem_severity = problem_severities[2][i]
             end
-            push!(problems, Problem(:code=>problem_codes[2][i], :severity => problem_severity, :line => problem_line))
+            problem = Problem(
+                :code => problem_codes[2][i],
+                :severity => problem_severity,
+                :line => problem_line,
+            )
+            push!(problems, problem)
         end
     end
 
@@ -200,7 +208,7 @@ function extract_problems(results)
 end
 
 function contains_problem(problems, problem_needle)::Bool
-    return any(p->matches_problem(p, problem_needle), problems)
+    return any(p -> matches_problem(p, problem_needle), problems)
 end
 
 function matches_problem(actual, expected)::Bool

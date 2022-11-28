@@ -23,18 +23,18 @@ function get_context()::Context
 end
 
 function set_context(new_context::Context)
-    TEST_CONTEXT_WRAPPER.context = new_context
+    return TEST_CONTEXT_WRAPPER.context = new_context
 end
 
-function create_test_database(clone_db::Union{Nothing,String} = nothing)::String
+function create_test_database(clone_db::Union{Nothing, String} = nothing)::String
     # TODO: Change to 'test-' when the account is changed
     schema = gen_safe_name("julia-sdk-test")
 
-    return create_database(get_context(), schema, source = clone_db).database.name
+    return create_database(get_context(), schema; source = clone_db).database.name
 end
 
 function delete_test_database(name::String)
-   return delete_database(get_context(), name)
+    return delete_database(get_context(), name)
 end
 
 """
@@ -42,12 +42,8 @@ end
 
 Given a Dict of expected relations, test if the actual results contain those relations.
 Types and contents of the relations must match.
-
 """
-function test_expected(
-        expected::AbstractDict,
-        results,
-        debug::Bool = false)
+function test_expected(expected::AbstractDict, results, debug::Bool = false)
     # No testing to do, return immediaely
     isempty(expected) && return
     if results === nothing
@@ -107,7 +103,7 @@ end
 
 """
 Expected problems are defined by a code and an optional starting line number
-    Dict(:code => "name" [, :line => <number>])
+Dict(:code => "name" [, :line => <number>])
 """
 const Problem = Dict{Symbol, Any}
 
@@ -142,7 +138,6 @@ end
     - `expected_problems::Vector}`: expected problems. The semantics of
       `expected_problems` is that the program must contain a super set of the specified
       errors. When `expected_problems` is `[]`, this means that errors are allowed.
-
 """
 struct Step
     query::Union{String, Nothing}
@@ -190,11 +185,11 @@ macro test_rel(args...)
     # in quoted code these already have a meaning.
     if args isa Tuple{String}
         quote
-            test_rel(;query = $(kwargs[1]), location = $(QuoteNode(__source__)))
+            test_rel(; query = $(kwargs[1]), location = $(QuoteNode(__source__)))
         end
     else
         quote
-            test_rel(;location = $(QuoteNode(__source__)), $(kwargs...))
+            test_rel(; location = $(QuoteNode(__source__)), $(kwargs...))
         end
     end
 end
@@ -204,7 +199,6 @@ end
 
 Run a single step Rel testcase.
 
-
 If `expected_problems` is not set, then no errors are
 allowed. The test fails if there are any errors in the program.
 
@@ -212,52 +206,36 @@ It is preferred to use integrity constraints to set test conditions. If the inte
 constraints have any compilation errors, then the test will still fail (unless
 `expected_problems` is set).
 
-!!! warning
+Note that `test_rel` creates a new schema for each test.
 
-    `test_rel` creates a new schema for each test.
-
-- `query::String`: The query to use for the test
-
-- `name::String`: name of the testcase
-
-- `location::LineNumberNode`: Sourcecode location
-
-- `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64" => [1, 2])`.
+  - `query::String`: The query to use for the test
+  - `name::String`: name of the testcase
+  - `location::LineNumberNode`: Sourcecode location
+  - `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64" => [1, 2])`.
     Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the values.
     or a type that can be converted to string and used as relation path.
-
-- `expected_problems::Vector`: expected problems. The semantics of
-  `expected_problems` is that the program must contain a super set of the specified
-  error codes.
-
-- `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
-
-- `install::Dict{String, String}`: source files to install in the database.
-
-- `schema_inputs::AbstractDict`: input schema for the transaction
-
-- `inputs::AbstractDict`: input data to the transaction
-
-- `abort_on_error::Bool`: boolean that specifies whether to abort on any
+  - `expected_problems::Vector`: expected problems. The semantics of
+    `expected_problems` is that the program must contain a super set of the specified
+    error codes.
+  - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
+  - `install::Dict{String, String}`: source files to install in the database.
+  - `schema_inputs::AbstractDict`: input schema for the transaction
+  - `inputs::AbstractDict`: input data to the transaction
+  - `abort_on_error::Bool`: boolean that specifies whether to abort on any
     triggered error.
-
-- `debug::Bool`: boolean that specifies debugging mode.
-
-- `debug_trace::Bool`: boolean that specifies printing out the debug_trace
-
-- `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it is
-  expected to abort, but it does not, then the test fails.
-
-- `broken::Bool`: if the test is not currently correct (wrt the `expected`
-  results), then `broken` can be used to mark the tests as broken and prevent the test from
-  failing.
-
+  - `debug::Bool`: boolean that specifies debugging mode.
+  - `debug_trace::Bool`: boolean that specifies printing out the debug_trace
+  - `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it is
+    expected to abort, but it does not, then the test fails.
+  - `broken::Bool`: if the test is not currently correct (wrt the `expected`
+    results), then `broken` can be used to mark the tests as broken and prevent the test from
+    failing.
 """
 function test_rel(;
     query::Union{String, Nothing} = nothing,
     steps::Vector{Step} = Step[],
-    name::Union{String,Nothing} = nothing,
-    location::Union{LineNumberNode,Nothing} = nothing,
+    name::Union{String, Nothing} = nothing,
+    location::Union{LineNumberNode, Nothing} = nothing,
     include_stdlib::Bool = true,
     install::AcceptedSourceTypes = Dict{String, String}(),
     abort_on_error::Bool = false,
@@ -271,30 +249,30 @@ function test_rel(;
     broken::Bool = false,
     clone_db::Union{String, Nothing} = nothing,
 )
-    query !== nothing && insert!(steps, 1, Step(
-        query = query,
-        expected = expected,
-        expected_problems = expected_problems,
-        expect_abort = expect_abort,
-        broken = broken,
-        ))
+    query !== nothing && insert!(
+        steps,
+        1,
+        Step(;
+            query = query,
+            expected = expected,
+            expected_problems = expected_problems,
+            expect_abort = expect_abort,
+            broken = broken,
+        ),
+    )
 
     # Perform all inserts before other tests
     if !isempty(install)
         insert!(steps, 1, Step(; install = convert_to_install_kv(install)))
     end
     if !isempty(schema_inputs)
-        insert!(steps, 1, Step(
-            schema_inputs = schema_inputs,
-            ))
+        insert!(steps, 1, Step(; schema_inputs = schema_inputs))
     end
     if !isempty(inputs)
-        insert!(steps, 1, Step(
-            inputs = inputs,
-            ))
+        insert!(steps, 1, Step(; inputs = inputs))
     end
 
-    test_rel_steps(;
+    return test_rel_steps(;
         steps = steps,
         name = name,
         location = location,
@@ -311,7 +289,6 @@ test_rel_steps(query; kwargs...)
 
 Run a Rel testcase composed of a series of steps.
 
-
 If `expected_problems` is not set, then no errors are
 allowed. The test fails if there are any errors in the program.
 
@@ -319,36 +296,27 @@ It is preferred to use integrity constraints to set test conditions. If the inte
 constraints have any compilation errors, then the test will still fail (unless
 `expected_problems` is set).
 
-!!! warning
+Note that `test_rel` creates a new schema for each test.
 
-    `test_rel` creates a new schema for each test.
-
-- `steps`::Vector{Step}: a vector of Steps that represent a series of transactions in the
-  test
-
-- `name::String`: name of the testcase
-
-- `location::LineNumberNode`: Sourcecode location
-
-- `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
-
-- `abort_on_error::Bool`: boolean that specifies whether to abort on any
+  - `steps`::Vector{Step}: a vector of Steps that represent a series of transactions in the
+    test
+  - `name::String`: name of the testcase
+  - `location::LineNumberNode`: Sourcecode location
+  - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
+  - `abort_on_error::Bool`: boolean that specifies whether to abort on any
     triggered error.
-
-- `debug::Bool`: boolean that specifies debugging mode.
-
-- `debug_trace::Bool`: boolean that specifies printing out the debug_trace
-
+  - `debug::Bool`: boolean that specifies debugging mode.
+  - `debug_trace::Bool`: boolean that specifies printing out the debug_trace
 """
 function test_rel_steps(;
     steps::Vector{Step},
-    name::Union{String,Nothing} = nothing,
-    location::Union{LineNumberNode,Nothing} = nothing,
+    name::Union{String, Nothing} = nothing,
+    location::Union{LineNumberNode, Nothing} = nothing,
     include_stdlib::Bool = true,
     abort_on_error::Bool = false,
     debug::Bool = false,
     debug_trace::Bool = false,
-    clone_db::Union{String, Nothing} = nothing
+    clone_db::Union{String, Nothing} = nothing,
 )
     # Setup steps that run before the first testing Step
     config_query = ""
@@ -371,7 +339,7 @@ function test_rel_steps(;
     end
 
     if config_query != ""
-        insert!(steps, 1, Step(query=config_query))
+        insert!(steps, 1, Step(; query = config_query))
     end
 
     parent = Test.get_testset()
@@ -382,7 +350,7 @@ function test_rel_steps(;
             location = location,
             debug = debug,
             quiet = true,
-            clone_db = clone_db
+            clone_db = clone_db,
         )
         add_test_ref(parent, ref)
     else
@@ -399,8 +367,8 @@ end
 # This internal function executes `test_rel`
 function _test_rel_steps(;
     steps::Vector{Step},
-    name::Union{String,Nothing},
-    location::Union{LineNumberNode,Nothing},
+    name::Union{String, Nothing},
+    location::Union{LineNumberNode, Nothing},
     debug::Bool = false,
     quiet::Bool = false,
     clone_db::Union{String, Nothing} = nothing,
@@ -412,7 +380,7 @@ function _test_rel_steps(;
     end
 
     if !isnothing(location)
-        path = joinpath(splitpath(string(location.file))[max(1,end-2):end])
+        path = joinpath(splitpath(string(location.file))[max(1, end - 2):end])
         resolved_location = string(path, ":", location.line)
 
         name *= resolved_location
@@ -427,15 +395,7 @@ function _test_rel_steps(;
         @testset type "$(string(name))" begin
             elapsed_time = @timed begin
                 for (index, step) in enumerate(steps)
-                    _test_rel_step(
-                        index,
-                        step,
-                        schema,
-                        test_engine,
-                        name,
-                        length(steps),
-                        debug,
-                    )
+                    _test_rel_step(index, step, schema, test_engine, name, length(steps), debug)
                 end
             end
             println(name, ": time", elapsed_time)
@@ -448,10 +408,8 @@ function _test_rel_steps(;
             println("Could not delete test database: ", schema)
         end
         release_test_engine(test_engine)
-
     end
 end
-
 
 # This internal function executes a single step of a `test_rel`
 function _test_rel_step(
