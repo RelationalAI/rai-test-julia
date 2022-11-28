@@ -114,10 +114,9 @@ const Problem = Dict{Symbol, Any}
     results), then `broken` can be used to mark the tests as broken and prevent the test from
     failing.
 
-    - `expected_problems::Option{Vector{<:Any}}`: expected problems. The semantics of
+    - `expected_problems::Vector}`: expected problems. The semantics of
       `expected_problems` is that the program must contain a super set of the specified
-      errors. When `expected_problems` is `[]` instead of `nothing`, then this means that errors
-      are allowed.
+      errors. When `expected_problems` is `[]`, this means that errors are allowed.
 
 """
 struct Step
@@ -202,7 +201,7 @@ constraints have any compilation errors, then the test will still fail (unless
     Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the values.
     or a type that can be converted to string and used as relation path.
 
-- `expected_problems::Vector{String}`: expected problems. The semantics of
+- `expected_problems::Vector`: expected problems. The semantics of
   `expected_problems` is that the program must contain a super set of the specified
   error codes.
 
