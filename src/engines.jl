@@ -33,7 +33,7 @@ end
 
 """
 Create an XS engine with default settings and the provided name.
-If the engine already exists, return immediately. If not, create the engine append
+If the engine already exists, return immediately. If not, create the engine then
 return once the provisioning process is complete, or failed.
 """
 function create_default_engine(name::String)
