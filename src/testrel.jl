@@ -138,7 +138,7 @@ function Step(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_problems::Vector = [],
+    expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
 )
     return Step(
@@ -242,7 +242,7 @@ function test_rel(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_problems::Vector = [],
+    expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
     broken::Bool = false,
     clone_db::Union{String, Nothing} = nothing,
