@@ -111,6 +111,24 @@ Expected problems are defined by a code and an optional starting line number
 """
 const Problem = Dict{Symbol, Any}
 
+const AcceptedSourceTypes = Union{
+    String,
+    Pair{String, String},
+    Vector{String},
+    Dict{String, String},
+}
+
+convert_to_install_kv(install_dict::Dict{String, String}) = install_dict
+convert_to_install_kv(install_pair::Pair{String, String}) = Dict(install_pair)
+convert_to_install_kv(install_string::String) = convert_to_install_kv([install_string])
+function convert_to_install_kv(install_vector::Vector{String})
+    models = Dict{String, String}()
+    for i in enumerate(install_vector)
+        models["test_install" * string(i[1])] = i[2]
+    end
+    return models
+end
+
 """
     Transaction Step used for `test_rel`
 
@@ -128,7 +146,7 @@ const Problem = Dict{Symbol, Any}
 """
 struct Step
     query::Union{String, Nothing}
-    install::Union{Vector{String}, Dict{String, String}}
+    install::Dict{String, String}
     broken::Bool
     schema_inputs::AbstractDict
     inputs::AbstractDict
@@ -139,7 +157,7 @@ end
 
 function Step(;
     query::Union{String, Nothing} = nothing,
-    install::Union{Vector{String}, Dict{String, String}} = Dict{String, String}(),
+    install::AcceptedSourceTypes = Dict{String, String}(),
     broken::Bool = false,
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
@@ -149,7 +167,7 @@ function Step(;
 )
     return Step(
         query,
-        install,
+        convert_to_install_kv(install),
         broken,
         schema_inputs,
         inputs,
@@ -241,7 +259,7 @@ function test_rel(;
     name::Union{String,Nothing} = nothing,
     location::Union{LineNumberNode,Nothing} = nothing,
     include_stdlib::Bool = true,
-    install::Union{Vector{String}, Dict{String, String}} = Dict{String, String}(),
+    install::AcceptedSourceTypes = Dict{String, String}(),
     abort_on_error::Bool = false,
     debug::Bool = false,
     debug_trace::Bool = false,
@@ -263,9 +281,7 @@ function test_rel(;
 
     # Perform all inserts before other tests
     if !isempty(install)
-        insert!(steps, 1, Step(
-            install = install,
-            ))
+        insert!(steps, 1, Step(; install = convert_to_install_kv(install)))
     end
     if !isempty(schema_inputs)
         insert!(steps, 1, Step(
@@ -468,15 +484,7 @@ function _test_rel_step(
     @testset BreakableTestSet "$(string(name))$step_postfix" broken = step.broken begin
         try
             if !isempty(step.install)
-                if step.install isa Dict
-                    load_models(get_context(), schema, engine, step.install)
-                else
-                    models = Dict{String, String}()
-                    for i in enumerate(step.install)
-                        models["test_install" * string(i[1])] = i[2]
-                    end
-                    load_models(get_context(), schema, engine, models)
-                end
+                load_models(get_context(), schema, engine, step.install)
             end
 
             # Don't test empty strings
