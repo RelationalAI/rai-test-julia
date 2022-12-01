@@ -226,6 +226,7 @@ Note that `test_rel` creates a new schema for each test.
   - `broken::Bool`: if the test is not currently correct (wrt the `expected`
     results), then `broken` can be used to mark the tests as broken and prevent the test from
     failing.
+  - `engine::String` (optional): the name of an existing engine where tests will be executed
 """
 function test_rel(;
     query::Union{String, Nothing} = nothing,
@@ -244,6 +245,7 @@ function test_rel(;
     expect_abort::Bool = false,
     broken::Bool = false,
     clone_db::Union{String, Nothing} = nothing,
+    engine::Union{String, Nothing} = nothing,
 )
     query !== nothing && insert!(
         steps,
@@ -277,6 +279,7 @@ function test_rel(;
         debug = debug,
         debug_trace = debug_trace,
         clone_db = clone_db,
+        engine = engine,
     )
 end
 
@@ -303,6 +306,7 @@ Note that `test_rel` creates a new schema for each test.
     triggered error.
   - `debug::Bool`: boolean that specifies debugging mode.
   - `debug_trace::Bool`: boolean that specifies printing out the debug_trace
+  - `engine::String` (optional): the name of an existing engine where tests will be executed
 """
 function test_rel_steps(;
     steps::Vector{Step},
@@ -313,6 +317,7 @@ function test_rel_steps(;
     debug::Bool = false,
     debug_trace::Bool = false,
     clone_db::Union{String, Nothing} = nothing,
+    engine::Union{String, Nothing} = nothing,
 )
     # Setup steps that run before the first testing Step
     config_query = ""
@@ -347,6 +352,7 @@ function test_rel_steps(;
             debug = debug,
             quiet = true,
             clone_db = clone_db,
+            user_engine = engine,
         )
         add_test_ref(parent, ref)
     else
@@ -356,6 +362,7 @@ function test_rel_steps(;
             location = location,
             debug = debug,
             clone_db = clone_db,
+            user_engine = engine,
         )
     end
 end
@@ -368,6 +375,7 @@ function _test_rel_steps(;
     debug::Bool = false,
     quiet::Bool = false,
     clone_db::Union{String, Nothing} = nothing,
+    user_engine::Union{String, Nothing} = nothing,
 )
     if isnothing(name)
         name = ""
@@ -382,7 +390,7 @@ function _test_rel_steps(;
         name *= resolved_location
     end
 
-    test_engine = get_test_engine()
+    test_engine = user_engine === nothing ? get_test_engine() : user_engine
     debug && println(name, " using test engine: ", test_engine)
     schema = create_test_database(clone_db)
 
@@ -403,7 +411,7 @@ function _test_rel_steps(;
         catch
             println("Could not delete test database: ", schema)
         end
-        release_test_engine(test_engine)
+        user_engine === nothing && release_test_engine(test_engine)
     end
 end
 
