@@ -107,12 +107,8 @@ Dict(:code => "name" [, :line => <number>])
 """
 const Problem = Dict{Symbol, Any}
 
-const AcceptedSourceTypes = Union{
-    String,
-    Pair{String, String},
-    Vector{String},
-    Dict{String, String},
-}
+const AcceptedSourceTypes =
+    Union{String, Pair{String, String}, Vector{String}, Dict{String, String}}
 
 convert_to_install_kv(install_dict::Dict{String, String}) = install_dict
 convert_to_install_kv(install_pair::Pair{String, String}) = Dict(install_pair)
