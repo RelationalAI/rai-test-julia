@@ -60,7 +60,6 @@ end
 
 """
 Test if an engine has been created and can be returned via the API.
-
 """
 function is_valid_engine(name::String)
     try
@@ -117,7 +116,6 @@ end
 """
 Engines are provisioned on first use by default. Calling this method will provision
 all engines in the current pool.
-
 """
 function provision_all_test_engines()
     @lock TEST_SERVER_LOCK begin
@@ -173,5 +171,5 @@ Call delete for any provisioned engines and resize the engine pool to zero.
 """
 function destroy_test_engines()
     resize_test_engine_pool(0)
-    println("Destroyed all test engine: ")
+    @info("Destroyed all test engine: ")
 end

@@ -12,13 +12,13 @@ mutable struct ConcurrentTestSet <: Test.AbstractTestSet
 end
 
 function record(ts::ConcurrentTestSet, child::AbstractTestSet)
-    record(ts.dts, child)
+    return record(ts.dts, child)
 end
 
 @testset "bob" println(1)
 
 function record(ts::ConcurrentTestSet, res::Test.Result)
-    record(ts.dts, res)
+    return record(ts.dts, res)
 end
 
 # Record any results directly stored and fetch results from any listed concurrent tests
@@ -38,12 +38,12 @@ function finish(ts::ConcurrentTestSet)
 end
 
 function add_test_ref(testset::ConcurrentTestSet, test_ref)
-    push!(testset.tests, test_ref)
+    return push!(testset.tests, test_ref)
 end
 
 # Handle attempted use outside of a ConcurrentTestSEt
 function add_test_ref(testset::AbstractTestSet, test_ref)
-    fetch(test_ref)
+    return fetch(test_ref)
 end
 
 # Wrap a DefaultTestSet. Results are recorded, but not printed.
@@ -74,7 +74,8 @@ mutable struct BreakableTestSet <: Test.AbstractTestSet
     quiet::Bool
     dts::Test.DefaultTestSet
 
-    BreakableTestSet(desc; broken = false, quiet = false) = new(broken, false, quiet, Test.DefaultTestSet(desc))
+    BreakableTestSet(desc; broken = false, quiet = false) =
+        new(broken, false, quiet, Test.DefaultTestSet(desc))
 end
 
 record(ts::BreakableTestSet, child::AbstractTestSet) = record(ts.dts, child)
@@ -96,12 +97,14 @@ function finish(ts::BreakableTestSet)
         ts.dts.n_passed = 0
         empty!(ts.dts.results)
 
-        push!(ts.dts.results, Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0)))
+        push!(
+            ts.dts.results,
+            Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0)),
+        )
     end
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
         parent_ts = Test.get_testset()
         record(parent_ts, ts.dts)
     end
-
 end

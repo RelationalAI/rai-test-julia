@@ -7,7 +7,7 @@ mutable struct TestEngineProvision
     creater::Function
 end
 
-function _wait_till_provisioned(engine_name,  max_wait_time_s = 240)
+function _wait_till_provisioned(engine_name, max_wait_time_s = 240)
     start_time = time()
     # This should be a rare event, so a coarse-grained period is acceptable
     # Current provisioning time is ~60s
@@ -49,7 +49,7 @@ function create_default_engine(name::String)
     end
 
     # Request engine creation
-    create_engine(get_context(), name, size = size)
+    create_engine(get_context(), name; size = size)
 
     # Wait for engine to be provisioned
     return _wait_till_provisioned(name, max_wait_time_s)
@@ -62,17 +62,21 @@ get_test_engine()::String = TEST_ENGINE_PROVISION.provider()
 release_test_engine(name::String) = TEST_ENGINE_PROVISION.releaser(name)
 
 function set_engine_name_provider(provider::Function)
-    TEST_ENGINE_PROVISION.provider = provider
+    return TEST_ENGINE_PROVISION.provider = provider
 end
 
 function set_engine_name_releaser(releaser::Function)
-    TEST_ENGINE_PROVISION.releaser = releaser
+    return TEST_ENGINE_PROVISION.releaser = releaser
 end
 
 function set_engine_creater(creater::Function)
-    TEST_ENGINE_PROVISION.creater = creater
+    return TEST_ENGINE_PROVISION.creater = creater
 end
 
 TEST_ENGINE_POOL = TestEnginePool(Dict{String, Int64}(), 0, get_next_engine_name)
 
-TEST_ENGINE_PROVISION = TestEngineProvision(get_pooled_test_engine, release_pooled_test_engine, create_default_engine)
+TEST_ENGINE_PROVISION = TestEngineProvision(
+    get_pooled_test_engine,
+    release_pooled_test_engine,
+    create_default_engine,
+)
