@@ -15,8 +15,6 @@ function record(ts::ConcurrentTestSet, child::AbstractTestSet)
     return record(ts.dts, child)
 end
 
-@testset "bob" println(1)
-
 function record(ts::ConcurrentTestSet, res::Test.Result)
     return record(ts.dts, res)
 end
