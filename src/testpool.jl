@@ -119,8 +119,8 @@ all engines in the current pool.
 """
 function provision_all_test_engines()
     @lock TEST_SERVER_LOCK begin
-        Threads.@sync for engine in TEST_ENGINE_POOL.engines
-            Threads.@async get_pooled_test_engine(engine.first)
+        for engine in TEST_ENGINE_POOL.engines
+            get_pooled_test_engine(engine.first)
         end
     end
 end
