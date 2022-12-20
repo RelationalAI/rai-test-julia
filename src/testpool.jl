@@ -10,21 +10,45 @@ function release_pooled_test_engine(name::String)
 end
 
 function get_pooled_test_engine(engine_name::Union{String, Nothing} = nothing)
-    if isnothing(engine_name)
+    # If we're asked to provide a particular engine then we can skip the pool tests
+    if !isnothing(engine_name)
+        @info("Retrieving named engine ", engine_name)
+        return get_engine(get_context(), engine_name)
+    end
+
+    # It is valid to keep looping while there are possible names to use
+    # When the pool is empty, errors are thrown
+    # If errors with provisioning occur they may be ongoing so attempts to provision a new
+    # engine are limited.
+    max_attempts = 5
+    attempts = 0
+    while attempts < max_attempts
+        attempts = attempts + 1
         engine_name = get_free_test_engine_name()
+
+        # Test if engine already exists and is ready for use
+        # If the engine does not exist then an exception is thrown
+        try
+            is_valid_engine(engine_name) && return engine_name
+            @info("<$engine_name> is not in a valid state", response)
+        catch
+            @info("Engine $engine_name does not exist - creating")
+        end
+
+        # The engine does not exist yet, so create it. The engine is potentially in an
+        # invalid state, in which case it will be recreated
+        try
+            return TEST_ENGINE_PROVISION.creater(engine_name)
+        catch
+            @info("Provisioning for $engine_name failed - attempting to replace")
+            # Provisioning failed - replace the engine and try again
+            replace_engine(name)
+        end
     end
 
-    # If the engine already exists, return it
-    is_valid_engine(engine_name) && return engine_name
+    # max_attempts were made to create a new engine. Give up and return an error
+    error("Engine could not be created")
 
-    # The engine does not exist yet, so create it
-    try
-        return TEST_ENGINE_PROVISION.creater(engine_name)
-    catch
-        # Provisioning failed - remove the name from the pool and rethrow
-        delete!(TEST_ENGINE_POOL.engines, engine_name)
-        rethrow()
-    end
 end
 
 const TEST_SERVER_LOCK = ReentrantLock()
@@ -59,13 +83,15 @@ function get_free_test_engine_name()::String
 end
 
 """
-Test if an engine has been created and can be returned via the API.
+Test if an engine has been created and is in the PROVISIONED state. Note that an engine
+that is currently being provisioned will fail this test, but may be valid once
+provisioning finishes.
 """
 function is_valid_engine(name::String)
     try
-        get_engine(get_context(), name)
-        # The engine exists and does not immediately return an error
-        return true
+        response = get_engine(get_context(), name)
+        # The engine has been provisioned and did not immediately return an error
+        return response.state == "PROVISIONED"
     catch
         # Engine does not exist
         return false
@@ -73,14 +99,17 @@ function is_valid_engine(name::String)
 end
 
 function replace_engine(name::String)
+    # Remove engine name from pool
     @lock TEST_SERVER_LOCK begin
         delete!(TEST_ENGINE_POOL.engines, name)
     end
-    # If the engine could not be deleted, notify and continue
+
+    # Attempt to delete the engine. If the engine could not be deleted, notify and continue
+    # Note that if an engine cannot be deleted, a new name will be used in the pool.
     try
         delete_engine(get_context(), name)
     catch
-        println("Could not delete engine: ", name)
+        info("Could not delete engine: ", name)
         name = TEST_ENGINE_POOL.generator(TEST_ENGINE_POOL.next_id)
     end
 
