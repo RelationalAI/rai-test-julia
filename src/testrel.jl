@@ -424,7 +424,7 @@ function _execute_test(name::String, context::Context, schema::String, engine::S
     @info("Executing $name with txn $txn_id")
 
     # The response may already contain the result. If so, we can return it immediately
-    if transactionResponse.results !== nothing
+    if !isnothing(transactionResponse.results)
         return transactionResponse
     end
     # The transaction was not immediately completed.
