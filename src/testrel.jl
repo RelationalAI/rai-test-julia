@@ -423,7 +423,7 @@ end
 
 function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
     start_time_ns = time_ns()
-    minimum_delta_sec = 1
+    delta_sec = 1
 
     txn = get_transaction(ctx, id)
     while !RAI.transaction_is_done(txn)
@@ -432,8 +432,7 @@ function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
             error("Transaction $id timed out after $timeout_sec seconds")
         end
 
-        delta = minimum_delta_sec + (duration / 1e9)
-        sleep(delta)
+        sleep(delta_sec)
 
         txn = get_transaction(ctx, id)
     end
