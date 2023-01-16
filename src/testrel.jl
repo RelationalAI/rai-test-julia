@@ -465,11 +465,15 @@ function _execute_test(
     program::String,
     timeout_sec::Int64)
     transactionResponse = exec_async(context, schema, engine, program)
-    if transactionResponse.results !== nothing
+    txn_id = transactionResponse.transaction.id
+    @info("Executing $name with txn $txn_id")
+
+    # The response may already contain the result. If so, we can return it immediately
+    if !isnothing(transactionResponse.results)
         return transactionResponse
     end
-
-    txn_id = transactionResponse.transaction.id
+    # The transaction was not immediately completed.
+    # Poll until the transaction is done, then return the results.
     try
         # Poll until the transaction is done, and return the results.
         return RAITest.wait_until_done(context, txn_id, timeout_sec)
@@ -519,7 +523,7 @@ function _test_rel_step(
                 return nothing
             end
 
-            response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec)
+            response = _execute_test(name, get_context(), schema, engine, program)
 
             state = response.transaction.state
 
