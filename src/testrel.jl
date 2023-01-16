@@ -415,17 +415,20 @@ function _test_rel_steps(;
     end
 end
 
-# Execute the test query. Outputs the transaction id and returns the response when done.
+# Execute the test query. Outputs the transaction id and returns the transaction response when done.
 function _execute_test(name::String, context::Context, schema::String, engine::String, program::String)
     start_time_ns = time_ns()
 
     transactionResponse = exec_async(context, schema, engine, program)
     txn_id = transactionResponse.transaction.id
     @info("Executing $name with txn $txn_id")
+
+    # The response may already contain the result. If so, we can return it immediately
     if transactionResponse.results !== nothing
         return transactionResponse
     end
-    # Poll until the transaction is done, and return the results.
+    # The transaction was not immediately completed.
+    # Poll until the transaction is done, then return the results.
     return RAI.wait_until_done(context, transactionResponse; start_time_ns = start_time_ns)
 end
 
