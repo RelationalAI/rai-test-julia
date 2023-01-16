@@ -144,6 +144,7 @@ struct Step
     expected::AbstractDict
     expected_problems::Vector
     expect_abort::Bool
+    timeout_sec::Int64
 end
 
 function Step(;
@@ -155,6 +156,7 @@ function Step(;
     expected::AbstractDict = Dict(),
     expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
+    timeout_sec::Int64 = 1800,
 )
     return Step(
         query,
@@ -165,6 +167,7 @@ function Step(;
         expected,
         expected_problems,
         expect_abort,
+        timeout_sec,
     )
 end
 
@@ -223,6 +226,7 @@ Note that `test_rel` creates a new schema for each test.
   - `debug_trace::Bool`: boolean that specifies printing out the debug_trace
   - `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it is
     expected to abort, but it does not, then the test fails.
+  - `timeout_sec`: an upper bound on test execution time.
   - `broken::Bool`: if the test is not currently correct (wrt the `expected`
     results), then `broken` can be used to mark the tests as broken and prevent the test from
     failing.
@@ -243,6 +247,7 @@ function test_rel(;
     expected::AbstractDict = Dict(),
     expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
+    timeout_sec::Int64 = 1800,
     broken::Bool = false,
     clone_db::Union{String, Nothing} = nothing,
     engine::Union{String, Nothing} = nothing,
@@ -255,6 +260,7 @@ function test_rel(;
             expected = expected,
             expected_problems = expected_problems,
             expect_abort = expect_abort,
+            timeout_sec = timeout_sec,
             broken = broken,
         ),
     )
@@ -415,10 +421,49 @@ function _test_rel_steps(;
     end
 end
 
-# Execute the test query. Outputs the transaction id and returns the transaction response when done.
-function _execute_test(name::String, context::Context, schema::String, engine::String, program::String)
+function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
     start_time_ns = time_ns()
+    delta_sec = 1
 
+    txn = get_transaction(ctx, id)
+    while !RAI.transaction_is_done(txn)
+        duration = time_ns() - start_time_ns
+        if duration > timeout_sec * 1e9
+            error("Transaction $id timed out after $timeout_sec seconds")
+        end
+
+        sleep(delta_sec)
+
+        txn = get_transaction(ctx, id)
+    end
+
+    m = Threads.@spawn get_transaction_metadata(ctx, id)
+    p = Threads.@spawn get_transaction_problems(ctx, id)
+    r = Threads.@spawn get_transaction_results(ctx, id)
+    try
+        return TransactionResponse(txn, fetch(m), fetch(p), fetch(r))
+    catch e
+        # (We use has_wrapped_exception to unwrap the TaskFailedException.)
+        if RAI.has_wrapped_exception(e, HTTPError) &&
+            RAI.unwrap_exception_to_root(e).status_code == 404
+            # This is an (unfortunately) expected case if the engine crashes during a
+            # transaction, or the transaction is cancelled. The transaction is marked
+            # as ABORTED, but it has no results.
+            return TransactionResponse(txn, nothing, nothing, nothing)
+        else
+            rethrow()
+        end
+    end
+end
+
+# Execute the test query. Outputs the transaction id and returns the response when done.
+function _execute_test(
+    name::String,
+    context::Context,
+    schema::String,
+    engine::String,
+    program::String,
+    timeout_sec::Int64)
     transactionResponse = exec_async(context, schema, engine, program)
     txn_id = transactionResponse.transaction.id
     @info("Executing $name with txn $txn_id")
@@ -428,8 +473,15 @@ function _execute_test(name::String, context::Context, schema::String, engine::S
         return transactionResponse
     end
     # The transaction was not immediately completed.
-    # Poll until the transaction is done, then return the results.
-    return RAI.wait_until_done(context, transactionResponse; start_time_ns = start_time_ns)
+    # Poll until the transaction is done, or times out, then return the results.
+    try
+        return RAITest.wait_until_done(context, txn_id, timeout_sec)
+    catch
+        # The transaction errored (not necessarily due to the timeout). Cancel the transaction and rethrow.
+        @info("Cancelling failed transaction")
+        RAI.cancel_transaction(context, txn_id)
+        rethrow()
+    end
 end
 
 # This internal function executes a single step of a `test_rel`
@@ -471,7 +523,7 @@ function _test_rel_step(
                 return nothing
             end
 
-            response = _execute_test(name, get_context(), schema, engine, program)
+            response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec)
 
             state = response.transaction.state
 
@@ -522,6 +574,7 @@ function _test_rel_step(
             end
         catch e
             Base.display_error(stderr, current_exceptions())
+            rethrow()
         end
         return nothing
     end
