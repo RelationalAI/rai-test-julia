@@ -523,7 +523,7 @@ function _test_rel_step(
                 return nothing
             end
 
-            response = _execute_test(name, get_context(), schema, engine, program)
+            response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec)
 
             state = response.transaction.state
 
