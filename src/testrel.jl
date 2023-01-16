@@ -473,11 +473,11 @@ function _execute_test(
         return transactionResponse
     end
     # The transaction was not immediately completed.
-    # Poll until the transaction is done, then return the results.
+    # Poll until the transaction is done, or times out, then return the results.
     try
-        # Poll until the transaction is done, and return the results.
         return RAITest.wait_until_done(context, txn_id, timeout_sec)
     catch
+        # The transaction errored (not necessarily due to the timeout). Cancel the transaction and rethrow.
         @info("Cancelling failed transaction")
         RAI.cancel_transaction(context, txn_id)
         rethrow()
