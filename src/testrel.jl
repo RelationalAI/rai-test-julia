@@ -252,7 +252,8 @@ function test_rel(;
     engine::Union{String, Nothing} = nothing,
 )
     if debug
-        ENV["JULIA_DEBUG"] = string(ENV["JULIA_DEBUG"]) * ",RAITest"
+        original_value = haskey(ENV, "Julia_DEBUG") ? string(ENV["JULIA_DEBUG"]) : ""
+        ENV["JULIA_DEBUG"] = original_value * ",RAITest"
     end
 
     query !== nothing && insert!(
