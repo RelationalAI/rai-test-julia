@@ -13,7 +13,7 @@ end
 # Generates a name for the given base name that makes it unique between multiple
 # processing units
 function gen_safe_name(basename)
-    return "$(basename)-p$(getpid())-t$(Base.Threads.threadid())-$(UUIDs.uuid4(MersenneTwister()))"
+    return "$(basename)-p$(getpid())-$(UUIDs.uuid4(MersenneTwister()))"
 end
 
 TEST_CONTEXT_WRAPPER::ContextWrapper = ContextWrapper(Context(load_config()))
@@ -27,8 +27,12 @@ function set_context(new_context::Context)
 end
 
 function create_test_database(clone_db::Union{Nothing, String} = nothing)::String
-    # TODO: Change to 'test-' when the account is changed
-    schema = gen_safe_name("julia-sdk-test")
+    basename = "test_rel"
+    if haskey(ENV, "TEST_REL_DB_BASENAME")
+        basename = ENV["TEST_REL_DB_BASENAME"]
+    end
+
+    schema = gen_safe_name(basename)
 
     return create_database(get_context(), schema; source = clone_db).database.name
 end
