@@ -47,7 +47,7 @@ function test_expected(expected::AbstractDict, results, debug::Bool = false)
     # No testing to do, return immediaely
     isempty(expected) && return
     if results === nothing
-        println("No results")
+        @info("No results")
         return false
     end
 
