@@ -54,7 +54,7 @@ function test_expected(expected::AbstractDict, results, debug::Bool = false)
 
     for e in expected
         name = string(e.first)
-        debug && println("looking for expected result for " * name)
+        @debug("looking for expected result for relation " * name)
         if e.first isa Symbol
             name = "/:"
             if !is_special_symbol(e.first)
@@ -74,14 +74,14 @@ function test_expected(expected::AbstractDict, results, debug::Bool = false)
         # Empty results will not be in the output so check for non-presence
         if isempty(expected_result_tuple_vector)
             if haskey(results, name)
-                println("Expected empty " * name * " not empty")
+                @info("Expected empty " * name * " not empty")
                 return false
             end
             continue
         end
         if !haskey(results, name)
-            println("Expected relation ", name, " not found")
-            debug && @info("results", results)
+            @info("Expected relation ", name, " not found")
+            @debug("All Results", results)
             return false
         end
 
@@ -92,10 +92,8 @@ function test_expected(expected::AbstractDict, results, debug::Bool = false)
         actual_result = results[name]
         actual_result_vector = sort(collect(zip(actual_result...)))
 
-        if debug
-            @info("expected", expected_result_tuple_vector)
-            @info("actual", actual_result_vector)
-        end
+        @debug("expected", expected_result_tuple_vector)
+        @debug("actual", actual_result_vector)
         !isequal(expected_result_tuple_vector, actual_result_vector) && return false
     end
 
@@ -253,6 +251,10 @@ function test_rel(;
     clone_db::Union{String, Nothing} = nothing,
     engine::Union{String, Nothing} = nothing,
 )
+    if debug
+        ENV["JULIA_DEBUG"] = string(ENV["JULIA_DEBUG"]) * ",RAITest"
+    end
+
     query !== nothing && insert!(
         steps,
         1,
@@ -277,7 +279,7 @@ function test_rel(;
         insert!(steps, 1, Step(; inputs = inputs))
     end
 
-    return test_rel_steps(;
+    result = test_rel_steps(;
         steps = steps,
         name = name,
         location = location,
@@ -288,6 +290,13 @@ function test_rel(;
         clone_db = clone_db,
         engine = engine,
     )
+
+    # Restore the environment if we changed it
+    if debug
+        ENV["JULIA_DEBUG"] = SubString(ENV["JULIA_DEBUG"], 1, lastindex(ENV["JULIA_DEBUG"]) - 8)
+    end
+
+    return result
 end
 
 """
@@ -398,7 +407,7 @@ function _test_rel_steps(;
     end
 
     test_engine = user_engine === nothing ? get_test_engine() : user_engine
-    debug && println(name, " using test engine: ", test_engine)
+    @debug("$name: using test engine: $test_engine")
     schema = create_test_database(clone_db)
 
     try
@@ -409,14 +418,15 @@ function _test_rel_steps(;
                     _test_rel_step(index, step, schema, test_engine, name, length(steps), debug)
                 end
             end
-            println(name, ": time", elapsed_time)
+            stats = (time = elapsed_time.time, allocations = elapsed_time.gcstats.poolalloc, bytes = elapsed_time.gcstats.allocd)
+            @info("$name: $stats")
         end
     finally
         # If database deletion fails
         try
             delete_test_database(schema)
         catch
-            println("Could not delete test database: ", schema)
+            @warn("Could not delete test database: ", schema)
         end
         user_engine === nothing && release_test_engine(test_engine)
     end
@@ -466,9 +476,10 @@ function _execute_test(
     engine::String,
     program::String,
     timeout_sec::Int64)
+    @debug("$name: Starting execution")
     transactionResponse = exec_async(context, schema, engine, program)
     txn_id = transactionResponse.transaction.id
-    @info("Executing $name with txn $txn_id")
+    @info("$name: Executing with txn $txn_id")
 
     # The response may already contain the result. If so, we can return it immediately
     if !isnothing(transactionResponse.results)
@@ -511,10 +522,11 @@ function _test_rel_step(
     #TODO: Remove this when the incoming tests are appropriately rewritten
     program *= generate_output_string_from_expected(step.expected)
 
-    debug && println(">>>>\n", program, "\n<<<<")
+    @debug("$name: generated program", program)
     step_postfix = steps_length > 1 ? " - step$index" : ""
+    name = "$(string(name))$step_postfix"
 
-    @testset BreakableTestSet "$(string(name))$step_postfix" broken = step.broken begin
+    @testset BreakableTestSet "$name" broken = step.broken begin
         try
             if !isempty(step.install)
                 load_models(get_context(), schema, engine, step.install)
@@ -551,12 +563,12 @@ function _test_rel_step(
             # Check if there were any unexpected errors/exceptions
             for problem in problems
                 if contains_problem(step.expected_problems, problem)
-                    debug && @info("Expected problem", problem)
+                    @debug("$name: Expected problem", problem)
                 else
                     unexpected_errors_found |= problem[:severity] == "error"
                     unexpected_errors_found |= problem[:severity] == "exception"
-                    println(name, " - Unexpected: ", problem[:code])
-                    debug && @info("Unexpected problem", problem)
+                    @info("$name: Unexpected problem: ", problem[:code])
+                    @debug("$name: Unexpected problem", problem)
                 end
             end
 
