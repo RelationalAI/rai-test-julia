@@ -252,8 +252,8 @@ function test_rel(;
     engine::Union{String, Nothing} = nothing,
 )
     if debug
-        original_value = haskey(ENV, "Julia_DEBUG") ? string(ENV["JULIA_DEBUG"]) : ""
-        ENV["JULIA_DEBUG"] = original_value * ",RAITest"
+        # Keep any existing debug settings
+        ENV["JULIA_DEBUG"] = get(ENV, "JULIA_DEBUG", "") * ",RAITest"
     end
 
     query !== nothing && insert!(
@@ -294,6 +294,7 @@ function test_rel(;
 
     # Restore the environment if we changed it
     if debug
+        # Remove the suffix ",RAITest"
         ENV["JULIA_DEBUG"] = SubString(ENV["JULIA_DEBUG"], 1, lastindex(ENV["JULIA_DEBUG"]) - 8)
     end
 
