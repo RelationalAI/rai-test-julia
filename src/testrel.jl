@@ -542,7 +542,7 @@ function _test_rel_step(
             response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec)
 
             state = response.transaction.state
-
+            @debug("Response state:", state)
             results = response.results
 
             results_dict = result_table_to_dict(results)
