@@ -27,10 +27,7 @@ function set_context(new_context::Context)
 end
 
 function create_test_database(clone_db::Union{Nothing, String} = nothing)::String
-    basename = "test_rel"
-    if haskey(ENV, "TEST_REL_DB_BASENAME")
-        basename = ENV["TEST_REL_DB_BASENAME"]
-    end
+    basename = get(ENV, "TEST_REL_DB_BASENAME", "test_rel")
 
     schema = gen_safe_name(basename)
 
