@@ -224,6 +224,10 @@ function matches_problem(actual::Dict, expected::Dict)::Bool
     return match
 end
 
+function result_table_to_dict(results::Nothing)
+    return nothing
+end
+
 function result_table_to_dict(results)
     dict_results = Dict{String, Arrow.Table}()
     for result in results

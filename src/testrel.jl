@@ -46,8 +46,8 @@ Types and contents of the relations must match.
 function test_expected(expected::AbstractDict, results, debug::Bool = false)
     # No testing to do, return immediaely
     isempty(expected) && return
-    if results === nothing
-        println("No results")
+    if isnothing(results)
+        @info("No results")
         return false
     end
 
