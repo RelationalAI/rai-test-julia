@@ -159,6 +159,11 @@ function Base.isequal(expected::UInt128, actual::Tuple{UInt64, UInt64})
     return isequal(expected, a)
 end
 
+# In some error cases the results may be nothing, rather than empty
+function extract_problems(results::Nothing)
+    return []
+end
+
 function extract_problems(results)
     problems = []
 
@@ -224,6 +229,7 @@ function matches_problem(actual::Dict, expected::Dict)::Bool
     return match
 end
 
+# In some error cases the results may be nothing, rather than empty
 function result_table_to_dict(results::Nothing)
     return nothing
 end
