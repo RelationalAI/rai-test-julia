@@ -443,6 +443,7 @@ function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
     try
         return TransactionResponse(txn, fetch(m), fetch(p), fetch(r))
     catch e
+        @info("Transaction response error", e)
         # (We use has_wrapped_exception to unwrap the TaskFailedException.)
         if RAI.has_wrapped_exception(e, HTTPError) &&
             RAI.unwrap_exception_to_root(e).status_code == 404
