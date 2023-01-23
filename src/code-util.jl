@@ -160,7 +160,7 @@ function Base.isequal(expected::UInt128, actual::Tuple{UInt64, UInt64})
 end
 
 # In some error cases the results may be nothing, rather than empty
-function extract_problems(reults::Nothing)
+function extract_problems(results::Nothing)
     return []
 end
 
