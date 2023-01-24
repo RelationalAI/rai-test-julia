@@ -20,7 +20,7 @@ jobs:
 
       - uses: julia-actions/setup-julia@v1
 
-      - uses: ./raicode/.github/actions/setup-raicloud
+      - uses: ./.github/actions/setup-raicloud
         with:
           profile: default
           environment: staging
