@@ -43,3 +43,15 @@ end
         end
     end
 end
+
+# Test basic test_rel usage
+try
+    resize_test_engine_pool(5)
+
+    @testset ConcurrentTestSet "Basics" begin
+        include("basic.jl")
+    end
+
+finally
+    resize_test_engine_pool(0)
+end
