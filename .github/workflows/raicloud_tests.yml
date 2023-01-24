@@ -33,7 +33,7 @@ jobs:
       
       - name: RAITest tests
         run: |
-         TEST_REL_DB_BASENAME="raitest" julia --projects=. test/runtests.jl 
+         TEST_REL_DB_BASENAME="raitest" julia --project=. test/runtests.jl
 
   FinalizeResult:
     name: Finalize Result
