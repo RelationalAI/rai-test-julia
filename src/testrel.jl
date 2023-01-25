@@ -398,6 +398,7 @@ function _test_rel_steps(;
     end
 
 
+    # Database creation can fail, so create database before claiming an engine
     schema = create_test_database(clone_db)
 
     test_engine = user_engine === nothing ? get_test_engine() : user_engine
