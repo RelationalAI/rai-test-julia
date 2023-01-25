@@ -28,9 +28,9 @@ end
 
 function create_test_database(clone_db::Union{Nothing, String} = nothing)::String
     basename = get(ENV, "TEST_REL_DB_BASENAME", "test_rel")
-
     schema = gen_safe_name(basename)
 
+    @debug("Using database name $schema")
     return create_database(get_context(), schema; source = clone_db).database.name
 end
 
