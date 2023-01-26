@@ -80,7 +80,7 @@ function test_expected(expected::AbstractDict, results, debug::Bool = false)
             continue
         end
         if !haskey(results, name)
-            @info("Expected relation ", name, " not found")
+            @info("Expected relation $name not found")
             @debug("All Results", results)
             return false
         end
