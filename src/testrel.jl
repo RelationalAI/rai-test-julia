@@ -92,8 +92,7 @@ function test_expected(expected::AbstractDict, results, debug::Bool = false)
         actual_result = results[name]
         actual_result_vector = sort(collect(zip(actual_result...)))
 
-        @debug("Expected result", expected_result_tuple_vector)
-        @debug("Actual result", actual_result_vector)
+        @debug("Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
         !isequal(expected_result_tuple_vector, actual_result_vector) && return false
     end
 
