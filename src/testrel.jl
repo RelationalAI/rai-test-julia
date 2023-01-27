@@ -38,22 +38,22 @@ function delete_test_database(name::String)
 end
 
 """
-    test_expected(expected::AbstractDict, results})
+    test_expected(expected::AbstractDict, results, testname)
 
 Given a Dict of expected relations, test if the actual results contain those relations.
 Types and contents of the relations must match.
 """
-function test_expected(expected::AbstractDict, results, debug::Bool = false)
+function test_expected(expected::AbstractDict, results, testname::String)
     # No testing to do, return immediaely
     isempty(expected) && return
     if isnothing(results)
-        @info("No results")
+        @info("$testname: No results")
         return false
     end
 
     for e in expected
         name = string(e.first)
-        @debug("looking for expected result for relation " * name)
+        @debug("$testname: looking for expected result for relation " * name)
         if e.first isa Symbol
             name = "/:"
             if !is_special_symbol(e.first)
@@ -73,14 +73,14 @@ function test_expected(expected::AbstractDict, results, debug::Bool = false)
         # Empty results will not be in the output so check for non-presence
         if isempty(expected_result_tuple_vector)
             if haskey(results, name)
-                @info("Expected empty " * name * " not empty")
+                @info("$testname: Expected empty " * name * " not empty")
                 return false
             end
             continue
         end
         if !haskey(results, name)
-            @info("Expected relation $name not found")
-            @debug("All Results", results)
+            @info("$testname: Expected relation $name not found")
+            @debug("$testname: Results", results)
             return false
         end
 
@@ -91,7 +91,7 @@ function test_expected(expected::AbstractDict, results, debug::Bool = false)
         actual_result = results[name]
         actual_result_vector = sort(collect(zip(actual_result...)))
 
-        @debug("Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
+        @debug("$testname: Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
         !isequal(expected_result_tuple_vector, actual_result_vector) && return false
     end
 
@@ -359,7 +359,6 @@ function test_rel_steps(;
             steps = steps,
             name = name,
             location = location,
-            debug = debug,
             quiet = true,
             clone_db = clone_db,
             user_engine = engine,
@@ -370,7 +369,6 @@ function test_rel_steps(;
             steps = steps,
             name = name,
             location = location,
-            debug = debug,
             clone_db = clone_db,
             user_engine = engine,
         )
@@ -382,7 +380,6 @@ function _test_rel_steps(;
     steps::Vector{Step},
     name::Union{String, Nothing},
     location::Union{LineNumberNode, Nothing},
-    debug::Bool = false,
     quiet::Bool = false,
     clone_db::Union{String, Nothing} = nothing,
     user_engine::Union{String, Nothing} = nothing,
@@ -412,7 +409,7 @@ function _test_rel_steps(;
         @testset type "$(string(name))" begin
             elapsed_time = @timed begin
                 for (index, step) in enumerate(steps)
-                    _test_rel_step(index, step, schema, test_engine, name, length(steps), debug)
+                    _test_rel_step(index, step, schema, test_engine, name, length(steps))
                 end
             end
             stats = (time = elapsed_time.time, allocations = elapsed_time.gcstats.poolalloc, bytes = elapsed_time.gcstats.allocd)
@@ -502,7 +499,6 @@ function _test_rel_step(
     engine::String,
     name::String,
     steps_length::Int,
-    debug::Bool,
 )
     if !isnothing(step.query)
         program = step.query
@@ -570,7 +566,7 @@ function _test_rel_step(
             end
 
             if !isempty(step.expected)
-                @test test_expected(step.expected, results_dict, debug)
+                @test test_expected(step.expected, results_dict, name)
             end
 
             # Allow all errors if any problems were expected
