@@ -28,7 +28,6 @@ end
 
 function create_test_database(clone_db::Union{Nothing, String} = nothing)::String
     basename = get(ENV, "TEST_REL_DB_BASENAME", "test_rel")
-
     schema = gen_safe_name(basename)
 
     return create_database(get_context(), schema; source = clone_db).database.name
@@ -39,22 +38,22 @@ function delete_test_database(name::String)
 end
 
 """
-    test_expected(expected::AbstractDict, results})
+    test_expected(expected::AbstractDict, results, testname)
 
 Given a Dict of expected relations, test if the actual results contain those relations.
 Types and contents of the relations must match.
 """
-function test_expected(expected::AbstractDict, results, debug::Bool = false)
+function test_expected(expected::AbstractDict, results, testname::String)
     # No testing to do, return immediaely
     isempty(expected) && return
     if isnothing(results)
-        @info("No results")
+        @info("$testname: No results")
         return false
     end
 
     for e in expected
         name = string(e.first)
-        debug && println("looking for expected result for " * name)
+        @debug("$testname: looking for expected result for relation " * name)
         if e.first isa Symbol
             name = "/:"
             if !is_special_symbol(e.first)
@@ -74,14 +73,14 @@ function test_expected(expected::AbstractDict, results, debug::Bool = false)
         # Empty results will not be in the output so check for non-presence
         if isempty(expected_result_tuple_vector)
             if haskey(results, name)
-                println("Expected empty " * name * " not empty")
+                @info("$testname: Expected empty " * name * " not empty")
                 return false
             end
             continue
         end
         if !haskey(results, name)
-            println("Expected relation ", name, " not found")
-            debug && @info("results", results)
+            @info("$testname: Expected relation $name not found")
+            @debug("$testname: Results", results)
             return false
         end
 
@@ -92,10 +91,7 @@ function test_expected(expected::AbstractDict, results, debug::Bool = false)
         actual_result = results[name]
         actual_result_vector = sort(collect(zip(actual_result...)))
 
-        if debug
-            @info("expected", expected_result_tuple_vector)
-            @info("actual", actual_result_vector)
-        end
+        @debug("$testname: Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
         !isequal(expected_result_tuple_vector, actual_result_vector) && return false
     end
 
@@ -277,17 +273,24 @@ function test_rel(;
         insert!(steps, 1, Step(; inputs = inputs))
     end
 
-    return test_rel_steps(;
-        steps = steps,
-        name = name,
-        location = location,
-        include_stdlib = include_stdlib,
-        abort_on_error = abort_on_error,
-        debug = debug,
-        debug_trace = debug_trace,
-        clone_db = clone_db,
-        engine = engine,
-    )
+    debug_env = get(ENV, "JULIA_DEBUG", "")
+    if debug
+        debug_env = debug_env * ",RAITest"
+    end
+
+    return withenv("JULIA_DEBUG" => debug_env) do
+        test_rel_steps(;
+            steps = steps,
+            name = name,
+            location = location,
+            include_stdlib = include_stdlib,
+            abort_on_error = abort_on_error,
+            debug = debug,
+            debug_trace = debug_trace,
+            clone_db = clone_db,
+            engine = engine,
+        )
+    end
 end
 
 """
@@ -356,7 +359,6 @@ function test_rel_steps(;
             steps = steps,
             name = name,
             location = location,
-            debug = debug,
             quiet = true,
             clone_db = clone_db,
             user_engine = engine,
@@ -367,7 +369,6 @@ function test_rel_steps(;
             steps = steps,
             name = name,
             location = location,
-            debug = debug,
             clone_db = clone_db,
             user_engine = engine,
         )
@@ -379,7 +380,6 @@ function _test_rel_steps(;
     steps::Vector{Step},
     name::Union{String, Nothing},
     location::Union{LineNumberNode, Nothing},
-    debug::Bool = false,
     quiet::Bool = false,
     clone_db::Union{String, Nothing} = nothing,
     user_engine::Union{String, Nothing} = nothing,
@@ -400,26 +400,27 @@ function _test_rel_steps(;
 
     # Database creation can fail, so create database before claiming an engine
     schema = create_test_database(clone_db)
-
+    @debug("$name: Using database name $schema")
     test_engine = user_engine === nothing ? get_test_engine() : user_engine
-    debug && println(name, " using test engine: ", test_engine)
+    @debug("$name: using test engine: $test_engine")
 
     try
         type = quiet ? QuietTestSet : Test.DefaultTestSet
         @testset type "$(string(name))" begin
             elapsed_time = @timed begin
                 for (index, step) in enumerate(steps)
-                    _test_rel_step(index, step, schema, test_engine, name, length(steps), debug)
+                    _test_rel_step(index, step, schema, test_engine, name, length(steps))
                 end
             end
-            println(name, ": time", elapsed_time)
+            stats = (time = elapsed_time.time, allocations = elapsed_time.gcstats.poolalloc, bytes = elapsed_time.gcstats.allocd)
+            @info("$name: $stats")
         end
     finally
         # If database deletion fails
         try
             delete_test_database(schema)
         catch
-            println("Could not delete test database: ", schema)
+            @warn("Could not delete test database: ", schema)
         end
         user_engine === nothing && release_test_engine(test_engine)
     end
@@ -469,9 +470,10 @@ function _execute_test(
     engine::String,
     program::String,
     timeout_sec::Int64)
+    @debug("$name: Starting execution")
     transactionResponse = exec_async(context, schema, engine, program)
     txn_id = transactionResponse.transaction.id
-    @info("Executing $name with txn $txn_id")
+    @info("$name: Executing with txn $txn_id")
 
     # The response may already contain the result. If so, we can return it immediately
     if !isnothing(transactionResponse.results)
@@ -497,7 +499,6 @@ function _test_rel_step(
     engine::String,
     name::String,
     steps_length::Int,
-    debug::Bool,
 )
     if !isnothing(step.query)
         program = step.query
@@ -514,10 +515,11 @@ function _test_rel_step(
     #TODO: Remove this when the incoming tests are appropriately rewritten
     program *= generate_output_string_from_expected(step.expected)
 
-    debug && println(">>>>\n", program, "\n<<<<")
+    @debug("$name: generated program", program)
     step_postfix = steps_length > 1 ? " - step$index" : ""
+    name = "$(string(name))$step_postfix"
 
-    @testset BreakableTestSet "$(string(name))$step_postfix" broken = step.broken begin
+    @testset BreakableTestSet "$name" broken = step.broken begin
         try
             if !isempty(step.install)
                 load_models(get_context(), schema, engine, step.install)
@@ -531,7 +533,7 @@ function _test_rel_step(
             response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec)
 
             state = response.transaction.state
-
+            @debug("Response state:", state)
             results = response.results
 
             results_dict = result_table_to_dict(results)
@@ -554,17 +556,17 @@ function _test_rel_step(
             # Check if there were any unexpected errors/exceptions
             for problem in problems
                 if contains_problem(step.expected_problems, problem)
-                    debug && @info("Expected problem", problem)
+                    @debug("$name: Expected problem", problem)
                 else
                     unexpected_errors_found |= problem[:severity] == "error"
                     unexpected_errors_found |= problem[:severity] == "exception"
-                    println(name, " - Unexpected: ", problem[:code])
-                    debug && @info("Unexpected problem", problem)
+                    @info("$name: Unexpected problem: $(problem[:code])")
+                    @debug("$name: Unexpected problem", problem)
                 end
             end
 
             if !isempty(step.expected)
-                @test test_expected(step.expected, results_dict, debug)
+                @test test_expected(step.expected, results_dict, name)
             end
 
             # Allow all errors if any problems were expected

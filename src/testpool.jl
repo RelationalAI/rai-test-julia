@@ -80,7 +80,7 @@ function replace_engine(name::String)
     try
         delete_engine(get_context(), name)
     catch
-        println("Could not delete engine: ", name)
+        @warn("Could not delete engine: ", name)
         name = TEST_ENGINE_POOL.generator(TEST_ENGINE_POOL.next_id)
     end
 
@@ -154,7 +154,7 @@ function resize_test_engine_pool(size::Int64, generator::Function = get_next_eng
         end
         Threads.@sync for engine in engines
             if length(engines) > size
-                println("Deleting engine ", engine.first)
+                @info("Deleting engine", engine.first)
                 @async try
                     delete_engine(get_context(), engine.first)
                 catch
