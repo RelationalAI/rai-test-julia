@@ -250,11 +250,6 @@ function test_rel(;
     clone_db::Union{String, Nothing} = nothing,
     engine::Union{String, Nothing} = nothing,
 )
-    if debug
-        # Keep any existing debug settings
-        ENV["JULIA_DEBUG"] = get(ENV, "JULIA_DEBUG", "") * ",RAITest"
-    end
-
     query !== nothing && insert!(
         steps,
         1,
@@ -279,25 +274,24 @@ function test_rel(;
         insert!(steps, 1, Step(; inputs = inputs))
     end
 
-    result = test_rel_steps(;
-        steps = steps,
-        name = name,
-        location = location,
-        include_stdlib = include_stdlib,
-        abort_on_error = abort_on_error,
-        debug = debug,
-        debug_trace = debug_trace,
-        clone_db = clone_db,
-        engine = engine,
-    )
-
-    # Restore the environment if we changed it
+    debug_env = get(ENV, "JULIA_DEBUG", "")
     if debug
-        # Remove the suffix ",RAITest"
-        ENV["JULIA_DEBUG"] = SubString(ENV["JULIA_DEBUG"], 1, lastindex(ENV["JULIA_DEBUG"]) - 8)
+        debug_env = debug_env * ",RAITest"
     end
 
-    return result
+    return withenv("JULIA_DEBUG" => debug_env) do
+        test_rel_steps(;
+            steps = steps,
+            name = name,
+            location = location,
+            include_stdlib = include_stdlib,
+            abort_on_error = abort_on_error,
+            debug = debug,
+            debug_trace = debug_trace,
+            clone_db = clone_db,
+            engine = engine,
+        )
+    end
 end
 
 """
