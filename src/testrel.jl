@@ -30,7 +30,6 @@ function create_test_database(clone_db::Union{Nothing, String} = nothing)::Strin
     basename = get(ENV, "TEST_REL_DB_BASENAME", "test_rel")
     schema = gen_safe_name(basename)
 
-    @debug("Using database name $schema")
     return create_database(get_context(), schema; source = clone_db).database.name
 end
 
@@ -404,7 +403,7 @@ function _test_rel_steps(;
 
     # Database creation can fail, so create database before claiming an engine
     schema = create_test_database(clone_db)
-
+    @debug("$name: Using database name $schema")
     test_engine = user_engine === nothing ? get_test_engine() : user_engine
     @debug("$name: using test engine: $test_engine")
 
