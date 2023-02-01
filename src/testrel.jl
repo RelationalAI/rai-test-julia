@@ -26,11 +26,13 @@ function set_context(new_context::Context)
     return TEST_CONTEXT_WRAPPER.context = new_context
 end
 
-function create_test_database(clone_db::Union{Nothing, String} = nothing)::String
+function create_test_database_name()::String
     basename = get(ENV, "TEST_REL_DB_BASENAME", "test_rel")
-    schema = gen_safe_name(basename)
+    return gen_safe_name(basename)
+end
 
-    return create_database(get_context(), schema; source = clone_db).database.name
+function create_test_database(name::String, clone_db::Union{Nothing, String} = nothing)::String
+    return create_database(get_context(), name; source = clone_db).database.name
 end
 
 function delete_test_database(name::String)
@@ -398,15 +400,17 @@ function _test_rel_steps(;
     end
 
 
-    # Database creation can fail, so create database before claiming an engine
-    schema = create_test_database(clone_db)
+    # Generate a name for the test database
+    schema = create_test_database_name()
     @debug("$name: Using database name $schema")
+
     test_engine = user_engine === nothing ? get_test_engine() : user_engine
     @debug("$name: using test engine: $test_engine")
 
     try
         type = quiet ? QuietTestSet : Test.DefaultTestSet
         @testset type "$(string(name))" begin
+            schema = create_test_database(schema, clone_db)
             elapsed_time = @timed begin
                 for (index, step) in enumerate(steps)
                     _test_rel_step(index, step, schema, test_engine, name, length(steps))
@@ -416,7 +420,6 @@ function _test_rel_steps(;
             @info("$name: $stats")
         end
     finally
-        # If database deletion fails
         try
             delete_test_database(schema)
         catch
