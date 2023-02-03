@@ -13,7 +13,7 @@ end
 # Generates a name for the given base name that makes it unique between multiple
 # processing units
 function gen_safe_name(basename)
-    return "$(basename)-p$(getpid())-$(UUIDs.uuid4(MersenneTwister()))"
+    return "$(basename)-$(UUIDs.uuid4(MersenneTwister()))"
 end
 
 TEST_CONTEXT_WRAPPER::ContextWrapper = ContextWrapper(Context(load_config()))
