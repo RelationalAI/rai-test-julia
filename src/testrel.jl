@@ -31,8 +31,8 @@ function create_test_database_name(; default_basename="test_rel")::String
     return gen_safe_name(basename)
 end
 
-function create_test_database(name::String, clone_db::Union{Nothing, String} = nothing)::String
-    return create_database(get_context(), name; source = clone_db).database.name
+function create_test_database(name::String, clone_db::Union{Nothing, String} = nothing)
+    create_database(get_context(), name; source = clone_db).database
 end
 
 function delete_test_database(name::String)
@@ -410,7 +410,7 @@ function _test_rel_steps(;
     try
         type = quiet ? QuietTestSet : Test.DefaultTestSet
         @testset type "$(string(name))" begin
-            schema = create_test_database(schema, clone_db)
+            create_test_database(schema, clone_db)
             elapsed_time = @timed begin
                 for (index, step) in enumerate(steps)
                     _test_rel_step(index, step, schema, test_engine, name, length(steps))
