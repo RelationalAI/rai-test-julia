@@ -26,8 +26,8 @@ function set_context(new_context::Context)
     return TEST_CONTEXT_WRAPPER.context = new_context
 end
 
-function create_test_database_name()::String
-    basename = get(ENV, "TEST_REL_DB_BASENAME", "test_rel")
+function create_test_database_name(; default_basename="test_rel")::String
+    basename = get(ENV, "TEST_REL_DB_BASENAME", default_basename)
     return gen_safe_name(basename)
 end
 
