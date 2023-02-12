@@ -144,6 +144,7 @@ function resize_test_engine_pool(size::Int64, generator::Function = get_next_eng
 
     @lock TEST_SERVER_LOCK begin
         engines = TEST_ENGINE_POOL.engines
+        # Add engines while length < size
         while (length(engines) < size)
             new_name = TEST_ENGINE_POOL.generator(TEST_ENGINE_POOL.next_id)
             if haskey(engines, new_name)
@@ -152,15 +153,20 @@ function resize_test_engine_pool(size::Int64, generator::Function = get_next_eng
             engines[new_name] = 0
             TEST_ENGINE_POOL.next_id += 1
         end
-        Threads.@sync for engine in engines
-            if length(engines) > size
-                @info("Deleting engine", engine.first)
-                @async try
-                    delete_engine(get_context(), engine.first)
-                catch
-                    # The engine may not exist if it hasn't been used yet
-                end
-                delete!(engines, engine.first)
+        # Move the first length - size engines to the list of engines to delete
+        engines_to_delete = String[]
+        while length(engines) > size
+            engine_name = first(engines).first
+            push!(engines_to_delete, engine_name)
+            delete!(engines, engine_name)
+        end
+        # Asynchronously delete the engines
+        Threads.@sync for engine in engines_to_delete
+            @info("Deleting engine", engine)
+            @async try
+                delete_engine(get_context(), engine.first)
+            catch
+                # The engine may not exist if it hasn't been used yet
             end
         end
     end
