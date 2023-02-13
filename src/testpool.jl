@@ -163,9 +163,11 @@ function resize_test_engine_pool(size::Int64, generator::Function = get_next_eng
         Threads.@sync for engine in engines_to_delete
             @info("Deleting engine", engine)
             @async try
-                delete_engine(get_context(), engine.first)
-            catch
+                delete_engine(get_context(), engine)
+            catch e
                 # The engine may not exist if it hasn't been used yet
+                # For other errors, we just report the error and delete what we can
+                @info(e)
             end
         end
     end
