@@ -156,9 +156,8 @@ function resize_test_engine_pool(size::Int64, generator::Function = get_next_eng
         # Move the first length - size engines to the list of engines to delete
         engines_to_delete = String[]
         while length(engines) > size
-            engine_name = first(engines).first
+            engine_name, _ = pop!(engines)
             push!(engines_to_delete, engine_name)
-            delete!(engines, engine_name)
         end
         # Asynchronously delete the engines
         Threads.@sync for engine in engines_to_delete
