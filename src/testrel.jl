@@ -12,8 +12,12 @@ end
 
 # Generates a name for the given base name that makes it unique between multiple
 # processing units
+# Generated names are truncated at 63 characters. This limit is reached when the
+# base name is 28 characters long. Longer base names can be used but uniqueness
+# is not guaranteed
 function gen_safe_name(basename)
-    return "$(basename)-$(UUIDs.uuid4(MersenneTwister()))"
+    name = "$(basename)-$(UUIDs.uuid4(MersenneTwister()))"
+    return name[1:min(sizeof(name), 63)]
 end
 
 TEST_CONTEXT_WRAPPER::ContextWrapper = ContextWrapper(Context(load_config()))
