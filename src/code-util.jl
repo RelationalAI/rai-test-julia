@@ -30,17 +30,41 @@ function convert_input_dict_to_string(inputs::AbstractDict)
                 program *= "; "
             end
 
-            if i isa String
-                program *= '"' * i * '"'
-            elseif i isa Char
-                program *= "'" * i * "'"
-            else
-                program *= string(i)
-            end
+            program *= input_element_to_string(i)
         end
     end
     return program
 end
+
+function input_element_to_string(input)
+    return repr(input)
+end
+
+# Escape strings in a format that is valid rel
+function input_element_to_string(input::String)
+    return "\"" * escape_string(input) * "\""
+end
+
+function input_element_to_string(input::Tuple)
+    if length(input) == 0
+        return "()"
+    end
+
+    if length(input) == 1
+        return input_element_to_string(input...)
+    end
+
+
+    program = "("
+    for element in input
+        program *= input_element_to_string(element)
+        program *= ","
+    end
+    program *= ")"
+
+    return program
+end
+
 
 # Extract relation names from the expected output and append them to output
 # Turns a dict of name=>vector, with names of form :othername/Type
