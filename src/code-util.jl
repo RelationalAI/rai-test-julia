@@ -41,6 +41,7 @@ function input_element_to_string(input)
 end
 
 # Escape strings in a format that is valid rel
+# repr() would be nice, but does not produce valid rel-escaped strings
 function input_element_to_string(input::String)
     return "\"" * escape_string(input) * "\""
 end
