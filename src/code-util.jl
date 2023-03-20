@@ -57,10 +57,7 @@ function input_element_to_string(input::Tuple)
 
 
     program = "("
-    for element in input
-        program *= input_element_to_string(element)
-        program *= ","
-    end
+    program *= join(input_element_to_string.(input), ",")
     program *= ")"
 
     return program
