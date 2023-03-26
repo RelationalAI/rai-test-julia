@@ -13,7 +13,7 @@ function _wait_till_provisioned(engine_name, max_wait_time_s = 240)
     # Current provisioning time is ~60s
     time_delta_s = 1
 
-    response = get_engine(get_context(), engine_name)
+    response = get_engine(get_context(), engine_name; readtimeout = max_wait_time_s)
 
     # The engine exists - now we wait until it is not in the provisioning stage
     while (response.state != "PROVISIONED")
@@ -25,7 +25,7 @@ function _wait_till_provisioned(engine_name, max_wait_time_s = 240)
         end
 
         sleep(time_delta_s)
-        response = get_engine(get_context(), engine_name)
+        response = get_engine(get_context(), engine_name; readtimeout = max_wait_time_s)
     end
 
     return response.name
@@ -41,7 +41,7 @@ function create_default_engine(name::String)
     max_wait_time_s = 120
 
     try
-        get_engine(get_context(), name)
+        get_engine(get_context(), name; readtimeout = max_wait_time_s)
         # The engine already exists so return it immediately
         return name
     catch
@@ -49,7 +49,7 @@ function create_default_engine(name::String)
     end
 
     # Request engine creation
-    create_engine(get_context(), name; size = size)
+    create_engine(get_context(), name; size = size, readtimeout = max_wait_time_s)
 
     # Wait for engine to be provisioned
     return _wait_till_provisioned(name, max_wait_time_s)

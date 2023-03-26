@@ -437,7 +437,7 @@ function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
     start_time_ns = time_ns()
     delta_sec = 1
 
-    txn = get_transaction(ctx, id)
+    txn = get_transaction(ctx, id; readtimeout = timeout_sec)
     while !RAI.transaction_is_done(txn)
         duration = time_ns() - start_time_ns
         if duration > timeout_sec * 1e9
@@ -446,7 +446,8 @@ function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
 
         sleep(delta_sec)
 
-        txn = get_transaction(ctx, id)
+        remaining = timeout_sec - floor(Int64, duration / 1e9)
+        txn = get_transaction(ctx, id; readtimeout = remaining)
     end
 
     m = Threads.@spawn get_transaction_metadata(ctx, id)
@@ -478,7 +479,8 @@ function _execute_test(
     program::String,
     timeout_sec::Int64)
     @debug("$name: Starting execution")
-    transactionResponse = exec_async(context, schema, engine, program)
+    transactionResponse = exec_async(context, schema, engine, program;
+            readtimeout = timeout_sec)
     txn_id = transactionResponse.transaction.id
     @info("$name: Executing with txn $txn_id")
 
