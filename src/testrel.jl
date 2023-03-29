@@ -492,9 +492,9 @@ function _execute_test(
     # Poll until the transaction is done, or times out, then return the results.
     try
         return RAITest.wait_until_done(context, txn_id, timeout_sec)
-    catch
+    catch e
         # The transaction errored (not necessarily due to the timeout). Cancel the transaction and rethrow.
-        @info("Cancelling failed transaction")
+        @info "$name: Cancelling failed transaction ($txn_id)" e txn_id name
         RAI.cancel_transaction(context, txn_id)
         rethrow()
     end
