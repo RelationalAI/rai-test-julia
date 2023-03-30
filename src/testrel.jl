@@ -450,9 +450,11 @@ function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
         txn = get_transaction(ctx, id; readtimeout = remaining)
     end
 
-    m = Threads.@spawn get_transaction_metadata(ctx, id)
-    p = Threads.@spawn get_transaction_problems(ctx, id)
-    r = Threads.@spawn get_transaction_results(ctx, id)
+    # The server has finished processing the transaction so we assume that worst-case
+    # timeouts can be much shorter
+    m = Threads.@spawn get_transaction_metadata(ctx, id; readtimeout = 120)
+    p = Threads.@spawn get_transaction_problems(ctx, id; readtimeout = 120)
+    r = Threads.@spawn get_transaction_results(ctx, id; readtimeout = 120)
     try
         return TransactionResponse(txn, fetch(m), fetch(p), fetch(r))
     catch e
@@ -493,9 +495,10 @@ function _execute_test(
     try
         return RAITest.wait_until_done(context, txn_id, timeout_sec)
     catch e
-        # The transaction errored (not necessarily due to the timeout). Cancel the transaction and rethrow.
+        # The transaction errored (not necessarily due to the timeout). Cancel the
+        # transaction and rethrow.
         @info "$name: Cancelling failed transaction ($txn_id)" e txn_id name
-        RAI.cancel_transaction(context, txn_id)
+        RAI.cancel_transaction(context, txn_id; readtimeout = timeout_sec)
         rethrow()
     end
 end
