@@ -7,7 +7,7 @@ mutable struct TestEngineProvision
     creater::Function
 end
 
-function _wait_till_provisioned(engine_name, max_wait_time_s = 240)
+function _wait_till_provisioned(engine_name, max_wait_time_s = 600)
     start_time = time()
     # This should be a rare event, so a coarse-grained period is acceptable
     # Current provisioning time is ~60s
@@ -38,7 +38,7 @@ return once the provisioning process is complete, or failed.
 """
 function create_default_engine(name::String)
     size = "XS"
-    max_wait_time_s = 120
+    max_wait_time_s = 600
 
     try
         get_engine(get_context(), name; readtimeout = max_wait_time_s)
