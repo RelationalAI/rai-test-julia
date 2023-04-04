@@ -9,7 +9,7 @@ function release_pooled_test_engine(name::String)
     end
 end
 
-function get_pooled_test_engine(engine_name::Union{String, Nothing} = nothing)
+function get_pooled_test_engine(engine_name::Option{String} = nothing)
     if isnothing(engine_name)
         engine_name = get_free_test_engine_name()
     end
