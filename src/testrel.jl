@@ -148,7 +148,7 @@ struct Step
     expected_problems::Vector
     expect_abort::Bool
     timeout_sec::Int64
-    readonly::Option{Bool}
+    readonly::Bool
 end
 
 function Step(;
@@ -161,7 +161,7 @@ function Step(;
     expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
     timeout_sec::Int64 = 1800,
-    readonly::Option{Bool} = nothing,
+    readonly::Bool = false,
 )
     return Step(
         query,
@@ -516,10 +516,6 @@ function _test_rel_step(
 )
     program = something(step.query, "")
 
-    # If readonly wasn't set, we assume if there are multiple steps, the transaction 
-    # should be write, otherwise, readonly
-    readonly = something(step.readonly, steps_length == 1)
-
     #Append inputs to program
     program *= convert_input_dict_to_string(step.inputs)
 
@@ -544,7 +540,7 @@ function _test_rel_step(
                 return nothing
             end
 
-            response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec, readonly)
+            response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec, step.readonly)
 
             state = response.transaction.state
             @debug("Response state:", state)
