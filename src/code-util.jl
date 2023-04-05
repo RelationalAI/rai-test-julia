@@ -1,3 +1,6 @@
+# helper for optional types
+const Option{T} = Union{Nothing, T}
+
 # Extract relation names from the inputs and adds them to the program
 # Turns a dict of name=>vector, with names of form :othername/Type,
 # into a series of def name = list of tuples

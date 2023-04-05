@@ -35,7 +35,7 @@ function create_test_database_name(; default_basename="test_rel")::String
     return gen_safe_name(basename)
 end
 
-function create_test_database(name::String, clone_db::Union{Nothing, String} = nothing)
+function create_test_database(name::String, clone_db::Option{String} = nothing)
     create_database(get_context(), name; source = clone_db).database
 end
 
@@ -139,7 +139,7 @@ end
       errors. When `expected_problems` is `[]`, this means that errors are allowed.
 """
 struct Step
-    query::Union{String, Nothing}
+    query::Option{String}
     install::Dict{String, String}
     broken::Bool
     schema_inputs::AbstractDict
@@ -148,10 +148,11 @@ struct Step
     expected_problems::Vector
     expect_abort::Bool
     timeout_sec::Int64
+    readonly::Bool
 end
 
 function Step(;
-    query::Union{String, Nothing} = nothing,
+    query::Option{String} = nothing,
     install::AcceptedSourceTypes = Dict{String, String}(),
     broken::Bool = false,
     schema_inputs::AbstractDict = Dict(),
@@ -160,6 +161,7 @@ function Step(;
     expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
     timeout_sec::Int64 = 1800,
+    readonly::Bool = false,
 )
     return Step(
         query,
@@ -171,6 +173,7 @@ function Step(;
         expected_problems,
         expect_abort,
         timeout_sec,
+        readonly
     )
 end
 
@@ -236,10 +239,10 @@ Note that `test_rel` creates a new schema for each test.
   - `engine::String` (optional): the name of an existing engine where tests will be executed
 """
 function test_rel(;
-    query::Union{String, Nothing} = nothing,
+    query::Option{String} = nothing,
     steps::Vector{Step} = Step[],
-    name::Union{String, Nothing} = nothing,
-    location::Union{LineNumberNode, Nothing} = nothing,
+    name::Option{String} = nothing,
+    location::Option{LineNumberNode} = nothing,
     include_stdlib::Bool = true,
     install::AcceptedSourceTypes = Dict{String, String}(),
     abort_on_error::Bool = false,
@@ -252,8 +255,8 @@ function test_rel(;
     expect_abort::Bool = false,
     timeout_sec::Int64 = 1800,
     broken::Bool = false,
-    clone_db::Union{String, Nothing} = nothing,
-    engine::Union{String, Nothing} = nothing,
+    clone_db::Option{String} = nothing,
+    engine::Option{String} = nothing,
 )
     query !== nothing && insert!(
         steps,
@@ -326,14 +329,14 @@ Note that `test_rel` creates a new schema for each test.
 """
 function test_rel_steps(;
     steps::Vector{Step},
-    name::Union{String, Nothing} = nothing,
-    location::Union{LineNumberNode, Nothing} = nothing,
+    name::Option{String} = nothing,
+    location::Option{LineNumberNode} = nothing,
     include_stdlib::Bool = true,
     abort_on_error::Bool = false,
     debug::Bool = false,
     debug_trace::Bool = false,
-    clone_db::Union{String, Nothing} = nothing,
-    engine::Union{String, Nothing} = nothing,
+    clone_db::Option{String} = nothing,
+    engine::Option{String} = nothing,
 )
     # Setup steps that run before the first testing Step
     config_query = ""
@@ -384,11 +387,11 @@ end
 # This internal function executes `test_rel`
 function _test_rel_steps(;
     steps::Vector{Step},
-    name::Union{String, Nothing},
-    location::Union{LineNumberNode, Nothing},
+    name::Option{String},
+    location::Option{LineNumberNode},
     quiet::Bool = false,
-    clone_db::Union{String, Nothing} = nothing,
-    user_engine::Union{String, Nothing} = nothing,
+    clone_db::Option{String} = nothing,
+    user_engine::Option{String} = nothing,
 )
     if isnothing(name)
         name = ""
@@ -479,16 +482,18 @@ function _execute_test(
     schema::String,
     engine::String,
     program::String,
-    timeout_sec::Int64)
+    timeout_sec::Int64,
+    readonly::Bool,
+)
     @debug("$name: Starting execution")
-    transactionResponse = exec_async(context, schema, engine, program;
-            readtimeout = timeout_sec)
-    txn_id = transactionResponse.transaction.id
+    rsp = exec_async(context, schema, engine, program;
+            readtimeout = timeout_sec, readonly)
+    txn_id = rsp.transaction.id
     @info("$name: Executing with txn $txn_id")
 
     # The response may already contain the result. If so, we can return it immediately
-    if !isnothing(transactionResponse.results)
-        return transactionResponse
+    if !isnothing(rsp.results)
+        return rsp
     end
     # The transaction was not immediately completed.
     # Poll until the transaction is done, or times out, then return the results.
@@ -512,11 +517,7 @@ function _test_rel_step(
     name::String,
     steps_length::Int,
 )
-    if !isnothing(step.query)
-        program = step.query
-    else
-        program = ""
-    end
+    program = something(step.query, "")
 
     #Append inputs to program
     program *= convert_input_dict_to_string(step.inputs)
@@ -542,7 +543,7 @@ function _test_rel_step(
                 return nothing
             end
 
-            response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec)
+            response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec, step.readonly)
 
             state = response.transaction.state
             @debug("Response state:", state)
