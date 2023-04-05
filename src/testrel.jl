@@ -481,7 +481,7 @@ function _execute_test(
     engine::String,
     program::String,
     timeout_sec::Int64,
-    readonly::Bool
+    readonly::Bool,
 )
     @debug("$name: Starting execution")
     rsp = exec_async(context, schema, engine, program;
