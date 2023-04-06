@@ -9,10 +9,6 @@ function convert_input_dict_to_string(inputs::AbstractDict)
     for input in inputs
         name = string(input.first)
 
-        # Dict values represent a functional dependency
-        if input.second isa Dict
-            program *= "\n@function"
-        end
         program *= "\ndef insert:" * name * " = "
 
         first = true
