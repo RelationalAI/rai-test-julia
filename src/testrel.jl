@@ -591,7 +591,7 @@ function _test_rel_step(
                 @test state == "COMPLETED"
                 @test !unexpected_errors_found
                 if state == "ABORTED"
-                    @info("Abort reason", response.transaction.abort_reason)
+                    @info("$name: Transaction $(response.transaction.id) aborted due to $(response.transaction.abort_reason)")
                 end
             else
                 @test state == "ABORTED"
