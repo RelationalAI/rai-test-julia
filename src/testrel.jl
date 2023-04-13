@@ -590,7 +590,7 @@ function _test_rel_step(
             if !step.expect_abort
                 @test state == "COMPLETED"
                 @test !unexpected_errors_found
-                if state != "COMPLETED"
+                if state == "ABORTED"
                     @info("Abort reason", response.transaction.abort_reason)
                 end
             else
