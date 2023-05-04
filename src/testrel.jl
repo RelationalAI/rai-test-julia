@@ -443,21 +443,19 @@ function _test_rel_steps(;
             msg = String(take!(io))
             @warn msg database=schema engine_name=test_engine test_name=name passed=false duration
         else
-            io = IOBuffer()
-            write(io, "Test $name passed\n\n Transaction IDs used:\n")
             txnids = Set()
             for log in logger.logs
-                if haskey(log.kwargs, "transaction_id")
-                    push!(txnids, log.kwargs["transaction_id"])
+                if haskey(log.kwargs, :transaction_id)
+                    push!(txnids, log.kwargs[:transaction_id])
                 end
             end
-            write(io, join(txnids, "\n"))
-            msg = String(take!(io))
+            msg = """Test $name passed TxIDs=[$(join(txnids, ", "))]""" 
             @info msg database=schema engine_name=test_engine test_name=name passed=true duration
         end
         logged = true
     finally
         if !logged
+            @error "here, uh oh"
             io = IOBuffer()
             write(io, "Something went wrong running test $name \n\n CAPTURED LOGS:\n")
             redirect_stdio(stdout=io, stderr=io) do
