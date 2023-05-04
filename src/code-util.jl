@@ -262,3 +262,10 @@ function result_table_to_dict(results)
     end
     return dict_results
 end
+
+# Log a captured log via the current logger
+function playback_log((;level, message, _module, group, id, file, line, kwargs)::LogRecord)
+    cur_logger = Logging.current_logger()
+    Logging.handle_message(cur_logger, level, message, _module, group, id, file, line; kwargs...)
+    return nothing
+end

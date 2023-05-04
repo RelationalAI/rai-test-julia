@@ -414,19 +414,57 @@ function _test_rel_steps(;
     test_engine = user_engine === nothing ? get_test_engine() : user_engine
     @debug("$name: using test engine: $test_engine")
 
+    logger = TestLogger()
+    logged = false
+
     try
         type = quiet ? QuietTestSet : Test.DefaultTestSet
-        @testset type "$(string(name))" begin
-            create_test_database(schema, clone_db)
-            elapsed_time = @timed begin
-                for (index, step) in enumerate(steps)
-                    _test_rel_step(index, step, schema, test_engine, name, length(steps))
+        ts = Logging.with_logger(logger) do 
+            @testset type "$(string(name))" begin
+                create_test_database(schema, clone_db)
+                elapsed_time = @timed begin
+                    for (index, step) in enumerate(steps)
+                        _test_rel_step(index, step, schema, test_engine, name, length(steps))
+                    end
+                end
+                stats = (time = elapsed_time.time, allocations = elapsed_time.gcstats.poolalloc, bytes = elapsed_time.gcstats.allocd)
+                @info("$name: $stats")
+            end
+        end
+
+        # Print summary of logs from the testset, or all logs if it did not pass
+        if anynonpass(ts)
+            # dump all of the captured logs
+            io = IOBuffer()
+            write(io, "Test $name failed\n\n CAPTURED LOGS:\n")
+            redirect_stdio(stdout=io, stderr=io) do
+                playback_log.(logger.logs)
+            end
+            msg = String(take!(io))
+            @warn msg database=schema engine_name=test_engine test_name=name passed=false
+        else
+            io = IOBuffer()
+            write(io, "Test $name passed\n\n Transaction IDs used:\n")
+            txnids = Set()
+            for log in logger.logs
+                if haskey(log.kwargs, "transaction_id")
+                    push!(txnids, log.kwargs["transaction_id"])
                 end
             end
-            stats = (time = elapsed_time.time, allocations = elapsed_time.gcstats.poolalloc, bytes = elapsed_time.gcstats.allocd)
-            @info("$name: $stats")
+            write(io, join(txnids, "\n"))
+            msg = String(take!(io))
+            @info msg database=schema engine_name=test_engine test_name=name passed=true
         end
+        logged = true
     finally
+        if !logged
+            io = IOBuffer()
+            write(io, "Something went wrong running test $name \n\n CAPTURED LOGS:\n")
+            redirect_stdio(stdout=io, stderr=io) do
+                playback_log.(logger.logs)
+            end
+            msg = String(take!(io))
+            @error msg database=schema engine_name=test_engine test_name=name passed=nothing
         try
             delete_test_database(schema)
         catch
@@ -489,7 +527,7 @@ function _execute_test(
     rsp = exec_async(context, schema, engine, program;
             readtimeout = timeout_sec, readonly)
     txn_id = rsp.transaction.id
-    @info("$name: Executing with txn $txn_id")
+    @info("$name: Executing with txn $txn_id"; transaction_id=txn_id)
 
     # The response may already contain the result. If so, we can return it immediately
     if !isnothing(rsp.results)

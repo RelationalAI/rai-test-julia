@@ -64,6 +64,9 @@ function finish(ts::QuietTestSet)
     return ts.dts
 end
 
+anynonpass(ts::QuietTestSet) = anynonpass(ts.dts)
+anynonpass(ts::Test.DefaultTestSet) = ts.anynonpass
+
 # TestSet that can be marked as broken.
 # This allows the broken status to be applied to a group of tests.
 mutable struct BreakableTestSet <: Test.AbstractTestSet
