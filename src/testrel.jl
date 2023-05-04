@@ -423,12 +423,12 @@ function _test_rel_steps(;
         ts = Logging.with_logger(logger) do 
             @testset type "$(string(name))" begin
                 create_test_database(schema, clone_db)
-                @timed begin
+                stats = @timed begin
                     for (index, step) in enumerate(steps)
                         _test_rel_step(index, step, schema, test_engine, name, length(steps))
                     end
                 end
-                duration = elapsed_time.time
+                duration = stats.time
             end
         end
 
