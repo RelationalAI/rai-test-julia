@@ -1,6 +1,6 @@
 module RAITest
 
-using Test: @testset
+using Test: @testset, TestLogger, LogRecord
 
 import Logging
 
