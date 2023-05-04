@@ -465,6 +465,8 @@ function _test_rel_steps(;
             end
             msg = String(take!(io))
             @error msg database=schema engine_name=test_engine test_name=name passed=nothing
+        end
+        
         try
             delete_test_database(schema)
         catch
