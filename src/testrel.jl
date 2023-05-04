@@ -466,7 +466,7 @@ function _test_rel_steps(;
             msg = String(take!(io))
             @error msg database=schema engine_name=test_engine test_name=name passed=nothing
         end
-        
+
         try
             delete_test_database(schema)
         catch
@@ -529,7 +529,7 @@ function _execute_test(
     rsp = exec_async(context, schema, engine, program;
             readtimeout = timeout_sec, readonly)
     txn_id = rsp.transaction.id
-    @info("$name: Executing with txn $txn_id"; transaction_id=txn_id)
+    @info "$name: Executing with txn $txn_id" transaction_id=txn_id
 
     # The response may already contain the result. If so, we can return it immediately
     if !isnothing(rsp.results)
