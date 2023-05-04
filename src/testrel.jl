@@ -428,20 +428,26 @@ function _test_rel_steps(;
                         _test_rel_step(index, step, schema, test_engine, name, length(steps))
                     end
                 end
-                duration = stats.time
+                if rand(1:10) == 7
+                    @test false
+                end
+                if rand(1:10) == 9
+                    throw("UH OH")
+                end
+                duration = sprint(show, stats.time; context=:compact => true)
             end
         end
 
         # Print summary of logs from the testset, or all logs if it did not pass
         if anynonpass(ts)
             # dump all of the captured logs
-            io = IOBuffer()
-            write(io, "Test $name failed\n\n CAPTURED LOGS:\n")
+            io = IOBuffer(;context=:color => get(logger.stream, :color, false))
+            write(io, "[FAIL] $name\n\n CAPTURED LOGS:\n")
             redirect_stdio(stdout=io, stderr=io) do
                 playback_log.(logger.logs)
             end
             msg = String(take!(io))
-            @warn msg database=schema engine_name=test_engine test_name=name passed=false duration
+            @warn msg database=schema engine_name=test_engine test_name=name duration
         else
             txnids = Set()
             for log in logger.logs
@@ -449,16 +455,14 @@ function _test_rel_steps(;
                     push!(txnids, log.kwargs[:transaction_id])
                 end
             end
-            msg = """Test $name passed TxIDs=[$(join(txnids, ", "))]""" 
-            @info msg database=schema engine_name=test_engine test_name=name passed=true duration
+            @info """[PASS] $name duration=$duration TxIDs=[$(join(txnids, ", "))]""" 
         end
         logged = true
         return ts
     finally
         if !logged
-            @error "here, uh oh"
-            io = IOBuffer()
-            write(io, "Something went wrong running test $name \n\n CAPTURED LOGS:\n")
+            io = IOBuffer(;context=:color => get(logger.stream, :color, false))
+            write(io, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
             redirect_stdio(stdout=io, stderr=io) do
                 playback_log.(logger.logs)
             end
