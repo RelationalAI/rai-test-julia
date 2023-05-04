@@ -441,7 +441,7 @@ function _test_rel_steps(;
         # Print summary of logs from the testset, or all logs if it did not pass
         if anynonpass(ts)
             # dump all of the captured logs
-            io = IOBuffer(;context=:color => get(logger.stream, :color, false))
+            io = IOBuffer(;context=:color => get(stderr, :color, false))
             write(io, "[FAIL] $name\n\n CAPTURED LOGS:\n")
             redirect_stdio(stdout=io, stderr=io) do
                 playback_log.(logger.logs)
@@ -461,7 +461,7 @@ function _test_rel_steps(;
         return ts
     finally
         if !logged
-            io = IOBuffer(;context=:color => get(logger.stream, :color, false))
+            io = IOBuffer(;context=:color => get(stderr, :color, false))
             write(io, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
             redirect_stdio(stdout=io, stderr=io) do
                 playback_log.(logger.logs)
