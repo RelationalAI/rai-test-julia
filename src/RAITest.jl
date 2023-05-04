@@ -2,6 +2,8 @@ module RAITest
 
 using Test: @testset
 
+import Logging
+
 export test_rel, @test_rel, @testset
 export Problem, Step
 export ConcurrentTestSet
