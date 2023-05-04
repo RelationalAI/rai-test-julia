@@ -419,16 +419,16 @@ function _test_rel_steps(;
 
     try
         type = quiet ? QuietTestSet : Test.DefaultTestSet
+        duration = nothing
         ts = Logging.with_logger(logger) do 
             @testset type "$(string(name))" begin
                 create_test_database(schema, clone_db)
-                elapsed_time = @timed begin
+                @timed begin
                     for (index, step) in enumerate(steps)
                         _test_rel_step(index, step, schema, test_engine, name, length(steps))
                     end
                 end
-                stats = (time = elapsed_time.time, allocations = elapsed_time.gcstats.poolalloc, bytes = elapsed_time.gcstats.allocd)
-                @info("$name: $stats")
+                duration = elapsed_time.time
             end
         end
 
@@ -441,7 +441,7 @@ function _test_rel_steps(;
                 playback_log.(logger.logs)
             end
             msg = String(take!(io))
-            @warn msg database=schema engine_name=test_engine test_name=name passed=false
+            @warn msg database=schema engine_name=test_engine test_name=name passed=false duration
         else
             io = IOBuffer()
             write(io, "Test $name passed\n\n Transaction IDs used:\n")
@@ -453,7 +453,7 @@ function _test_rel_steps(;
             end
             write(io, join(txnids, "\n"))
             msg = String(take!(io))
-            @info msg database=schema engine_name=test_engine test_name=name passed=true
+            @info msg database=schema engine_name=test_engine test_name=name passed=true duration
         end
         logged = true
     finally
