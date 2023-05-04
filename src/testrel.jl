@@ -426,13 +426,12 @@ function _test_rel_steps(;
                 stats = @timed begin
                     for (index, step) in enumerate(steps)
                         _test_rel_step(index, step, schema, test_engine, name, length(steps))
+                        if index % 4 == 0
+                            @test index == 1
+                        elseif index % 5 == 0
+                            throw("UH OH")
+                        end
                     end
-                end
-                if rand(1:10) == 7
-                    @test false
-                end
-                if rand(1:10) == 9
-                    throw("UH OH")
                 end
                 duration = sprint(show, stats.time; context=:compact => true)
             end
