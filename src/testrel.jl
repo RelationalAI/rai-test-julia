@@ -453,6 +453,7 @@ function _test_rel_steps(;
             @info msg database=schema engine_name=test_engine test_name=name passed=true duration
         end
         logged = true
+        return ts
     finally
         if !logged
             @error "here, uh oh"
