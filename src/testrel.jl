@@ -455,9 +455,7 @@ function _test_rel_steps(;
         end
 
         # dump all of the captured logs
-        redirect_stdio(stdout=ctx, stderr=ctx) do
-            playback_log.(logger.logs)
-        end
+        playback_log.(logger.logs)
         Base.show(ctx, e)
         msg = String(take!(io))
 
