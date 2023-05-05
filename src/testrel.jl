@@ -417,7 +417,7 @@ function _test_rel_steps(;
     logger = TestLogger()
 
     try
-        type = quiet ? QuietTestSet : Test.DefaultTestSet
+        type = QuietTestSet
         duration = nothing
         ts = @testset type "$(string(name))" begin
             Logging.with_logger(logger) do
@@ -461,14 +461,14 @@ function _test_rel_steps(;
         end
 
         ts
-    catch e
+    catch err
         io = IOBuffer()
         ctx = IOContext(io, :color => get(stderr, :color, false))
         write(ctx, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
 
         # dump all of the captured logs
         playback_log.(ctx, logger.logs)
-        Base.show(ctx, e)
+        Base.show(ctx, err)
         msg = String(take!(io))
 
         @error msg database=schema engine_name=test_engine test_name=name

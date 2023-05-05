@@ -55,6 +55,27 @@ end
 record(ts::QuietTestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::QuietTestSet, res::Test.Result) = record(ts.dts, res)
 
+function record(ts::QuietTestSet, t::Union{Test.Fail, Test.Error})
+    io = IOBuffer()
+    ctx = IOContext(io, :color => get(stderr, :color, false))
+    print(ctx, ts.description, ": ")
+    print(ctx, t)
+    if !isa(t, Error) # if not gets printed in the show method
+        Base.show_backtrace(ctx, scrub_backtrace(backtrace()))
+    end
+    println(ctx)
+    msg = String(take!(io))
+
+    if t isa Test.Fail 
+        @warn msg
+    else
+        @error msg
+    end
+
+    push!(ts.dts.results, t)
+    return t
+end
+
 function finish(ts::QuietTestSet)
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
