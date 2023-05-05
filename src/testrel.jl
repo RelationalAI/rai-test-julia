@@ -415,7 +415,6 @@ function _test_rel_steps(;
     @debug("$name: using test engine: $test_engine")
 
     logger = TestLogger()
-    logged = false
 
     try
         type = quiet ? QuietTestSet : Test.DefaultTestSet
@@ -437,38 +436,35 @@ function _test_rel_steps(;
             end
         end
 
-        # Print summary of logs from the testset, or all logs if it did not pass
-        if anynonpass(ts)
-            # dump all of the captured logs
-            io = IOBuffer(;context=:color => get(stderr, :color, false))
-            write(io, "[FAIL] $name\n\n CAPTURED LOGS:\n")
-            redirect_stdio(stdout=io, stderr=io) do
-                playback_log.(logger.logs)
+        txnids = Set()
+        for log in logger.logs
+            if haskey(log.kwargs, :transaction_id)
+                push!(txnids, log.kwargs[:transaction_id])
             end
-            msg = String(take!(io))
-            @warn msg database=schema engine_name=test_engine test_name=name duration
-        else
-            txnids = Set()
-            for log in logger.logs
-                if haskey(log.kwargs, :transaction_id)
-                    push!(txnids, log.kwargs[:transaction_id])
-                end
-            end
-            @info """[PASS] $name duration=$duration TxIDs=[$(join(txnids, ", "))]""" 
         end
-        logged = true
-        return ts
-    finally
-        if !logged
-            io = IOBuffer(;context=:color => get(stderr, :color, false))
-            write(io, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
-            redirect_stdio(stdout=io, stderr=io) do
-                playback_log.(logger.logs)
-            end
-            msg = String(take!(io))
-            @error msg database=schema engine_name=test_engine test_name=name passed=nothing
+        @info """[PASS] $name duration=$duration TxIDs=[$(join(txnids, ", "))]""" 
+    catch e
+        io = IOBuffer()
+        ctx = IOContext(io, :color => get(stderr, :color, false))
+        if e isa Test.TestSetException
+            write(ctx, "[FAIL] $name\n\n CAPTURED LOGS:\n")
+        else
+            write(ctx, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
         end
 
+        # dump all of the captured logs
+        redirect_stdio(stdout=ctx, stderr=ctx) do
+            playback_log.(logger.logs)
+        end
+        Base.show(ctx, e)
+        msg = String(take!(io))
+
+        if e isa Test.TestSetException
+            @warn msg database=schema engine_name=test_engine test_name=name 
+        else
+            @error msg database=schema engine_name=test_engine test_name=name
+        end
+    finally
         try
             delete_test_database(schema)
         catch
