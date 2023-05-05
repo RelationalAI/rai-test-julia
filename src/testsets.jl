@@ -55,15 +55,12 @@ end
 record(ts::QuietTestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::QuietTestSet, res::Test.Result) = record(ts.dts, res)
 
+# log these - by default they get printed to stdout
 function record(ts::QuietTestSet, t::Union{Test.Fail, Test.Error})
     io = IOBuffer()
     ctx = IOContext(io, :color => get(stderr, :color, false))
-    print(ctx, ts.description, ": ")
+    print(ctx, ts.dts.description, ": ")
     print(ctx, t)
-    if !isa(t, Error) # if not gets printed in the show method
-        Base.show_backtrace(ctx, scrub_backtrace(backtrace()))
-    end
-    println(ctx)
     msg = String(take!(io))
 
     if t isa Test.Fail 
