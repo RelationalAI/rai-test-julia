@@ -425,8 +425,8 @@ function _test_rel_steps(;
     try
         type = QuietTestSet
         duration = nothing
-        ts = @testset type "$(string(name))" begin
-            Logging.with_logger(logger) do
+        ts = Logging.with_logger(logger) do
+            @testset type "$(string(name))" begin
                 create_test_database(schema, clone_db)
                 stats = @timed begin
                     for (index, step) in enumerate(steps)
