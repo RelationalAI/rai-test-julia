@@ -419,8 +419,8 @@ function _test_rel_steps(;
     try
         type = quiet ? QuietTestSet : Test.DefaultTestSet
         duration = nothing
-        ts = Logging.with_logger(logger) do 
-            @testset type "$(string(name))" begin
+        ts = @testset type "$(string(name))" begin
+            Logging.with_logger(logger) do
                 create_test_database(schema, clone_db)
                 stats = @timed begin
                     for (index, step) in enumerate(steps)
@@ -442,14 +442,14 @@ function _test_rel_steps(;
             write(ctx, "[ERROR] $name\n\n CAPTURED LOGS:\n")
             playback_log.(ctx, logger.logs)
             msg = String(take!(io))
-            @error msg database=schema engine_name=test_engine test_name=name
+            @error msg database=schema engine_name=test_engine test_name=name duration
         elseif anyfail(ts)
             io = IOBuffer()
             ctx = IOContext(io, :color => get(stderr, :color, false))
             write(ctx, "[FAIL] $name\n\n CAPTURED LOGS:\n")
             playback_log.(ctx, logger.logs)
             msg = String(take!(io))
-            @warn msg database=schema engine_name=test_engine test_name=name
+            @warn msg database=schema engine_name=test_engine test_name=name duration
         else
             txnids = Set()
             for log in logger.logs
