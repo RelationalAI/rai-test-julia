@@ -443,6 +443,8 @@ function _test_rel_steps(;
             end
         end
         @info """[PASS] $name duration=$duration TxIDs=[$(join(txnids, ", "))]""" 
+
+        ts
     catch e
         io = IOBuffer()
         ctx = IOContext(io, :color => get(stderr, :color, false))
