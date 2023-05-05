@@ -64,8 +64,17 @@ function finish(ts::QuietTestSet)
     return ts.dts
 end
 
-anynonpass(ts::QuietTestSet) = anynonpass(ts.dts)
-anynonpass(ts::Test.DefaultTestSet) = ts.anynonpass
+anyerror(ts::QuietTestSet) = anyerror(ts.dts)
+function anyerror(ts::Test.DefaultTestSet)
+    stats = Test.get_test_counts(ts)
+    return stats[3] + stats[7] > 0
+end
+
+anyfail(ts::QuietTestSet) = anyfail(ts.dts)
+function anyfail(ts::Test.DefaultTestSet)
+    stats = Test.get_test_counts(ts)
+    return stats[2] + stats[6] > 0
+end
 
 # TestSet that can be marked as broken.
 # This allows the broken status to be applied to a group of tests.

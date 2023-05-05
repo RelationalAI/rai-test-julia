@@ -436,7 +436,14 @@ function _test_rel_steps(;
             end
         end
 
-        if anynonpass(ts)
+        if anyerror(ts)
+            io = IOBuffer()
+            ctx = IOContext(io, :color => get(stderr, :color, false))
+            write(ctx, "[ERROR] $name\n\n CAPTURED LOGS:\n")
+            playback_log.(ctx, logger.logs)
+            msg = String(take!(io))
+            @error msg database=schema engine_name=test_engine test_name=name
+        elseif anyfail(ts)
             io = IOBuffer()
             ctx = IOContext(io, :color => get(stderr, :color, false))
             write(ctx, "[FAIL] $name\n\n CAPTURED LOGS:\n")
