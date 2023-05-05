@@ -436,34 +436,35 @@ function _test_rel_steps(;
             end
         end
 
-        txnids = Set()
-        for log in logger.logs
-            if haskey(log.kwargs, :transaction_id)
-                push!(txnids, log.kwargs[:transaction_id])
+        if anynonpass(ts)
+            io = IOBuffer()
+            ctx = IOContext(io, :color => get(stderr, :color, false))
+            write(ctx, "[FAIL] $name\n\n CAPTURED LOGS:\n")
+            playback_log.(ctx, logger.logs)
+            msg = String(take!(io))
+            @warn msg database=schema engine_name=test_engine test_name=name
+        else
+            txnids = Set()
+            for log in logger.logs
+                if haskey(log.kwargs, :transaction_id)
+                    push!(txnids, log.kwargs[:transaction_id])
+                end
             end
+            @info """[PASS] $name duration=$duration TxIDs=[$(join(txnids, ", "))]""" 
         end
-        @info """[PASS] $name duration=$duration TxIDs=[$(join(txnids, ", "))]""" 
 
         ts
     catch e
         io = IOBuffer()
         ctx = IOContext(io, :color => get(stderr, :color, false))
-        if e isa Test.TestSetException
-            write(ctx, "[FAIL] $name\n\n CAPTURED LOGS:\n")
-        else
-            write(ctx, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
-        end
+        write(ctx, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
 
         # dump all of the captured logs
         playback_log.(ctx, logger.logs)
         Base.show(ctx, e)
         msg = String(take!(io))
 
-        if e isa Test.TestSetException
-            @warn msg database=schema engine_name=test_engine test_name=name 
-        else
-            @error msg database=schema engine_name=test_engine test_name=name
-        end
+        @error msg database=schema engine_name=test_engine test_name=name
     finally
         try
             delete_test_database(schema)
