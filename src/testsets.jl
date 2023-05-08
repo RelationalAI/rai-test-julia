@@ -62,12 +62,7 @@ function record(ts::QuietTestSet, t::Union{Test.Fail, Test.Error})
     print(ctx, ts.dts.description, ": ")
     print(ctx, t)
     msg = String(take!(io))
-
-    if t isa Test.Fail 
-        @warn msg
-    else
-        @error msg
-    end
+    @error msg
 
     push!(ts.dts.results, t)
     return t

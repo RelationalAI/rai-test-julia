@@ -269,3 +269,17 @@ function playback_log(io::IO, (;level, message, _module, group, id, file, line, 
     Logging.handle_message(logger, level, message, _module, group, id, file, line; kwargs...)
     return nothing
 end
+
+# Get an io and ctx that are colored according to the current logger's capabilities
+function get_logging_io()
+    io = IOBuffer()
+
+    logger = Logging.current_logger()
+    color = if hasproperty(logger, :stream)
+        get(logger.stream, :color, false)
+    else
+        get(stderr, :color, false)
+    end
+    ctx = IOContext(io, :color => color)
+    return io, ctx
+end

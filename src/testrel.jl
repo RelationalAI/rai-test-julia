@@ -99,7 +99,7 @@ function test_expected(expected::AbstractDict, results, testname::String)
 
         
         if !isequal(expected_result_tuple_vector, actual_result_vector)
-            @info("$testname: Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
+            @warn("$testname: Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
             return false
         else
             @debug("$testname: Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
@@ -442,20 +442,18 @@ function _test_rel_steps(;
             end
         end
 
-        if anyerror(ts)
-            io = IOBuffer()
-            ctx = IOContext(io, :color => get(stderr, :color, false))
-            write(ctx, "[ERROR] $name\n\n CAPTURED LOGS:\n")
+        if anyerror(ts) || anyfail(ts)
+            io, ctx = get_logging_io()
+            if anyerror(ts)
+                write(ctx, "[ERROR]")
+            end
+            if anyfail(ts)
+                write(ctx, "[FAIL]")
+            end
+            write(ctx, " $name\n\n CAPTURED LOGS:\n")
             playback_log.(ctx, logger.logs)
             msg = String(take!(io))
             @error msg database=schema engine_name=test_engine test_name=name duration
-        elseif anyfail(ts)
-            io = IOBuffer()
-            ctx = IOContext(io, :color => get(stderr, :color, false))
-            write(ctx, "[FAIL] $name\n\n CAPTURED LOGS:\n")
-            playback_log.(ctx, logger.logs)
-            msg = String(take!(io))
-            @warn msg database=schema engine_name=test_engine test_name=name duration
         else
             txnids = Set()
             for log in logger.logs
@@ -468,8 +466,7 @@ function _test_rel_steps(;
 
         ts
     catch err
-        io = IOBuffer()
-        ctx = IOContext(io, :color => get(stderr, :color, false))
+        io, ctx = get_logging_io()
         write(ctx, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
 
         # dump all of the captured logs
