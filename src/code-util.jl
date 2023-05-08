@@ -274,12 +274,11 @@ end
 function get_logging_io()
     io = IOBuffer()
 
+    stream = stderr
     logger = Logging.current_logger()
-    color = if hasproperty(logger, :stream)
-        get(logger.stream, :color, false)
-    else
-        get(stderr, :color, false)
+    if hasproperty(logger, :stream) && isopen(logger.stream)
+        stream = logger.stream
     end
-    ctx = IOContext(io, :color => color)
+    ctx = IOContext(io, stream)
     return io, ctx
 end

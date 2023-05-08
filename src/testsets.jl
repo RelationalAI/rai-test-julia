@@ -57,8 +57,7 @@ record(ts::QuietTestSet, res::Test.Result) = record(ts.dts, res)
 
 # log these - by default they get printed to stdout
 function record(ts::QuietTestSet, t::Union{Test.Fail, Test.Error})
-    io = IOBuffer()
-    ctx = IOContext(io, :color => get(stderr, :color, false))
+    io, ctx = get_logging_io()
     print(ctx, ts.dts.description, ": ")
     print(ctx, t)
     msg = String(take!(io))
