@@ -449,10 +449,10 @@ function _test_rel_steps(;
             if anyfail(ts)
                 write(ctx, "[FAIL]")
             end
-            write(ctx, " $name\n\n CAPTURED LOGS:\n")
+            write(ctx, " $name duration=$duration\n\n CAPTURED LOGS:\n")
             playback_log.(ctx, logger.logs)
             msg = String(take!(io))
-            @error msg database=schema engine_name=test_engine test_name=name duration
+            @error msg database=schema engine_name=test_engine
         else
             txnids = Set()
             for log in logger.logs
