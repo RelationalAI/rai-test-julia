@@ -423,23 +423,21 @@ function _test_rel_steps(;
     logger = TestLogger()
 
     try
-        duration = nothing
-        ts = Logging.with_logger(logger) do
+        stats = @timed Logging.with_logger(logger) do
             @testset TestRelTestSet nested=nested "$(string(name))" begin
                 create_test_database(schema, clone_db)
-                stats = @timed begin
-                    for (index, step) in enumerate(steps)
-                        _test_rel_step(index, step, schema, test_engine, name, length(steps))
-                        if index % 4 == 0
-                            @test index == 1
-                        elseif index % 5 == 0
-                            throw("UH OH")
-                        end
+                for (index, step) in enumerate(steps)
+                    _test_rel_step(index, step, schema, test_engine, name, length(steps))
+                    if index % 4 == 0
+                        @test index == 1
+                    elseif index % 5 == 0
+                        throw("UH OH")
                     end
                 end
-                duration = sprint(show, stats.time; context=:compact => true)
             end
         end
+        duration = sprint(show, stats.time; context=:compact => true)
+        ts = stats.value
 
         if anyerror(ts) || anyfail(ts)
             io, ctx = get_logging_io()
