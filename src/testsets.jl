@@ -47,7 +47,7 @@ end
 # Wrap a DefaultTestSet. Results are recorded, but not printed if nested=true.
 # This is helpful when used in a ConcurrentTestSet where the parent
 # linkage is lost due to the concurrency
-mutable struct TestRelTestSet
+mutable struct TestRelTestSet <: AbstractTestSet
     dts::Test.DefaultTestSet
     nested::Bool
 
