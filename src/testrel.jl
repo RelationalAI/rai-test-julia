@@ -374,7 +374,7 @@ function test_rel_steps(;
             steps = steps,
             name = name,
             location = location,
-            quiet = true,
+            nested = true,
             clone_db = clone_db,
             user_engine = engine,
         )
@@ -395,7 +395,7 @@ function _test_rel_steps(;
     steps::Vector{Step},
     name::Option{String},
     location::Option{LineNumberNode},
-    quiet::Bool = false,
+    nested::Bool = false,
     clone_db::Option{String} = nothing,
     user_engine::Option{String} = nothing,
 )
@@ -423,10 +423,9 @@ function _test_rel_steps(;
     logger = TestLogger()
 
     try
-        type = QuietTestSet
         duration = nothing
         ts = Logging.with_logger(logger) do
-            @testset type "$(string(name))" begin
+            @testset TestRelTestSet nested=nested "$(string(name))" begin
                 create_test_database(schema, clone_db)
                 stats = @timed begin
                     for (index, step) in enumerate(steps)
