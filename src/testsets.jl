@@ -44,24 +44,52 @@ function add_test_ref(testset::AbstractTestSet, test_ref)
     return fetch(test_ref)
 end
 
-# Wrap a DefaultTestSet. Results are recorded, but not printed.
-# This is helpful when used with a separate environment
-mutable struct QuietTestSet <: AbstractTestSet
+# Wrap a DefaultTestSet. Results are recorded, but not printed if nested=true.
+# This is helpful when used in a ConcurrentTestSet where the parent
+# linkage is lost due to the concurrency
+mutable struct TestRelTestSet <: AbstractTestSet
     dts::Test.DefaultTestSet
+    nested::Bool
 
-    QuietTestSet(desc) = new(Test.DefaultTestSet(desc))
+    TestRelTestSet(desc; nested=false) = new(Test.DefaultTestSet(desc), nested)
 end
 
-record(ts::QuietTestSet, child::AbstractTestSet) = record(ts.dts, child)
-record(ts::QuietTestSet, res::Test.Result) = record(ts.dts, res)
+record(ts::TestRelTestSet, child::AbstractTestSet) = record(ts.dts, child)
+record(ts::TestRelTestSet, res::Test.Result) = record(ts.dts, res)
 
-function finish(ts::QuietTestSet)
+# log these - by default they get printed to stdout
+function record(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
+    io, ctx = get_logging_io()
+    print(ctx, ts.dts.description, ": ")
+    print(ctx, t)
+    msg = String(take!(io))
+    @error msg
+
+    push!(ts.dts.results, t)
+    return t
+end
+
+function finish(ts::TestRelTestSet)
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
         parent_ts = Test.get_testset()
         record(parent_ts, ts.dts)
+        return ts
     end
+    !ts.nested && finish(ts.dts)
     return ts.dts
+end
+
+anyerror(ts::TestRelTestSet) = anyerror(ts.dts)
+function anyerror(ts::Test.DefaultTestSet)
+    stats = Test.get_test_counts(ts)
+    return stats[3] + stats[7] > 0
+end
+
+anyfail(ts::TestRelTestSet) = anyfail(ts.dts)
+function anyfail(ts::Test.DefaultTestSet)
+    stats = Test.get_test_counts(ts)
+    return stats[2] + stats[6] > 0
 end
 
 # TestSet that can be marked as broken.

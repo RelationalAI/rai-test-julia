@@ -262,3 +262,23 @@ function result_table_to_dict(results)
     end
     return dict_results
 end
+
+# Log a captured log via the current logger
+function playback_log(io::IO, (;level, message, _module, group, id, file, line, kwargs)::LogRecord)
+    logger = Logging.ConsoleLogger(io)
+    Logging.handle_message(logger, level, message, _module, group, id, file, line; kwargs...)
+    return nothing
+end
+
+# Get an io and ctx that are colored according to the current logger's capabilities
+function get_logging_io()
+    io = IOBuffer()
+
+    stream = stderr
+    logger = Logging.current_logger()
+    if hasproperty(logger, :stream) && isopen(logger.stream)
+        stream = logger.stream
+    end
+    ctx = IOContext(io, stream)
+    return io, ctx
+end

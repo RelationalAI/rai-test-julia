@@ -97,8 +97,14 @@ function test_expected(expected::AbstractDict, results, testname::String)
         actual_result = results[name]
         actual_result_vector = sort(collect(zip(actual_result...)))
 
-        @debug("$testname: Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
-        !isequal(expected_result_tuple_vector, actual_result_vector) && return false
+        
+        if !isequal(expected_result_tuple_vector, actual_result_vector)
+            @warn("$testname: Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
+            return false
+        else
+            @debug("$testname: Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
+            return true
+        end
     end
 
     return true
@@ -368,7 +374,7 @@ function test_rel_steps(;
             steps = steps,
             name = name,
             location = location,
-            quiet = true,
+            nested = true,
             clone_db = clone_db,
             user_engine = engine,
         )
@@ -389,7 +395,7 @@ function _test_rel_steps(;
     steps::Vector{Step},
     name::Option{String},
     location::Option{LineNumberNode},
-    quiet::Bool = false,
+    nested::Bool = false,
     clone_db::Option{String} = nothing,
     user_engine::Option{String} = nothing,
 )
@@ -414,18 +420,53 @@ function _test_rel_steps(;
     test_engine = user_engine === nothing ? get_test_engine() : user_engine
     @debug("$name: using test engine: $test_engine")
 
+    logger = TestLogger()
+
     try
-        type = quiet ? QuietTestSet : Test.DefaultTestSet
-        @testset type "$(string(name))" begin
-            create_test_database(schema, clone_db)
-            elapsed_time = @timed begin
+        stats = @timed Logging.with_logger(logger) do
+            @testset TestRelTestSet nested=nested "$(string(name))" begin
+                create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
                     _test_rel_step(index, step, schema, test_engine, name, length(steps))
                 end
             end
-            stats = (time = elapsed_time.time, allocations = elapsed_time.gcstats.poolalloc, bytes = elapsed_time.gcstats.allocd)
-            @info("$name: $stats")
         end
+        duration = sprint(show, stats.time; context=:compact => true)
+        ts = stats.value
+
+        if anyerror(ts) || anyfail(ts)
+            io, ctx = get_logging_io()
+            if anyerror(ts)
+                write(ctx, "[ERROR]")
+            end
+            if anyfail(ts)
+                write(ctx, "[FAIL]")
+            end
+            write(ctx, " $name duration=$duration\n\n CAPTURED LOGS:\n")
+            playback_log.(ctx, logger.logs)
+            msg = String(take!(io))
+            @error msg database=schema engine_name=test_engine
+        else
+            txnids = Set()
+            for log in logger.logs
+                if haskey(log.kwargs, :transaction_id)
+                    push!(txnids, log.kwargs[:transaction_id])
+                end
+            end
+            @info """[PASS] $name duration=$duration TxIDs=[$(join(txnids, ", "))]""" 
+        end
+
+        ts
+    catch err
+        io, ctx = get_logging_io()
+        write(ctx, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
+
+        # dump all of the captured logs
+        playback_log.(ctx, logger.logs)
+        Base.show(ctx, err)
+        msg = String(take!(io))
+
+        @error msg database=schema engine_name=test_engine test_name=name
     finally
         try
             delete_test_database(schema)
@@ -489,7 +530,7 @@ function _execute_test(
     rsp = exec_async(context, schema, engine, program;
             readtimeout = timeout_sec, readonly)
     txn_id = rsp.transaction.id
-    @info("$name: Executing with txn $txn_id")
+    @info "$name: Executing with txn $txn_id" transaction_id=txn_id
 
     # The response may already contain the result. If so, we can return it immediately
     if !isnothing(rsp.results)
