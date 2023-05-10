@@ -428,11 +428,6 @@ function _test_rel_steps(;
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
                     _test_rel_step(index, step, schema, test_engine, name, length(steps))
-                    if index % 4 == 0
-                        @test index == 1
-                    elseif index % 5 == 0
-                        throw("UH OH")
-                    end
                 end
             end
         end
