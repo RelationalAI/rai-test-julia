@@ -420,7 +420,7 @@ function _test_rel_steps(;
     test_engine = user_engine === nothing ? get_test_engine() : user_engine
     @debug("$name: using test engine: $test_engine")
 
-    logger = TestLogger()
+    logger = TestLogger(; catch_exceptions=true)
 
     try
         stats = @timed Logging.with_logger(logger) do
