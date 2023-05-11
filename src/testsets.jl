@@ -52,7 +52,7 @@ end
 mutable struct TestRelTestSet <: AbstractTestSet
     dts::Test.DefaultTestSet
     nested::Bool
-    broken::Bool
+    broken_expected::Bool
     broken_found::Bool
 
     TestRelTestSet(desc; nested=false, broken=false) = 
@@ -65,7 +65,7 @@ record(ts::TestRelTestSet, res::Test.Result) = record(ts.dts, res)
 
 # Flip to broken if expected, if not, log them (recording to dts goes to stdout)
 function record(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
-    if ts.broken
+    if ts.broken_expected
         ts.broken_found = true
         push!(ts.dts.results, Test.Broken(t.test_type, t.orig_expr))
     else
@@ -76,7 +76,7 @@ function record(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
 end
 
 function finish(ts::TestRelTestSet)
-    if ts.broken && !ts.broken_found
+    if ts.broken_expected && !ts.broken_found
         # If we expect broken tests and everything passes, drop the results and 
         # replace with an unbroken Error
         ts.dts.n_passed = 0
