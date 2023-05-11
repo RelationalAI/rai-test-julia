@@ -259,7 +259,7 @@ function test_rel(;
     expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
     timeout_sec::Int64 = 1800,
-    broken::Bool = true,
+    broken::Bool = false,
     clone_db::Option{String} = nothing,
     engine::Option{String} = nothing,
 )
