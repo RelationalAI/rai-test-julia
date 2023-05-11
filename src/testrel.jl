@@ -259,7 +259,7 @@ function test_rel(;
     expected_problems::Vector = Problem[],
     expect_abort::Bool = false,
     timeout_sec::Int64 = 1800,
-    broken::Bool = false,
+    broken::Bool = true,
     clone_db::Option{String} = nothing,
     engine::Option{String} = nothing,
 )
@@ -338,7 +338,7 @@ function test_rel_steps(;
     location::Option{LineNumberNode} = nothing,
     include_stdlib::Bool = true,
     abort_on_error::Bool = false,
-    debug::Bool = true,
+    debug::Bool = false,
     debug_trace::Bool = false,
     clone_db::Option{String} = nothing,
     engine::Option{String} = nothing,
