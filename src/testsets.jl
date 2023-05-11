@@ -59,12 +59,7 @@ record(ts::TestRelTestSet, res::Test.Result) = record(ts.dts, res)
 
 # log these - by default they get printed to stdout
 function record(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
-    io, ctx = get_logging_io()
-    print(ctx, ts.dts.description, ": ")
-    print(ctx, t)
-    msg = String(take!(io))
-    @error msg
-
+    log_test_error(t)
     push!(ts.dts.results, t)
     return t
 end
@@ -97,11 +92,10 @@ end
 mutable struct BreakableTestSet <: Test.AbstractTestSet
     broken::Bool
     broken_found::Bool
-    quiet::Bool
     dts::Test.DefaultTestSet
 
-    BreakableTestSet(desc; broken = false, quiet = false) =
-        new(broken, false, quiet, Test.DefaultTestSet(desc))
+    BreakableTestSet(desc; broken = false) =
+        new(broken, false, Test.DefaultTestSet(desc))
 end
 
 record(ts::BreakableTestSet, child::AbstractTestSet) = record(ts.dts, child)
@@ -110,9 +104,9 @@ record(ts::BreakableTestSet, res::Test.Result) = record(ts.dts, res)
 function record(ts::BreakableTestSet, t::Union{Test.Fail, Test.Error})
     if ts.broken
         ts.broken_found = true
-        @info "I broke" t
         push!(ts.dts.results, Test.Broken(t.test_type, t.orig_expr))
     else
+        log_test_error(t)
         record(ts.dts, t)
     end
 end
@@ -124,10 +118,9 @@ function finish(ts::BreakableTestSet)
         ts.dts.n_passed = 0
         empty!(ts.dts.results)
 
-        push!(
-            ts.dts.results,
-            Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0)),
-        )
+        t = Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0))
+        push!(ts.dts.results, t)
+        log_test_error(t)
         @info "I'm unbroken" ts
     end
     if Test.get_testset_depth() > 0
@@ -135,4 +128,14 @@ function finish(ts::BreakableTestSet)
         parent_ts = Test.get_testset()
         record(parent_ts, ts.dts)
     end
+    return ts
+end
+
+# ======= HELPERS =========
+function log_test_error(t::Union{Test.Fail, Test.Error})
+    io, ctx = get_logging_io()
+    print(ctx, ts.dts.description, ": ")
+    print(ctx, t)
+    msg = String(take!(io))
+    @error msg
 end
