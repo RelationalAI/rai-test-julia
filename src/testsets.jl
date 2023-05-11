@@ -19,8 +19,7 @@ record(ts::ConcurrentTestSet, res::Test.Result) = record(ts.dts, res)
 # If this is the parent then show results
 function finish(ts::ConcurrentTestSet)
     for t in ts.tests
-        f = fetch(t)
-        record(ts.dts, f)
+        record(ts.dts, fetch(t))
     end
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
