@@ -572,7 +572,7 @@ function _test_rel_step(
     step_postfix = steps_length > 1 ? " - step$index" : ""
     name = "$(string(name))$step_postfix"
 
-    @testset BreakableTestSet "$name" broken = step.broken begin
+    @testset TestRelTestSet "$name" broken = step.broken begin
         try
             if !isempty(step.install)
                 load_models(get_context(), schema, engine, step.install)

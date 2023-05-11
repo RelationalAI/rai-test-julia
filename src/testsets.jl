@@ -32,26 +32,35 @@ function finish(ts::ConcurrentTestSet)
         return ts
     end
     finish(ts.dts)
-    return ts.dts
+    return ts
 end
 
 function add_test_ref(testset::ConcurrentTestSet, test_ref)
     return push!(testset.tests, test_ref)
 end
 
-# Handle attempted use outside of a ConcurrentTestSEt
+# Handle attempted use outside of a ConcurrentTestSet
 function add_test_ref(testset::AbstractTestSet, test_ref)
     return fetch(test_ref)
 end
 
-# Wrap a DefaultTestSet. Results are recorded, but not printed if nested=true.
+# Wrap a DefaultTestSet with some behavior specific to @test_rel.
+# 
+# Results are recorded, but not printed if nested=true.
 # This is helpful when used in a ConcurrentTestSet where the parent
-# linkage is lost due to the concurrency
+# linkage is lost due to the concurrency.
+#
+# Additionally the whole test set can be checked for broken-ness, this is
+# needed as a test rel desugars into multiple checks and we don't know which
+# is expected not to work.
 mutable struct TestRelTestSet <: AbstractTestSet
     dts::Test.DefaultTestSet
     nested::Bool
+    broken::Bool
+    broken_found::Bool
 
-    TestRelTestSet(desc; nested=false) = new(Test.DefaultTestSet(desc), nested)
+    TestRelTestSet(desc; nested=false, broken=false) = 
+        new(Test.DefaultTestSet(desc), nested, broken, false)
 end
 
 record(ts::TestRelTestSet, child::AbstractTestSet) = record(ts.dts, child)
@@ -59,12 +68,29 @@ record(ts::TestRelTestSet, res::Test.Result) = record(ts.dts, res)
 
 # log these - by default they get printed to stdout
 function record(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
-    log_test_error(t)
-    push!(ts.dts.results, t)
+    if ts.broken
+        ts.broken_found = true
+        push!(ts.dts.results, Test.Broken(t.test_type, t.orig_expr))
+    else
+        log_test_error(t)
+        push!(ts.dts.results, t)
+    end
     return t
 end
 
 function finish(ts::TestRelTestSet)
+    if ts.broken && !ts.broken_found
+        # If we expect broken tests and everything passes, drop the results and replace with an unbroken Error
+
+        ts.dts.n_passed = 0
+        empty!(ts.dts.results)
+
+        t = Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0))
+        push!(ts.dts.results, t)
+        log_test_error(t)
+        @info "I'm unbroken" ts
+    end
+
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
         parent_ts = Test.get_testset()
@@ -72,7 +98,7 @@ function finish(ts::TestRelTestSet)
         return ts
     end
     !ts.nested && finish(ts.dts)
-    return ts.dts
+    return ts
 end
 
 anyerror(ts::TestRelTestSet) = anyerror(ts.dts)
@@ -87,51 +113,6 @@ function anyfail(ts::Test.DefaultTestSet)
     return stats[2] + stats[6] > 0
 end
 
-# TestSet that can be marked as broken.
-# This allows the broken status to be applied to a group of tests.
-mutable struct BreakableTestSet <: Test.AbstractTestSet
-    broken::Bool
-    broken_found::Bool
-    dts::Test.DefaultTestSet
-
-    BreakableTestSet(desc; broken = false) =
-        new(broken, false, Test.DefaultTestSet(desc))
-end
-
-record(ts::BreakableTestSet, child::AbstractTestSet) = record(ts.dts, child)
-record(ts::BreakableTestSet, res::Test.Result) = record(ts.dts, res)
-
-function record(ts::BreakableTestSet, t::Union{Test.Fail, Test.Error})
-    if ts.broken
-        ts.broken_found = true
-        push!(ts.dts.results, Test.Broken(t.test_type, t.orig_expr))
-    else
-        log_test_error(t)
-        push!(ts.dts.results, t)
-    end
-end
-
-function finish(ts::BreakableTestSet)
-    if ts.broken && !ts.broken_found
-        # If we expect broken tests and everything passes, drop the results and replace with an unbroken Error
-
-        ts.dts.n_passed = 0
-        empty!(ts.dts.results)
-
-        t = Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0))
-        push!(ts.dts.results, t)
-        log_test_error(t)
-        @info "I'm unbroken" ts
-    end
-    if Test.get_testset_depth() > 0
-        # Attach this test set to the parent test set
-        parent_ts = Test.get_testset()
-        record(parent_ts, ts.dts)
-    end
-    return ts
-end
-
-# ======= HELPERS =========
 function log_test_error(t::Union{Test.Fail, Test.Error})
     io, ctx = get_logging_io()
     print(ctx, ts.dts.description, ": ")
