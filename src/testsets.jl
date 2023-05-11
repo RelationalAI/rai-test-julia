@@ -11,24 +11,21 @@ mutable struct ConcurrentTestSet <: Test.AbstractTestSet
     ConcurrentTestSet(desc) = new(Test.DefaultTestSet(desc), [])
 end
 
-function record(ts::ConcurrentTestSet, child::AbstractTestSet)
-    return record(ts.dts, child)
-end
-
-function record(ts::ConcurrentTestSet, res::Test.Result)
-    return record(ts.dts, res)
-end
+record(ts::ConcurrentTestSet, child::AbstractTestSet) = record(ts.dts, child)
+record(ts::Test.DefaultTestSet, child::ConcurrentTestSet) = record(ts, child.dts)
+record(ts::ConcurrentTestSet, res::Test.Result) = record(ts.dts, res)
 
 # Record any results directly stored and fetch results from any listed concurrent tests
 # If this is the parent then show results
 function finish(ts::ConcurrentTestSet)
     for t in ts.tests
-        record(ts.dts, fetch(t))
+        f = fetch(t)
+        record(ts.dts, f)
     end
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
         parent_ts = Test.get_testset()
-        record(parent_ts, ts.dts)
+        record(parent_ts, ts)
         return ts
     end
     finish(ts.dts)
@@ -64,6 +61,7 @@ mutable struct TestRelTestSet <: AbstractTestSet
 end
 
 record(ts::TestRelTestSet, child::AbstractTestSet) = record(ts.dts, child)
+record(ts::Test.DefaultTestSet, child::TestRelTestSet) = record(ts, child.dts)
 record(ts::TestRelTestSet, res::Test.Result) = record(ts.dts, res)
 
 # Flip to broken if expected, if not, log them (recording to dts goes to stdout)
@@ -82,7 +80,6 @@ function finish(ts::TestRelTestSet)
     if ts.broken && !ts.broken_found
         # If we expect broken tests and everything passes, drop the results and 
         # replace with an unbroken Error
-
         ts.dts.n_passed = 0
         empty!(ts.dts.results)
 
@@ -98,7 +95,7 @@ function finish(ts::TestRelTestSet)
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
         parent_ts = Test.get_testset()
-        record(parent_ts, ts.dts)
+        record(parent_ts, ts)
         return ts
     end
     !ts.nested && finish(ts.dts)
