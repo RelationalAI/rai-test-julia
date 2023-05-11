@@ -103,7 +103,6 @@ function test_expected(expected::AbstractDict, results, testname::String)
             return false
         else
             @debug("$testname: Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
-            return true
         end
     end
 
