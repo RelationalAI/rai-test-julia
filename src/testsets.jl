@@ -63,7 +63,8 @@ record(ts::TestRelTestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::Test.DefaultTestSet, child::TestRelTestSet) = record(ts, child.dts)
 record(ts::TestRelTestSet, res::Test.Result) = record(ts.dts, res)
 
-# Flip to broken if expected, if not, log them (recording to dts goes to stdout)
+# Change error/fail to broken if expected and record as such. If not expected, 
+# log the failure and record the result.
 function record(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
     if ts.broken_expected
         ts.broken_found = true
