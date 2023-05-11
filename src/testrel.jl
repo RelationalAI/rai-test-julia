@@ -338,7 +338,7 @@ function test_rel_steps(;
     location::Option{LineNumberNode} = nothing,
     include_stdlib::Bool = true,
     abort_on_error::Bool = false,
-    debug::Bool = false,
+    debug::Bool = true,
     debug_trace::Bool = false,
     clone_db::Option{String} = nothing,
     engine::Option{String} = nothing,

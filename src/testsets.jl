@@ -110,6 +110,7 @@ record(ts::BreakableTestSet, res::Test.Result) = record(ts.dts, res)
 function record(ts::BreakableTestSet, t::Union{Test.Fail, Test.Error})
     if ts.broken
         ts.broken_found = true
+        @info "I broke" t
         push!(ts.dts.results, Test.Broken(t.test_type, t.orig_expr))
     else
         record(ts.dts, t)
@@ -127,6 +128,7 @@ function finish(ts::BreakableTestSet)
             ts.dts.results,
             Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0)),
         )
+        @info "I'm unbroken" ts
     end
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
