@@ -589,7 +589,6 @@ function _test_rel_step(
         for expected_problem in step.expected_problems
             expected_problem_found = contains_problem(problems, expected_problem)
             @test expected_problem_found
-            throw("uh oh")
         end
 
         # PASS:
