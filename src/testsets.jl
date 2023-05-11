@@ -107,7 +107,7 @@ function record(ts::BreakableTestSet, t::Union{Test.Fail, Test.Error})
         push!(ts.dts.results, Test.Broken(t.test_type, t.orig_expr))
     else
         log_test_error(t)
-        record(ts.dts, t)
+        push!(ts.dts.results, t)
     end
 end
 
