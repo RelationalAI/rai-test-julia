@@ -66,13 +66,13 @@ end
 record(ts::TestRelTestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::TestRelTestSet, res::Test.Result) = record(ts.dts, res)
 
-# log these - by default they get printed to stdout
+# Flip to broken if expected, if not, log them (recording to dts goes to stdout)
 function record(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
     if ts.broken
         ts.broken_found = true
         push!(ts.dts.results, Test.Broken(t.test_type, t.orig_expr))
     else
-        log_test_error(t)
+        log_test_error(ts, t)
         push!(ts.dts.results, t)
     end
     return t
@@ -80,14 +80,15 @@ end
 
 function finish(ts::TestRelTestSet)
     if ts.broken && !ts.broken_found
-        # If we expect broken tests and everything passes, drop the results and replace with an unbroken Error
+        # If we expect broken tests and everything passes, drop the results and 
+        # replace with an unbroken Error
 
         ts.dts.n_passed = 0
         empty!(ts.dts.results)
 
         t = Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0))
         push!(ts.dts.results, t)
-        log_test_error(t)
+        log_test_error(ts, t)
         @info "I'm unbroken" ts
     end
 
@@ -113,7 +114,7 @@ function anyfail(ts::Test.DefaultTestSet)
     return stats[2] + stats[6] > 0
 end
 
-function log_test_error(t::Union{Test.Fail, Test.Error})
+function log_test_error(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
     io, ctx = get_logging_io()
     print(ctx, ts.dts.description, ": ")
     print(ctx, t)

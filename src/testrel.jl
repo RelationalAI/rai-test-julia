@@ -370,22 +370,16 @@ function test_rel_steps(;
     parent = Test.get_testset()
     if parent isa ConcurrentTestSet
         ref = Threads.@spawn _test_rel_steps(;
-            steps = steps,
-            name = name,
-            location = location,
-            nested = true,
-            clone_db = clone_db,
-            user_engine = engine,
+            steps,
+            name,
+            location,
+            nested=true,
+            clone_db,
+            user_engine=engine,
         )
         add_test_ref(parent, ref)
     else
-        _test_rel_steps(;
-            steps = steps,
-            name = name,
-            location = location,
-            clone_db = clone_db,
-            user_engine = engine,
-        )
+        _test_rel_steps(; steps, name, location, clone_db, user_engine=engine)
     end
 end
 
