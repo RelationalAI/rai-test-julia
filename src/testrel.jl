@@ -567,73 +567,68 @@ function _test_rel_step(
     name = "$(string(name))$step_postfix"
 
     @testset TestRelTestSet "$name" broken = step.broken begin
-        try
-            if !isempty(step.install)
-                load_models(get_context(), schema, engine, step.install)
-            end
-
-            # Don't test empty strings
-            if program == ""
-                return nothing
-            end
-
-            response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec, step.readonly)
-
-            state = response.transaction.state
-            @debug("Response state:", state)
-            results = response.results
-
-            results_dict = result_table_to_dict(results)
-            problems = extract_problems(results_dict)
-
-            # Check that expected problems were found
-            for expected_problem in step.expected_problems
-                expected_problem_found = contains_problem(problems, expected_problem)
-                @test expected_problem_found
-            end
-
-            # PASS:
-            #   If an abort is expected it is encountered
-            #   If no abort is expected it is not encountered
-            #   If results are expected, they are found (other results are ignored)
-            #   If problems are expected, they are found (other problems are ignored)
-            #   If no problems are expected, warning level problems are ignored
-
-            unexpected_errors_found = false
-            # Check if there were any unexpected errors/exceptions
-            for problem in problems
-                if contains_problem(step.expected_problems, problem)
-                    @debug("$name: Expected problem", problem)
-                else
-                    unexpected_errors_found |= problem[:severity] == "error"
-                    unexpected_errors_found |= problem[:severity] == "exception"
-                    @info("$name: Unexpected problem: $(problem[:code])")
-                    @debug("$name: Unexpected problem", problem)
-                end
-            end
-
-            if !isempty(step.expected)
-                @test test_expected(step.expected, results_dict, name)
-            end
-
-            # Allow all errors if any problems were expected
-            if !isempty(step.expected_problems)
-                unexpected_errors_found = false
-            end
-
-            if !step.expect_abort
-                @test state == "COMPLETED"
-                @test !unexpected_errors_found
-                if state == "ABORTED"
-                    @info("$name: Transaction $(response.transaction.id) aborted due to \"$(response.transaction.abort_reason)\"")
-                end
-            else
-                @test state == "ABORTED"
-            end
-        catch e
-            Base.display_error(stderr, current_exceptions())
-            rethrow()
+        if !isempty(step.install)
+            load_models(get_context(), schema, engine, step.install)
         end
-        return nothing
+
+        # Don't test empty strings
+        if program == ""
+            return nothing
+        end
+
+        response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec, step.readonly)
+
+        state = response.transaction.state
+        @debug("Response state:", state)
+        results = response.results
+
+        results_dict = result_table_to_dict(results)
+        problems = extract_problems(results_dict)
+
+        # Check that expected problems were found
+        for expected_problem in step.expected_problems
+            expected_problem_found = contains_problem(problems, expected_problem)
+            @test expected_problem_found
+            throw("uh oh")
+        end
+
+        # PASS:
+        #   If an abort is expected it is encountered
+        #   If no abort is expected it is not encountered
+        #   If results are expected, they are found (other results are ignored)
+        #   If problems are expected, they are found (other problems are ignored)
+        #   If no problems are expected, warning level problems are ignored
+
+        unexpected_errors_found = false
+        # Check if there were any unexpected errors/exceptions
+        for problem in problems
+            if contains_problem(step.expected_problems, problem)
+                @debug("$name: Expected problem", problem)
+            else
+                unexpected_errors_found |= problem[:severity] == "error"
+                unexpected_errors_found |= problem[:severity] == "exception"
+                @info("$name: Unexpected problem: $(problem[:code])")
+                @debug("$name: Unexpected problem", problem)
+            end
+        end
+
+        if !isempty(step.expected)
+            @test test_expected(step.expected, results_dict, name)
+        end
+
+        # Allow all errors if any problems were expected
+        if !isempty(step.expected_problems)
+            unexpected_errors_found = false
+        end
+
+        if !step.expect_abort
+            @test state == "COMPLETED"
+            @test !unexpected_errors_found
+            if state == "ABORTED"
+                @info("$name: Transaction $(response.transaction.id) aborted due to \"$(response.transaction.abort_reason)\"")
+            end
+        else
+            @test state == "ABORTED"
+        end
     end
 end
