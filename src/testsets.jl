@@ -86,10 +86,13 @@ function finish(ts::TestRelTestSet)
         ts.dts.n_passed = 0
         empty!(ts.dts.results)
 
+        # Default unbroken message doesn't make sense for @test_rel
+        @error """Unexpected pass
+        Got correct result: $(ts.dts.description) 
+        Please remove `broken` flag if no longer broken.
+        """
         t = Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0))
         push!(ts.dts.results, t)
-        log_test_error(ts, t)
-        @info "I'm unbroken" ts
     end
 
     if Test.get_testset_depth() > 0
