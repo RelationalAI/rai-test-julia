@@ -9,7 +9,7 @@ function release_pooled_test_engine(name::String)
     end
 end
 
-function get_pooled_test_engine(engine_name::Option{String} = nothing)
+function get_pooled_test_engine(engine_name::Option{String}=nothing)
     if isnothing(engine_name)
         engine_name = get_free_test_engine_name()
     end
@@ -31,7 +31,7 @@ const TEST_SERVER_LOCK = ReentrantLock()
 const TEST_SERVER_ACQUISITION_LOCK = ReentrantLock()
 
 mutable struct TestEnginePool
-    engines::Dict{String, Int64}
+    engines::Dict{String,Int64}
     # This is used to enable unique, simple, naming of engines
     # Switching to randomly generated UUIDs would be needed if tests are run independently
     next_id::Int64
@@ -135,7 +135,7 @@ If an name generator is given it will be passed a unique id each time it is call
 If the pool size is smaller than the current size, engines will be de-provisioned and
 removed from the list until the desired size is reached.
 """
-function resize_test_engine_pool(size::Int64, generator::Function = get_next_engine_name)
+function resize_test_engine_pool(size::Int64, generator::Function=get_next_engine_name)
     if size < 0
         size = 0
     end
