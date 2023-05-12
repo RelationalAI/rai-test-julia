@@ -517,13 +517,34 @@ function _execute_test(
     engine::String,
     program::String,
     timeout_sec::Int64,
-    readonly::Bool,
+    readonly::Bool;
+    num_retries=0,
 )
     @debug("$name: Starting execution")
-    rsp = exec_async(context, schema, engine, program;
-            readtimeout = timeout_sec, readonly)
-    txn_id = rsp.transaction.id
-    @info "$name: Executing with txn $txn_id" transaction_id=txn_id
+    rsp = nothing
+    txn_id = nothing
+    try
+        # Exec async really should return after 2-3 seconds
+        rsp = exec_async(context, schema, engine, program; readtimeout=30, readonly)
+        txn_id = rsp.transaction.id
+        @info "$name: Executing with txn $txn_id" transaction_id = txn_id
+    catch e
+        @error "$name: Failed to submit transaction\n\n$e"
+        if num_retries < 3
+            # Try again
+            return _execute_test(
+                name,
+                context,
+                schema,
+                engine,
+                program,
+                timeout_sec,
+                readonly;
+                num_retries=num_retries + 1,
+            )
+        end
+        rethrow()
+    end
 
     # The response may already contain the result. If so, we can return it immediately
     if !isnothing(rsp.results)
