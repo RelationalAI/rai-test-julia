@@ -528,6 +528,7 @@ function _execute_test(
         rsp = exec_async(context, schema, engine, program; readtimeout=30, readonly)
         txn_id = rsp.transaction.id
         @info "$name: Executing with txn $txn_id" transaction_id = txn_id
+        throw("uh oh")
     catch e
         @error "$name: Failed to submit transaction\n\n$e"
         if num_retries < 3
