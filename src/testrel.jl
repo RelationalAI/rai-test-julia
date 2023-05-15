@@ -474,7 +474,7 @@ end
 
 function check_flaky(name::String, logs::Vector{LogRecord})
     retries = 0
-    for log in logger.logs
+    for log in logs
         if haskey(log.kwargs, :submit_failed) && log.kwargs[:retry_number] > retries
             retries = log.kwargs[:retry_number]
         end
@@ -546,7 +546,7 @@ function _execute_test(
         @info "$name: Executing with txn $txn_id" transaction_id = txn_id
     catch e
         @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed=true
-        if retry_number <= 3
+        if retry_number < 3
             # Try again
             return _execute_test(
                 name,
