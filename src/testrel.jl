@@ -422,7 +422,10 @@ function _test_rel_steps(;
                 for (index, step) in enumerate(steps)
                     inner_ts = _test_rel_step(index, step, schema, test_engine, name, length(steps))
                     # short circuit if something errored
-                    anyerror(inner_ts) && break
+                    if anyerror(inner_ts) && index < length(steps)
+                        @error "Error running $name - not executing further steps"
+                        break
+                    end
                 end
             end
         end
@@ -548,7 +551,6 @@ function _execute_test(
         # Exec async really should return after 2-3 seconds
         headers = ["X-Request-ID" => request_id]
         exec_async(context, schema, engine, program; readtimeout=30, readonly, headers)
-        throw("uh oh")
     catch e
         @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed=true request_id
         if retry_number < 3
