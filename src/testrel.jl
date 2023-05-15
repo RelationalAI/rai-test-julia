@@ -417,7 +417,7 @@ function _test_rel_steps(;
 
     try
         stats = @timed Logging.with_logger(logger) do
-            @testset TestRelTestSet nested=nested "$(string(name))" begin
+            @testset TestRelTestSet nested=nested "$name" begin
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
                     _test_rel_step(index, step, schema, test_engine, name, length(steps))
@@ -426,6 +426,8 @@ function _test_rel_steps(;
         end
         duration = sprint(show, stats.time; context=:compact => true)
         ts = stats.value
+        
+        check_flaky(name, logger.logs)
 
         if anyerror(ts) || anyfail(ts)
             io, ctx = get_logging_io()
@@ -467,6 +469,19 @@ function _test_rel_steps(;
             @warn("Could not delete test database: ", schema)
         end
         user_engine === nothing && release_test_engine(test_engine)
+    end
+end
+
+function check_flaky(name::String, logs::Vector{LogRecord})
+    retries = 0
+    for log in logs
+        if haskey(log.kwargs, :submit_failed) && log.kwargs[:retry_number] > retries
+            retries = log.kwargs[:retry_number]
+        end
+    end
+
+    if retries > 0
+        @warn "[FLAKY] $name: transaction submission had to be retried $retries times"
     end
 end
 
@@ -517,13 +532,33 @@ function _execute_test(
     engine::String,
     program::String,
     timeout_sec::Int64,
-    readonly::Bool,
+    readonly::Bool;
+    retry_number=1,
 )
     @debug("$name: Starting execution")
-    rsp = exec_async(context, schema, engine, program;
-            readtimeout = timeout_sec, readonly)
+    rsp = try
+        # Exec async really should return after 2-3 seconds
+        exec_async(context, schema, engine, program; readtimeout=30, readonly)
+    catch e
+        @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed=true
+        if retry_number < 3
+            # Try again
+            return _execute_test(
+                name,
+                context,
+                schema,
+                engine,
+                program,
+                timeout_sec,
+                readonly;
+                retry_number=retry_number + 1,
+            )
+        end
+        rethrow()
+    end
+ 
     txn_id = rsp.transaction.id
-    @info "$name: Executing with txn $txn_id" transaction_id=txn_id
+    @info "$name: Executing with txn $txn_id" transaction_id = txn_id
 
     # The response may already contain the result. If so, we can return it immediately
     if !isnothing(rsp.results)
