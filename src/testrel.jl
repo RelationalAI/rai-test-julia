@@ -535,12 +535,14 @@ function _execute_test(
     readonly::Bool;
     retry_number=1,
 )
-    @debug("$name: Starting execution")
+    request_id = string(UUIDs.uuid4())
+    @debug("$name: Starting execution ReqId=$request_id")
     rsp = try
         # Exec async really should return after 2-3 seconds
-        exec_async(context, schema, engine, program; readtimeout=30, readonly)
+        headers = ["X-Request-ID" => request_id]
+        exec_async(context, schema, engine, program; readtimeout=30, readonly, headers)
     catch e
-        @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed=true
+        @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed=true request_id
         if retry_number < 3
             # Try again
             return _execute_test(
