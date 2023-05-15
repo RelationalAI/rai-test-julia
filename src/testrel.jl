@@ -540,7 +540,6 @@ function _execute_test(
     txn_id = nothing
     try
         # Exec async really should return after 2-3 seconds
-        throw("uh oh")
         rsp = exec_async(context, schema, engine, program; readtimeout=30, readonly)
         txn_id = rsp.transaction.id
         @info "$name: Executing with txn $txn_id" transaction_id = txn_id
