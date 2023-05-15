@@ -536,13 +536,9 @@ function _execute_test(
     retry_number=1,
 )
     @debug("$name: Starting execution")
-    rsp = nothing
-    txn_id = nothing
-    try
+    rsp = try
         # Exec async really should return after 2-3 seconds
-        rsp = exec_async(context, schema, engine, program; readtimeout=30, readonly)
-        txn_id = rsp.transaction.id
-        @info "$name: Executing with txn $txn_id" transaction_id = txn_id
+        exec_async(context, schema, engine, program; readtimeout=30, readonly)
     catch e
         @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed=true
         if retry_number < 3
@@ -560,6 +556,9 @@ function _execute_test(
         end
         rethrow()
     end
+ 
+    txn_id = rsp.transaction.id
+    @info "$name: Executing with txn $txn_id" transaction_id = txn_id
 
     # The response may already contain the result. If so, we can return it immediately
     if !isnothing(rsp.results)
