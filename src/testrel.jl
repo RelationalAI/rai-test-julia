@@ -474,14 +474,19 @@ end
 
 function check_flaky(name::String, logs::Vector{LogRecord})
     retries = 0
+    request_ids = []
     for log in logs
-        if haskey(log.kwargs, :submit_failed) && log.kwargs[:retry_number] > retries
-            retries = log.kwargs[:retry_number]
+        if haskey(log.kwargs, :submit_failed)
+            if log.kwargs[:retry_number] > retries
+                retries = log.kwargs[:retry_number]
+            end
+            push!(request_ids, log.kwargs[:request_id])
         end
     end
 
     if retries > 0
-        @warn "[FLAKY] $name: transaction submission had to be retried $retries times"
+        req_ids = """ReqIds=[$(join(request_ids, ", "))]"""
+        @warn """[FLAKY] $name: transaction submission had to be retried $retries times $req_ids"""
     end
 end
 
@@ -541,6 +546,7 @@ function _execute_test(
         # Exec async really should return after 2-3 seconds
         headers = ["X-Request-ID" => request_id]
         exec_async(context, schema, engine, program; readtimeout=30, readonly, headers)
+        throw("uh oh")
     catch e
         @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed=true request_id
         if retry_number < 3
