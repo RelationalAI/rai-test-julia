@@ -417,7 +417,7 @@ function _test_rel_steps(;
 
     try
         stats = @timed Logging.with_logger(logger) do
-            @testset TestRelTestSet nested=nested name begin
+            @testset TestRelTestSet nested=nested "$name" begin
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
                     _test_rel_step(index, step, schema, test_engine, name, length(steps))
