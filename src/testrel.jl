@@ -420,7 +420,9 @@ function _test_rel_steps(;
             @testset TestRelTestSet nested=nested "$name" begin
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
-                    _test_rel_step(index, step, schema, test_engine, name, length(steps))
+                    inner_ts = _test_rel_step(index, step, schema, test_engine, name, length(steps))
+                    # short circuit if something errored
+                    anyerror(inner_ts) && break
                 end
             end
         end
