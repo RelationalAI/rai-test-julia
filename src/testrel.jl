@@ -368,18 +368,21 @@ function test_rel_steps(;
     end
 
     parent = Test.get_testset()
-    if parent isa ConcurrentTestSet
-        ref = Threads.@spawn _test_rel_steps(;
-            steps,
-            name,
-            location,
-            nested=true,
-            clone_db,
-            user_engine=engine,
-        )
-        add_test_ref(parent, ref)
+    report = is_reportable(parent)
+    if is_distributed(parent)
+        distribute_test(parent) do
+            _test_rel_steps(;
+                steps,
+                name,
+                location,
+                nested=true,
+                report
+                clone_db,
+                user_engine=engine,
+            )
+        end
     else
-        _test_rel_steps(; steps, name, location, clone_db, user_engine=engine)
+        _test_rel_steps(; steps, name, location, report, clone_db, user_engine=engine)
     end
 end
 
@@ -389,6 +392,7 @@ function _test_rel_steps(;
     name::Option{String},
     location::Option{LineNumberNode},
     nested::Bool = false,
+    report::Bool = false
     clone_db::Option{String} = nothing,
     user_engine::Option{String} = nothing,
 )
@@ -417,7 +421,7 @@ function _test_rel_steps(;
 
     try
         stats = @timed Logging.with_logger(logger) do
-            @testset TestRelTestSet nested=nested "$name" begin
+            @testset TestRelTestSet nested report "$name" begin
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
                     _test_rel_step(index, step, schema, test_engine, name, length(steps))
@@ -426,29 +430,21 @@ function _test_rel_steps(;
         end
         duration = sprint(show, stats.time; context=:compact => true)
         ts = stats.value
+        ts.logs = logger.logs
         
         check_flaky(name, logger.logs)
-
+        
+        log_header = get_log_header(ts, duration, schema, test_engine)
         if anyerror(ts) || anyfail(ts)
+            ts.error_message = log_header
             io, ctx = get_logging_io()
-            if anyerror(ts)
-                write(ctx, "[ERROR]")
-            end
-            if anyfail(ts)
-                write(ctx, "[FAIL]")
-            end
-            write(ctx, " $name duration=$duration\n\n CAPTURED LOGS:\n")
+            write(ctx, log_header)
+            write(ctx, "\n\nCAPTURED LOGS:\n")
             playback_log.(ctx, logger.logs)
             msg = String(take!(io))
             @error msg database=schema engine_name=test_engine
         else
-            txnids = Set()
-            for log in logger.logs
-                if haskey(log.kwargs, :transaction_id)
-                    push!(txnids, log.kwargs[:transaction_id])
-                end
-            end
-            @info """[PASS] $name duration=$duration TxIDs=[$(join(txnids, ", "))]""" 
+            @info log_header
         end
 
         ts

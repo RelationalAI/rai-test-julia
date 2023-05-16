@@ -2,22 +2,83 @@ import Test: Test, finish, record
 
 using Test
 using Test: AbstractTestSet
+using ReTestItems: JUnitTestSuites, JUnitTestSuite, JUnitTestCase, write_junit_file, junit_record!
 
-# Wraps a DefaultTestSet and adds a list of Tasks for concurrent tests
-mutable struct ConcurrentTestSet <: Test.AbstractTestSet
+mutable struct RAITestSet <: Test.AbstractTestSet
     dts::Test.DefaultTestSet
-    tests::Vector{Task}
+    report::Bool
+    distributed::Bool
+    distributed_tests::Vector{Task}
+    junit::Union{JUnitTestSuites, JUnitTestSuite}
 
-    ConcurrentTestSet(desc) = new(Test.DefaultTestSet(desc), [])
+    function RAITestSet(dts, report, distributed)
+        if Test.get_testset_depth() == 0
+            junit = JUnitTestSuites(desc)
+        else
+            junit = JUnitTestSuite(desc)
+        end
+        new(dts, report, distributed, [], junit)
+    end
 end
 
-record(ts::ConcurrentTestSet, child::AbstractTestSet) = record(ts.dts, child)
-record(ts::Test.DefaultTestSet, child::ConcurrentTestSet) = record(ts, child.dts)
-record(ts::ConcurrentTestSet, res::Test.Result) = record(ts.dts, res)
+function RAITestSet(desc; report::Option{Nothing}=nothing, distributed::Option{Nothing}=nothing)
+    dts = Test.DefaultTestSet(desc)
+    is_nested = Test.get_testset_depth() > 0
+    default_report = false
+    default_distributed = true
+
+    # Pass on the parent RAITestSet's options if nested
+    if is_nested
+        parent = Test.get_testset()
+        if parent isa RAITestSet
+            default_report = parent.report
+            default_distributed = parent.distributed
+        end
+    end
+
+    return RAITestSet(dts, something(report, default_report), something(distributed, default_distributed))
+end
+
+is_distributed(ts::RAITestSet) = ts.distributed
+is_distributed(ts::Test.AbstractTestSet) = false
+
+is_reportable(ts::RAITestSet) = ts.report
+is_reportable(ts::Test.AbstractTestSet) = false
+
+function distribute_test(f, ts::RAITestSet)
+    ref = Threads.@spawn f()
+    push!(ts.tests, test_ref)
+end
+
+function record(ts::RAITestSet, child::RAITestSet)
+    junit_record!(ts.junit, child.junit)
+    record(ts.dts, child.dts)
+end
+function record(ts::RAITestSet, child::TestRelTestSet)
+    tc = JUnitTestCase(child.dts)
+    # Populate logs if error message is set
+    tc.error_message = child.error_message
+    if !isnothing(tc.error_message)
+        io = IOBuffer()
+        playback_log.(io, tc.logs)
+        tc.logs = take!(io)
+    end
+    junit_record!(ts.junit, tc)
+    record(ts.dts, child.dts)
+end
+record(ts::RAITestSet, child::AbstractTestSet) = record(ts.dts, child)
+record(ts::Test.DefaultTestSet, child::RAITestSet) = record(ts, child.dts)
+record(ts::RAITestSet, res::Test.Result) = record(ts.dts, res)
+
+# TODO PR: contribute back to ReTestItems
+function junit_record!(ts1::JUnitTestSuite, ts2::JUnitTestSuite)
+    update!(ts1.counts, ts2.counts)
+    append!(ts1.testcases, ts2.testcases)
+end
 
 # Record any results directly stored and fetch results from any listed concurrent tests
 # If this is the parent then show results
-function finish(ts::ConcurrentTestSet)
+function finish(ts::RAITestSet)
     for t in ts.tests
         record(ts.dts, fetch(t))
     end
@@ -28,16 +89,15 @@ function finish(ts::ConcurrentTestSet)
         return ts
     end
     finish(ts.dts)
+
+    # We are the root testet, Write JUnit XML
+    if ts.report
+        projectfile = Base.active_project()
+        proj_name = Pkg.Types.read_project(projectfile).name
+        ReTestItems.write_junit_file(proj_name, dirname(projectfile), ts.junit)
+    end
+    
     return ts
-end
-
-function add_test_ref(testset::ConcurrentTestSet, test_ref)
-    return push!(testset.tests, test_ref)
-end
-
-# Handle attempted use outside of a ConcurrentTestSet
-function add_test_ref(testset::AbstractTestSet, test_ref)
-    return fetch(test_ref)
 end
 
 # Wrap a DefaultTestSet with some behavior specific to @test_rel.
@@ -52,11 +112,16 @@ end
 mutable struct TestRelTestSet <: AbstractTestSet
     dts::Test.DefaultTestSet
     nested::Bool
+    report::Bool
     broken_expected::Bool
     broken_found::Bool
 
-    TestRelTestSet(desc; nested=false, broken=false) = 
-        new(Test.DefaultTestSet(desc), nested, broken, false)
+    # Added after running, before recording
+    logs::Vector{LogRecord}
+    error_msg::Option{String}
+
+    TestRelTestSet(desc; nested=false, broken=false, report=false) = 
+        new(Test.DefaultTestSet(desc), nested, report, broken, false, [], nothing)
 end
 
 record(ts::TestRelTestSet, child::AbstractTestSet) = record(ts.dts, child)
@@ -100,6 +165,34 @@ function finish(ts::TestRelTestSet)
     end
     !ts.nested && finish(ts.dts)
     return ts
+end
+
+function get_log_header(ts::TestRelTestSet, duration, database, engine_name)
+    io, ctx = get_logging_io()
+
+    # status
+    anyerror(ts) && write(ctx, "[ERROR]")
+    anyfail(ts) && write(ctx, "[FAIL]")
+    all_pass = !any_error(ts) && !anyfail(ts)
+    all_pass && write(ctx, "[PASS]")
+    
+    # core info
+    write(ctx, " $name, duration=$duration")
+
+    # tail
+    if all_pass
+        txnids = Set()
+        for log in ts.logs
+            if haskey(log.kwargs, :transaction_id)
+                push!(txnids, log.kwargs[:transaction_id])
+            end
+        end
+        write(ctx, """ TxIDs=[$(join(txnids, ", "))]""")
+    else
+        write(ctx, "\n\ndatabase=$database\nengine_name=$engine_name")
+    end
+    
+    return String(take!(io))
 end
 
 anyerror(ts::TestRelTestSet) = anyerror(ts.dts)
