@@ -19,9 +19,9 @@ export set_engine_name_provider
 export set_engine_name_releaser
 export set_engine_creater
 
-include("testsets.jl")
-
 include("code-util.jl")
+
+include("testsets.jl")
 
 include("testrel.jl")
 

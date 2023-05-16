@@ -3,6 +3,7 @@ import Test: Test, finish, record
 using Test
 using Test: AbstractTestSet
 using ReTestItems: JUnitTestSuites, JUnitTestSuite, JUnitTestCase, write_junit_file, junit_record!
+import ReTestItems
 
 mutable struct RAITestSet <: Test.AbstractTestSet
     dts::Test.DefaultTestSet
@@ -51,24 +52,12 @@ function record(ts::RAITestSet, child::RAITestSet)
     junit_record!(ts.junit, child.junit)
     record(ts.dts, child.dts)
 end
-function record(ts::RAITestSet, child::TestRelTestSet)
-    tc = JUnitTestCase(child.dts)
-    # Populate logs if error message is set
-    tc.error_message = child.error_message
-    if !isnothing(tc.error_message)
-        io = IOBuffer()
-        playback_log.(io, tc.logs)
-        tc.logs = take!(io)
-    end
-    junit_record!(ts.junit, tc)
-    record(ts.dts, child.dts)
-end
 record(ts::RAITestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::Test.DefaultTestSet, child::RAITestSet) = record(ts, child.dts)
 record(ts::RAITestSet, res::Test.Result) = record(ts.dts, res)
 
 # TODO PR: contribute back to ReTestItems
-function junit_record!(ts1::JUnitTestSuite, ts2::JUnitTestSuite)
+function ReTestItems.junit_record!(ts1::JUnitTestSuite, ts2::JUnitTestSuite)
     update!(ts1.counts, ts2.counts)
     append!(ts1.testcases, ts2.testcases)
 end
@@ -120,6 +109,18 @@ mutable struct TestRelTestSet <: AbstractTestSet
         new(Test.DefaultTestSet(desc), nested, broken, false, [], nothing)
 end
 
+function record(ts::RAITestSet, child::TestRelTestSet)
+    tc = JUnitTestCase(child.dts)
+    # Populate logs if error message is set
+    tc.error_message = child.error_message
+    if !isnothing(tc.error_message)
+        io = IOBuffer()
+        playback_log.(io, tc.logs)
+        tc.logs = take!(io)
+    end
+    junit_record!(ts.junit, tc)
+    record(ts.dts, child.dts)
+end
 record(ts::TestRelTestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::Test.DefaultTestSet, child::TestRelTestSet) = record(ts, child.dts)
 record(ts::TestRelTestSet, res::Test.Result) = record(ts.dts, res)
