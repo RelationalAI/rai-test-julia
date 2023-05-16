@@ -22,7 +22,7 @@ mutable struct RAITestSet <: Test.AbstractTestSet
     end
 end
 
-function RAITestSet(desc; report::Option{Nothing}=nothing, distributed::Option{Nothing}=nothing)
+function RAITestSet(desc; report::Option{Bool}=nothing, distributed::Option{Bool}=nothing)
     dts = Test.DefaultTestSet(desc)
     is_nested = Test.get_testset_depth() > 0
     default_report = false

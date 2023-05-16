@@ -93,7 +93,7 @@ function test_expected(expected::AbstractDict, results, testname::String)
         end
 
         # Existence check only
-        expected_result_tuple_vector == [()] && continue
+        expected_result_tuple_vecto == [()] && continue
 
         # convert actual results to a vector for comparison
         actual_result = results[name]
@@ -420,7 +420,7 @@ function _test_rel_steps(;
 
     try
         stats = @timed Logging.with_logger(logger) do
-            @testset TestRelTestSet nested "$name" begin
+            @testset TestRelTestSet nested=nested "$name" begin
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
                     _test_rel_step(index, step, schema, test_engine, name, length(steps))
