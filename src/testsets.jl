@@ -44,7 +44,7 @@ is_distributed(ts::Test.AbstractTestSet) = false
 
 function distribute_test(f, ts::RAITestSet)
     ref = Threads.@spawn f()
-    push!(ts.tests, test_ref)
+    push!(ts.distributed_tests, test_ref)
 end
 
 function record(ts::RAITestSet, child::RAITestSet)
@@ -76,7 +76,7 @@ end
 # Record any results directly stored and fetch results from any listed concurrent tests
 # If this is the parent then show results
 function finish(ts::RAITestSet)
-    for t in ts.tests
+    for t in ts.distributed_tests
         record(ts.dts, fetch(t))
     end
     if Test.get_testset_depth() > 0
