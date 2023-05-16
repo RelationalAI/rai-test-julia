@@ -5,6 +5,7 @@ using Test: @testset, TestLogger, LogRecord
 import Logging
 
 export test_rel, @test_rel, @testset
+export RAITestSet
 export Problem, Step
 export ConcurrentTestSet
 
