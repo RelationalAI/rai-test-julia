@@ -42,9 +42,6 @@ end
 is_distributed(ts::RAITestSet) = ts.distributed
 is_distributed(ts::Test.AbstractTestSet) = false
 
-is_reportable(ts::RAITestSet) = ts.report
-is_reportable(ts::Test.AbstractTestSet) = false
-
 function distribute_test(f, ts::RAITestSet)
     ref = Threads.@spawn f()
     push!(ts.tests, test_ref)
@@ -112,7 +109,6 @@ end
 mutable struct TestRelTestSet <: AbstractTestSet
     dts::Test.DefaultTestSet
     nested::Bool
-    report::Bool
     broken_expected::Bool
     broken_found::Bool
 
@@ -120,8 +116,8 @@ mutable struct TestRelTestSet <: AbstractTestSet
     logs::Vector{LogRecord}
     error_msg::Option{String}
 
-    TestRelTestSet(desc; nested=false, broken=false, report=false) = 
-        new(Test.DefaultTestSet(desc), nested, report, broken, false, [], nothing)
+    TestRelTestSet(desc; nested=false, broken=false) = 
+        new(Test.DefaultTestSet(desc), nested, broken, false, [], nothing)
 end
 
 record(ts::TestRelTestSet, child::AbstractTestSet) = record(ts.dts, child)

@@ -368,7 +368,6 @@ function test_rel_steps(;
     end
 
     parent = Test.get_testset()
-    report = is_reportable(parent)
     if is_distributed(parent)
         distribute_test(parent) do
             _test_rel_steps(;
@@ -376,13 +375,12 @@ function test_rel_steps(;
                 name,
                 location,
                 nested=true,
-                report
                 clone_db,
                 user_engine=engine,
             )
         end
     else
-        _test_rel_steps(; steps, name, location, report, clone_db, user_engine=engine)
+        _test_rel_steps(; steps, name, location, clone_db, user_engine=engine)
     end
 end
 
@@ -392,7 +390,6 @@ function _test_rel_steps(;
     name::Option{String},
     location::Option{LineNumberNode},
     nested::Bool = false,
-    report::Bool = false
     clone_db::Option{String} = nothing,
     user_engine::Option{String} = nothing,
 )
@@ -421,7 +418,7 @@ function _test_rel_steps(;
 
     try
         stats = @timed Logging.with_logger(logger) do
-            @testset TestRelTestSet nested report "$name" begin
+            @testset TestRelTestSet nested "$name" begin
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
                     _test_rel_step(index, step, schema, test_engine, name, length(steps))
