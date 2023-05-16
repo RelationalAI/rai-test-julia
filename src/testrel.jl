@@ -6,10 +6,6 @@ using Random: MersenneTwister
 using Test
 using UUIDs
 
-mutable struct ContextWrapper
-    context::Context
-end
-
 # Generates a name for the given base name that makes it unique between multiple
 # processing units
 # Generated names are truncated at 63 characters. This limit is reached when the
@@ -20,14 +16,20 @@ function gen_safe_name(basename)
     return name[1:min(sizeof(name), 63)]
 end
 
-TEST_CONTEXT_WRAPPER::ContextWrapper = ContextWrapper(Context(load_config()))
+const TEST_CONTEXT = Ref{Option{Context}}(nothing)
 
-function get_context()::Context
-    return TEST_CONTEXT_WRAPPER.context
+try
+    TEST_CONTEXT[] = Context(load_config())
+catch
+    @warn "No `default` RAI context found. Use `set_context` to pass in a context and enable usage of `RAITest`."
+end
+
+function get_context()
+    return TEST_CONTEXT[]
 end
 
 function set_context(new_context::Context)
-    return TEST_CONTEXT_WRAPPER.context = new_context
+    return TEST_CONTEXT[] = new_context
 end
 
 function create_test_database_name(; default_basename="test_rel")::String
