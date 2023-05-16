@@ -13,6 +13,7 @@ mutable struct RAITestSet <: Test.AbstractTestSet
     junit::Union{JUnitTestSuites, JUnitTestSuite}
 
     function RAITestSet(dts, report, distributed)
+        desc = dts.description
         if Test.get_testset_depth() == 0
             junit = JUnitTestSuites(desc)
         else
