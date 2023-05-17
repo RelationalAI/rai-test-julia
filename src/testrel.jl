@@ -143,8 +143,8 @@ end
         sources to install in the database.
 
     - `broken::Bool`: if the computed values are not currently correct (wrt the `expected`
-    results), then `broken` can be used to mark the tests as broken and prevent the test from
-    failing.
+    results), then `broken` can be used to mark the tests as broken and prevent the test
+    from failing.
 
     - `expected_problems::Vector}`: expected problems. The semantics of
       `expected_problems` is that the program must contain a super set of the specified
@@ -228,9 +228,11 @@ Note that `test_rel` creates a new schema for each test.
   - `query::String`: The query to use for the test
   - `name::String`: name of the testcase
   - `location::LineNumberNode`: Sourcecode location
-  - `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64" => [1, 2])`.
-    Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the values.
-    or a type that can be converted to string and used as relation path.
+  - `expected::AbstractDict`: Expected values in the form
+    `Dict("/:output/:a/Int64" => [1, 2])` or
+    `Dict(:a => p1, 2])`
+    Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the
+    values, or a type that can be converted to string and used as relation path.
   - `expected_problems::Vector`: expected problems. The semantics of
     `expected_problems` is that the program must contain a super set of the specified
     error codes.
@@ -242,12 +244,12 @@ Note that `test_rel` creates a new schema for each test.
     triggered error.
   - `debug::Bool`: boolean that specifies debugging mode.
   - `debug_trace::Bool`: boolean that specifies printing out the debug_trace
-  - `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it is
-    expected to abort, but it does not, then the test fails.
+  - `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it
+    is expected to abort, but it does not, then the test fails.
   - `timeout_sec`: an upper bound on test execution time.
   - `broken::Bool`: if the test is not currently correct (wrt the `expected`
-    results), then `broken` can be used to mark the tests as broken and prevent the test from
-    failing.
+    results), then `broken` can be used to mark the tests as broken and prevent the test
+    from failing.
   - `engine::String` (optional): the name of an existing engine where tests will be executed
 """
 function test_rel(;
