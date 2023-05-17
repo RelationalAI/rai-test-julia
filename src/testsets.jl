@@ -175,6 +175,7 @@ function get_log_header(ts::TestRelTestSet, duration, database, engine_name)
     all_pass && write(ctx, "[PASS]")
     
     # core info
+    name = ts.dts.description
     write(ctx, " $name, duration=$duration")
 
     # tail
