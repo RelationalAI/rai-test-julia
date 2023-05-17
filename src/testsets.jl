@@ -46,7 +46,7 @@ is_distributed(ts::Test.AbstractTestSet) = false
 
 function distribute_test(f, ts::RAITestSet)
     ref = Threads.@spawn f()
-    push!(ts.distributed_tests, test_ref)
+    push!(ts.distributed_tests, ref)
 end
 
 function record(ts::RAITestSet, child::RAITestSet)
