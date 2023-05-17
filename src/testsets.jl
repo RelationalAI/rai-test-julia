@@ -171,7 +171,7 @@ function get_log_header(ts::TestRelTestSet, duration, database, engine_name)
     # status
     anyerror(ts) && write(ctx, "[ERROR]")
     anyfail(ts) && write(ctx, "[FAIL]")
-    all_pass = !any_error(ts) && !anyfail(ts)
+    all_pass = !anyerror(ts) && !anyfail(ts)
     all_pass && write(ctx, "[PASS]")
     
     # core info
