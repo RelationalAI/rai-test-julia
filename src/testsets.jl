@@ -65,7 +65,7 @@ record(ts::TestRelTestSet, res::Test.Result) = record(ts.dts, res)
 
 # Change error/fail to broken if expected and record as such. If not expected, 
 # log the failure and record the result.
-function record(ts::TestRelTestSet, t::Union{Test.Fail,Test.Error})
+function record(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
     if ts.broken_expected
         ts.broken_found = true
         push!(ts.dts.results, Test.Broken(t.test_type, t.orig_expr))
@@ -114,7 +114,7 @@ function anyfail(ts::Test.DefaultTestSet)
     return stats[2] + stats[6] > 0
 end
 
-function log_test_error(ts::TestRelTestSet, t::Union{Test.Fail,Test.Error})
+function log_test_error(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
     io, ctx = get_logging_io()
     print(ctx, ts.dts.description, ": ")
     print(ctx, t)

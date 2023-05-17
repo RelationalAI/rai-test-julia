@@ -31,7 +31,7 @@ const TEST_SERVER_LOCK = ReentrantLock()
 const TEST_SERVER_ACQUISITION_LOCK = ReentrantLock()
 
 mutable struct TestEnginePool
-    engines::Dict{String,Int64}
+    engines::Dict{String, Int64}
     # This is used to enable unique, simple, naming of engines
     # Switching to randomly generated UUIDs would be needed if tests are run independently
     next_id::Int64

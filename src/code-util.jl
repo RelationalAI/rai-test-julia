@@ -1,5 +1,5 @@
 # helper for optional types
-const Option{T} = Union{Nothing,T}
+const Option{T} = Union{Nothing, T}
 
 # Extract relation names from the inputs and adds them to the program
 # Turns a dict of name=>vector, with names of form :othername/Type,
@@ -139,7 +139,7 @@ function to_vector_of_tuples(input::Dict)
     return result
 end
 
-function to_vector_of_tuples(input::Union{Set,Vector})
+function to_vector_of_tuples(input::Union{Set, Vector})
     isempty(input) && return []
 
     result = []
@@ -163,7 +163,7 @@ function Base.isequal(c::Char, u::UInt32)
 end
 
 # The intermediate Arrow format encodes Int128/UInt128 as a tuple of Int64s
-function Base.isequal(i::Int128, t::Tuple{UInt64,UInt64})
+function Base.isequal(i::Int128, t::Tuple{UInt64, UInt64})
     sign = Int128(t[2] >> 63)
 
     a = Int128(t[2] - (sign << 63))
@@ -173,7 +173,7 @@ function Base.isequal(i::Int128, t::Tuple{UInt64,UInt64})
     return isequal(i, a)
 end
 
-function Base.isequal(expected::UInt128, actual::Tuple{UInt64,UInt64})
+function Base.isequal(expected::UInt128, actual::Tuple{UInt64, UInt64})
     a = UInt128(actual[1]) + UInt128(actual[2]) << 64
     return isequal(expected, a)
 end
@@ -254,7 +254,7 @@ function result_table_to_dict(results::Nothing)
 end
 
 function result_table_to_dict(results)
-    dict_results = Dict{String,Arrow.Table}()
+    dict_results = Dict{String, Arrow.Table}()
     for result in results
         dict_results[result[1]] = result[2]
     end

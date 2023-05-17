@@ -120,18 +120,18 @@ end
 Expected problems are defined by a code and an optional starting line number
 Dict(:code => "name" [, :line => <number>])
 """
-const Problem = Dict{Symbol,Any}
+const Problem = Dict{Symbol, Any}
 
 const AcceptedSourceTypes =
-    Union{String,Pair{String,String},Vector{String},Dict{String,String}}
+    Union{String, Pair{String, String}, Vector{String}, Dict{String, String}}
 
-convert_to_install_kv(install_dict::Dict{String,String}) = install_dict
-convert_to_install_kv(install_pair::Pair{String,String}) = Dict(install_pair)
+convert_to_install_kv(install_dict::Dict{String, String}) = install_dict
+convert_to_install_kv(install_pair::Pair{String, String}) = Dict(install_pair)
 convert_to_install_kv(install_string::String) = convert_to_install_kv([install_string])
 function convert_to_install_kv(install_vector::Vector{String})
-    models = Dict{String,String}()
+    models = Dict{String, String}()
     for i in enumerate(install_vector)
-        models["test_install"*string(i[1])] = i[2]
+        models["test_install" * string(i[1])] = i[2]
     end
     return models
 end
@@ -143,8 +143,8 @@ end
         sources to install in the database.
 
     - `broken::Bool`: if the computed values are not currently correct (wrt the `expected`
-    results), then `broken` can be used to mark the tests as broken and prevent the test from
-    failing.
+    results), then `broken` can be used to mark the tests as broken and prevent the test
+    from failing.
 
     - `expected_problems::Vector}`: expected problems. The semantics of
       `expected_problems` is that the program must contain a super set of the specified
@@ -152,7 +152,7 @@ end
 """
 struct Step
     query::Option{String}
-    install::Dict{String,String}
+    install::Dict{String, String}
     broken::Bool
     schema_inputs::AbstractDict
     inputs::AbstractDict
@@ -165,7 +165,7 @@ end
 
 function Step(;
     query::Option{String}=nothing,
-    install::AcceptedSourceTypes=Dict{String,String}(),
+    install::AcceptedSourceTypes=Dict{String, String}(),
     broken::Bool=false,
     schema_inputs::AbstractDict=Dict(),
     inputs::AbstractDict=Dict(),
@@ -228,9 +228,11 @@ Note that `test_rel` creates a new schema for each test.
   - `query::String`: The query to use for the test
   - `name::String`: name of the testcase
   - `location::LineNumberNode`: Sourcecode location
-  - `expected::AbstractDict`: Expected values in the form `Dict("/:output/:a/Int64" => [1, 2])`.
-    Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the values.
-    or a type that can be converted to string and used as relation path.
+  - `expected::AbstractDict`: Expected values in the form
+    `Dict("/:output/:a/Int64" => [1, 2])` or
+    `Dict(:a => p1, 2])`
+    Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the
+    values, or a type that can be converted to string and used as relation path.
   - `expected_problems::Vector`: expected problems. The semantics of
     `expected_problems` is that the program must contain a super set of the specified
     error codes.
@@ -242,12 +244,12 @@ Note that `test_rel` creates a new schema for each test.
     triggered error.
   - `debug::Bool`: boolean that specifies debugging mode.
   - `debug_trace::Bool`: boolean that specifies printing out the debug_trace
-  - `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it is
-    expected to abort, but it does not, then the test fails.
+  - `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it
+    is expected to abort, but it does not, then the test fails.
   - `timeout_sec`: an upper bound on test execution time.
   - `broken::Bool`: if the test is not currently correct (wrt the `expected`
-    results), then `broken` can be used to mark the tests as broken and prevent the test from
-    failing.
+    results), then `broken` can be used to mark the tests as broken and prevent the test
+    from failing.
   - `engine::String` (optional): the name of an existing engine where tests will be executed
 """
 function test_rel(;
@@ -256,7 +258,7 @@ function test_rel(;
     name::Option{String}=nothing,
     location::Option{LineNumberNode}=nothing,
     include_stdlib::Bool=true,
-    install::AcceptedSourceTypes=Dict{String,String}(),
+    install::AcceptedSourceTypes=Dict{String, String}(),
     abort_on_error::Bool=false,
     debug::Bool=false,
     debug_trace::Bool=false,

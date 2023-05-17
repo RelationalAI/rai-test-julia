@@ -73,7 +73,7 @@ function set_engine_creater(creater::Function)
     return TEST_ENGINE_PROVISION.creater = creater
 end
 
-TEST_ENGINE_POOL = TestEnginePool(Dict{String,Int64}(), 0, get_next_engine_name)
+TEST_ENGINE_POOL = TestEnginePool(Dict{String, Int64}(), 0, get_next_engine_name)
 
 TEST_ENGINE_PROVISION = TestEngineProvision(
     get_pooled_test_engine,
