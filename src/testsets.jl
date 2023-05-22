@@ -59,7 +59,7 @@ record(ts::RAITestSet, res::Test.Result) = record(ts.dts, res)
 
 # TODO PR: contribute back to ReTestItems
 function ReTestItems.junit_record!(ts1::JUnitTestSuite, ts2::JUnitTestSuite)
-    update!(ts1.counts, ts2.counts)
+    ReTestItems.update!(ts1.counts, ts2.counts)
     append!(ts1.testcases, ts2.testcases)
 end
 
