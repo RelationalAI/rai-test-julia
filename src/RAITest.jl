@@ -3,6 +3,7 @@ module RAITest
 using Test: @testset, TestLogger, LogRecord
 
 import Logging
+import Pkg
 
 export test_rel, @test_rel, @testset
 export RAITestSet
