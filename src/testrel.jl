@@ -93,7 +93,7 @@ function test_expected(expected::AbstractDict, results, testname::String)
         end
 
         # Existence check only
-        expected_result_tuple_vecto == [()] && continue
+        expected_result_tuple_vector == [()] && continue
 
         # convert actual results to a vector for comparison
         actual_result = results[name]
