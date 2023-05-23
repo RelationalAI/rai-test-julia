@@ -57,12 +57,6 @@ record(ts::RAITestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::Test.DefaultTestSet, child::RAITestSet) = record(ts, child.dts)
 record(ts::RAITestSet, res::Test.Result) = record(ts.dts, res)
 
-# TODO PR: contribute back to ReTestItems
-function ReTestItems.junit_record!(ts1::JUnitTestSuite, ts2::JUnitTestSuite)
-    ReTestItems.update!(ts1.counts, ts2.counts)
-    append!(ts1.testcases, ts2.testcases)
-end
-
 # Record any results directly stored and fetch results from any listed concurrent tests
 # If this is the parent then show results
 function finish(ts::RAITestSet)
