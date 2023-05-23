@@ -80,7 +80,7 @@ function finish(ts::RAITestSet)
     # We are the root testet, Write JUnit XML
     if ts.report
         projectfile = Base.active_project()
-        proj_name = Pkg.Types.read_project(projectfile).name
+        proj_name = something(Pkg.Types.read_project(projectfile).name, "")
         ReTestItems.write_junit_file(proj_name, dirname(projectfile), ts.junit)
     end
     
