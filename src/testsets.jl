@@ -67,7 +67,7 @@ end
 # If this is the parent then show results
 function finish(ts::RAITestSet)
     for t in ts.distributed_tests
-        record(ts.dts, fetch(t))
+        record(ts, fetch(t))
     end
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
