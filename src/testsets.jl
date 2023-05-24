@@ -98,7 +98,7 @@ mutable struct TestRelTestSet <: AbstractTestSet
 
     # Added after running, before recording
     logs::Vector{LogRecord}
-    error_msg::Option{String}
+    error_message::Option{String}
 
     TestRelTestSet(desc; nested=false, broken=false) = 
         new(Test.DefaultTestSet(desc), nested, broken, false, [], nothing)
