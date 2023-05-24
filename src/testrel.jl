@@ -385,12 +385,12 @@ function test_rel_steps(;
         name *= resolved_location
     end
     
-    if is_reportable(ts)
-        name_count = get!(ts.name_dict, name, 0)
+    if is_reportable(parent)
+        name_count = get!(parent.name_dict, name, 0)
         if name_count > 0
             name *= " ($name_count)"
         end
-        ts.name_dict[name] += 1
+        parent.name_dict[name] += 1
     end
 
     if is_distributed(parent)
