@@ -11,15 +11,16 @@ mutable struct RAITestSet <: Test.AbstractTestSet
     distributed::Bool
     distributed_tests::Vector{Task}
     junit::Union{JUnitTestSuites, JUnitTestSuite}
+    name_dict::Dict{String, Int}
 
-    function RAITestSet(dts, report, distributed)
+    function RAITestSet(dts, report, distributed, name_dict)
         desc = dts.description
         if Test.get_testset_depth() == 0
             junit = JUnitTestSuites(desc)
         else
             junit = JUnitTestSuite(desc)
         end
-        new(dts, report, distributed, [], junit)
+        new(dts, report, distributed, [], junit, name_dict)
     end
 end
 
@@ -28,6 +29,7 @@ function RAITestSet(desc; report::Option{Bool}=nothing, distributed::Option{Bool
     is_nested = Test.get_testset_depth() > 0
     default_report = false
     default_distributed = true
+    default_name_dict = Dict{String,Int}()
 
     # Pass on the parent RAITestSet's options if nested
     if is_nested
@@ -35,14 +37,18 @@ function RAITestSet(desc; report::Option{Bool}=nothing, distributed::Option{Bool
         if parent isa RAITestSet
             default_report = parent.report
             default_distributed = parent.distributed
+            default_name_dict = parent.name_dict
         end
     end
 
-    return RAITestSet(dts, something(report, default_report), something(distributed, default_distributed))
+    return RAITestSet(dts, something(report, default_report), something(distributed, default_distributed), default_name_dict)
 end
 
 is_distributed(ts::RAITestSet) = ts.distributed
 is_distributed(ts::Test.AbstractTestSet) = false
+
+is_reportable(ts::RAITestSet) = ts.report
+is_reportable(ts::Test.AbstractTestSet) = false
 
 function distribute_test(f, ts::RAITestSet)
     ref = Threads.@spawn f()
@@ -74,7 +80,7 @@ function finish(ts::RAITestSet)
     finish(ts.dts)
 
     # We are the root testet, Write JUnit XML
-    if ts.report
+    if is_reportable(ts)
         projectfile = Base.active_project()
         proj_name = something(Pkg.Types.read_project(projectfile).name, "")
         ReTestItems.write_junit_file(proj_name, dirname(projectfile), ts.junit)

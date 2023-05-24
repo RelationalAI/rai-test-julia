@@ -370,31 +370,8 @@ function test_rel_steps(;
     end
 
     parent = Test.get_testset()
-    if is_distributed(parent)
-        distribute_test(parent) do
-            _test_rel_steps(;
-                steps,
-                name,
-                location,
-                nested=true,
-                clone_db,
-                user_engine=engine,
-            )
-        end
-    else
-        _test_rel_steps(; steps, name, location, clone_db, user_engine=engine)
-    end
-end
-
-# This internal function executes `test_rel`
-function _test_rel_steps(;
-    steps::Vector{Step},
-    name::Option{String},
-    location::Option{LineNumberNode},
-    nested::Bool = false,
-    clone_db::Option{String} = nothing,
-    user_engine::Option{String} = nothing,
-)
+    
+    # make sure name is unique if reporting on it
     if isnothing(name)
         name = ""
     else
@@ -407,8 +384,38 @@ function _test_rel_steps(;
 
         name *= resolved_location
     end
+    
+    if is_reportable(ts)
+        name_count = get!(ts.name_dict, name, 0)
+        if name_count > 0
+            name *= " ($name_count)"
+        end
+        ts.name_dict[name] += 1
+    end
 
+    if is_distributed(parent)
+        distribute_test(parent) do
+            _test_rel_steps(;
+                steps,
+                name,
+                nested=true,
+                clone_db,
+                user_engine=engine,
+            )
+        end
+    else
+        _test_rel_steps(; steps, name, clone_db, user_engine=engine)
+    end
+end
 
+# This internal function executes `test_rel`
+function _test_rel_steps(;
+    steps::Vector{Step},
+    name::Option{String},
+    nested::Bool = false,
+    clone_db::Option{String} = nothing,
+    user_engine::Option{String} = nothing,
+)
     # Generate a name for the test database
     schema = create_test_database_name()
     @debug("$name: Using database name $schema")
