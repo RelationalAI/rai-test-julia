@@ -387,10 +387,10 @@ function test_rel_steps(;
     
     if is_reportable(parent)
         name_count = get!(parent.name_dict, name, 0)
+        parent.name_dict[name] += 1
         if name_count > 0
             name *= " ($name_count)"
         end
-        parent.name_dict[name] += 1
     end
 
     if is_distributed(parent)
