@@ -113,7 +113,7 @@ end
 Expected problems are defined by a code and an optional starting line number
 Dict(:code => "name" [, :line => <number>])
 """
-const Problem = Dict{Symbol, Any}
+const Problem = Union{Dict{Symbol, Any}, Pair{Symbol, Any}}
 
 const AcceptedSourceTypes =
     Union{String, Pair{String, String}, Vector{String}, Dict{String, String}}
