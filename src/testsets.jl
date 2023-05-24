@@ -118,7 +118,7 @@ function record(ts::RAITestSet, child::TestRelTestSet)
     tc.error_message = child.error_message
     if !isnothing(tc.error_message)
         io = IOBuffer()
-        playback_log.(io, tc.logs)
+        playback_log.(io, child.logs)
         tc.logs = take!(io)
     end
     junit_record!(ts.junit, tc)
