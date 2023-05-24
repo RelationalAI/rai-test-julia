@@ -60,6 +60,8 @@ record(ts::RAITestSet, res::Test.Result) = record(ts.dts, res)
 # Record any results directly stored and fetch results from any listed concurrent tests
 # If this is the parent then show results
 function finish(ts::RAITestSet)
+    ts.dts.time_end = time()
+ 
     for t in ts.distributed_tests
         record(ts, fetch(t))
     end
@@ -134,6 +136,8 @@ function record(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
 end
 
 function finish(ts::TestRelTestSet)
+    ts.dts.time_end = time()
+
     if ts.broken_expected && !ts.broken_found
         # If we expect broken tests and everything passes, drop the results and 
         # replace with an unbroken Error
