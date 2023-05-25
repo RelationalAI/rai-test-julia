@@ -235,9 +235,10 @@ function contains_problem(problems, problem_needle)::Bool
     return any(p -> matches_problem(p, problem_needle), problems)
 end
 
-matches_problem(actual, expected::Tuple) = matches_problem(actual, Dict(expected))
-function matches_problem(actual, expected)::Bool
-    match = string(actual[:code]) == string(expected[:code])
+matches_problem(prob1::Tuple, prob2) = matches_problem(Dict(prob1), prob2)
+matches_problem(prob1, prob2::Tuple) = matches_problem(prob1, Dict(prob2))
+function matches_problem(prob1, prob2)::Bool
+    match = string(prob1[:code]) == string(prob2[:code])
     # TODO: behaviour of line numbering in problem reports needs verification before
     # enabling line number tests
     #haskey(expected, :line) && match &= actual[:line] = expected[:line]
