@@ -78,8 +78,8 @@ function record(ts::RAITestSet, res::Test.Result)
     counts.skipped += res isa Test.Broken
 
     name = ts.dts.description
-    name_count = get!(parent.name_dict, name, 1)
-    parent.name_dict[name] += 1
+    name_count = get!(ts.name_dict, name, 1)
+    ts.name_dict[name] += 1
     if name_count > 1
         name *= " ($name_count)"
     end
