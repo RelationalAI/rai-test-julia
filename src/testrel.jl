@@ -35,8 +35,8 @@ function create_test_database_name(; default_basename="test_rel")::String
     return gen_safe_name(basename)
 end
 
-function create_test_database(name::String, clone_db::Option{String} = nothing)
-    create_database(get_context(), name; source = clone_db).database
+function create_test_database(name::String, clone_db::Option{String}=nothing)
+    return create_database(get_context(), name; source=clone_db).database
 end
 
 function delete_test_database(name::String)
@@ -97,12 +97,19 @@ function test_expected(expected::AbstractDict, results, testname::String)
         actual_result = results[name]
         actual_result_vector = sort(collect(zip(actual_result...)))
 
-        
         if !isequal(expected_result_tuple_vector, actual_result_vector)
-            @warn("$testname: Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
+            @warn(
+                "$testname: Expected result vs. actual",
+                expected_result_tuple_vector,
+                actual_result_vector
+            )
             return false
         else
-            @debug("$testname: Expected result vs. actual", expected_result_tuple_vector, actual_result_vector)
+            @debug(
+                "$testname: Expected result vs. actual",
+                expected_result_tuple_vector,
+                actual_result_vector
+            )
         end
     end
 
@@ -157,16 +164,16 @@ struct Step
 end
 
 function Step(;
-    query::Option{String} = nothing,
-    install::AcceptedSourceTypes = Dict{String, String}(),
-    broken::Bool = false,
-    schema_inputs::AbstractDict = Dict(),
-    inputs::AbstractDict = Dict(),
-    expected::AbstractDict = Dict(),
-    expected_problems::Vector = Problem[],
-    expect_abort::Bool = false,
-    timeout_sec::Int64 = 1800,
-    readonly::Bool = false,
+    query::Option{String}=nothing,
+    install::AcceptedSourceTypes=Dict{String, String}(),
+    broken::Bool=false,
+    schema_inputs::AbstractDict=Dict(),
+    inputs::AbstractDict=Dict(),
+    expected::AbstractDict=Dict(),
+    expected_problems::Vector=Problem[],
+    expect_abort::Bool=false,
+    timeout_sec::Int64=1800,
+    readonly::Bool=false,
 )
     return Step(
         query,
@@ -178,7 +185,7 @@ function Step(;
         expected_problems,
         expect_abort,
         timeout_sec,
-        readonly
+        readonly,
     )
 end
 
@@ -195,11 +202,11 @@ macro test_rel(args...)
     # in quoted code these already have a meaning.
     if args isa Tuple{String}
         quote
-            test_rel(; query = $(kwargs[1]), location = $(QuoteNode(__source__)))
+            test_rel(; query=$(kwargs[1]), location=$(QuoteNode(__source__)))
         end
     else
         quote
-            test_rel(; location = $(QuoteNode(__source__)), $(kwargs...))
+            test_rel(; location=$(QuoteNode(__source__)), $(kwargs...))
         end
     end
 end
@@ -244,47 +251,47 @@ Note that `test_rel` creates a new schema for each test.
   - `engine::String` (optional): the name of an existing engine where tests will be executed
 """
 function test_rel(;
-    query::Option{String} = nothing,
-    steps::Vector{Step} = Step[],
-    name::Option{String} = nothing,
-    location::Option{LineNumberNode} = nothing,
-    include_stdlib::Bool = true,
-    install::AcceptedSourceTypes = Dict{String, String}(),
-    abort_on_error::Bool = false,
-    debug::Bool = false,
-    debug_trace::Bool = false,
-    schema_inputs::AbstractDict = Dict(),
-    inputs::AbstractDict = Dict(),
-    expected::AbstractDict = Dict(),
-    expected_problems::Vector = Problem[],
-    expect_abort::Bool = false,
-    timeout_sec::Int64 = 1800,
-    broken::Bool = false,
-    clone_db::Option{String} = nothing,
-    engine::Option{String} = nothing,
+    query::Option{String}=nothing,
+    steps::Vector{Step}=Step[],
+    name::Option{String}=nothing,
+    location::Option{LineNumberNode}=nothing,
+    include_stdlib::Bool=true,
+    install::AcceptedSourceTypes=Dict{String, String}(),
+    abort_on_error::Bool=false,
+    debug::Bool=false,
+    debug_trace::Bool=false,
+    schema_inputs::AbstractDict=Dict(),
+    inputs::AbstractDict=Dict(),
+    expected::AbstractDict=Dict(),
+    expected_problems::Vector=Problem[],
+    expect_abort::Bool=false,
+    timeout_sec::Int64=1800,
+    broken::Bool=false,
+    clone_db::Option{String}=nothing,
+    engine::Option{String}=nothing,
 )
     query !== nothing && insert!(
         steps,
         1,
         Step(;
-            query = query,
-            expected = expected,
-            expected_problems = expected_problems,
-            expect_abort = expect_abort,
-            timeout_sec = timeout_sec,
-            broken = broken,
+            query=query,
+            expected=expected,
+            expected_problems=expected_problems,
+            expect_abort=expect_abort,
+            timeout_sec=timeout_sec,
+            broken=broken,
         ),
     )
 
     # Perform all inserts before other tests
     if !isempty(install)
-        insert!(steps, 1, Step(; install = convert_to_install_kv(install)))
+        insert!(steps, 1, Step(; install=convert_to_install_kv(install)))
     end
     if !isempty(schema_inputs)
-        insert!(steps, 1, Step(; schema_inputs = schema_inputs))
+        insert!(steps, 1, Step(; schema_inputs=schema_inputs))
     end
     if !isempty(inputs)
-        insert!(steps, 1, Step(; inputs = inputs))
+        insert!(steps, 1, Step(; inputs=inputs))
     end
 
     debug_env = get(ENV, "JULIA_DEBUG", "")
@@ -293,16 +300,16 @@ function test_rel(;
     end
 
     return withenv("JULIA_DEBUG" => debug_env) do
-        test_rel_steps(;
-            steps = steps,
-            name = name,
-            location = location,
-            include_stdlib = include_stdlib,
-            abort_on_error = abort_on_error,
-            debug = debug,
-            debug_trace = debug_trace,
-            clone_db = clone_db,
-            engine = engine,
+        return test_rel_steps(;
+            steps=steps,
+            name=name,
+            location=location,
+            include_stdlib=include_stdlib,
+            abort_on_error=abort_on_error,
+            debug=debug,
+            debug_trace=debug_trace,
+            clone_db=clone_db,
+            engine=engine,
         )
     end
 end
@@ -334,14 +341,14 @@ Note that `test_rel` creates a new schema for each test.
 """
 function test_rel_steps(;
     steps::Vector{Step},
-    name::Option{String} = nothing,
-    location::Option{LineNumberNode} = nothing,
-    include_stdlib::Bool = true,
-    abort_on_error::Bool = false,
-    debug::Bool = false,
-    debug_trace::Bool = false,
-    clone_db::Option{String} = nothing,
-    engine::Option{String} = nothing,
+    name::Option{String}=nothing,
+    location::Option{LineNumberNode}=nothing,
+    include_stdlib::Bool=true,
+    abort_on_error::Bool=false,
+    debug::Bool=false,
+    debug_trace::Bool=false,
+    clone_db::Option{String}=nothing,
+    engine::Option{String}=nothing,
 )
     # Setup steps that run before the first testing Step
     config_query = ""
@@ -364,7 +371,7 @@ function test_rel_steps(;
     end
 
     if config_query != ""
-        insert!(steps, 1, Step(; query = config_query))
+        insert!(steps, 1, Step(; query=config_query))
     end
 
     parent = Test.get_testset()
@@ -388,9 +395,9 @@ function _test_rel_steps(;
     steps::Vector{Step},
     name::Option{String},
     location::Option{LineNumberNode},
-    nested::Bool = false,
-    clone_db::Option{String} = nothing,
-    user_engine::Option{String} = nothing,
+    nested::Bool=false,
+    clone_db::Option{String}=nothing,
+    user_engine::Option{String}=nothing,
 )
     if isnothing(name)
         name = ""
@@ -405,7 +412,6 @@ function _test_rel_steps(;
         name *= resolved_location
     end
 
-
     # Generate a name for the test database
     schema = create_test_database_name()
     @debug("$name: Using database name $schema")
@@ -417,7 +423,7 @@ function _test_rel_steps(;
 
     try
         stats = @timed Logging.with_logger(logger) do
-            @testset TestRelTestSet nested=nested "$name" begin
+            @testset TestRelTestSet nested = nested "$name" begin
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
                     _test_rel_step(index, step, schema, test_engine, name, length(steps))
@@ -426,7 +432,7 @@ function _test_rel_steps(;
         end
         duration = sprint(show, stats.time; context=:compact => true)
         ts = stats.value
-        
+
         check_flaky(name, logger.logs)
 
         if anyerror(ts) || anyfail(ts)
@@ -440,7 +446,7 @@ function _test_rel_steps(;
             write(ctx, " $name duration=$duration\n\n CAPTURED LOGS:\n")
             playback_log.(ctx, logger.logs)
             msg = String(take!(io))
-            @error msg database=schema engine_name=test_engine
+            @error msg database = schema engine_name = test_engine
         else
             txnids = Set()
             for log in logger.logs
@@ -448,7 +454,7 @@ function _test_rel_steps(;
                     push!(txnids, log.kwargs[:transaction_id])
                 end
             end
-            @info """[PASS] $name duration=$duration TxIDs=[$(join(txnids, ", "))]""" 
+            @info """[PASS] $name duration=$duration TxIDs=[$(join(txnids, ", "))]"""
         end
 
         ts
@@ -461,7 +467,7 @@ function _test_rel_steps(;
         Base.show(ctx, err)
         msg = String(take!(io))
 
-        @error msg database=schema engine_name=test_engine test_name=name
+        @error msg database = schema engine_name = test_engine test_name = name
     finally
         try
             delete_test_database(schema)
@@ -489,7 +495,7 @@ function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
     start_time_ns = time_ns()
     delta_sec = 1
 
-    txn = get_transaction(ctx, id; readtimeout = timeout_sec)
+    txn = get_transaction(ctx, id; readtimeout=timeout_sec)
     while !RAI.transaction_is_done(txn)
         duration = time_ns() - start_time_ns
         if duration > timeout_sec * 1e9
@@ -499,21 +505,21 @@ function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
         sleep(delta_sec)
 
         remaining = timeout_sec - floor(Int64, duration / 1e9)
-        txn = get_transaction(ctx, id; readtimeout = remaining)
+        txn = get_transaction(ctx, id; readtimeout=remaining)
     end
 
     # The server has finished processing the transaction so we assume that worst-case
     # timeouts can be much shorter
-    m = Threads.@spawn get_transaction_metadata(ctx, id; readtimeout = 120)
-    p = Threads.@spawn get_transaction_problems(ctx, id; readtimeout = 120)
-    r = Threads.@spawn get_transaction_results(ctx, id; readtimeout = 120)
+    m = Threads.@spawn get_transaction_metadata(ctx, id; readtimeout=120)
+    p = Threads.@spawn get_transaction_problems(ctx, id; readtimeout=120)
+    r = Threads.@spawn get_transaction_results(ctx, id; readtimeout=120)
     try
         return TransactionResponse(txn, fetch(m), fetch(p), fetch(r))
     catch e
         @info("Transaction response error", e)
         # (We use has_wrapped_exception to unwrap the TaskFailedException.)
         if RAI.has_wrapped_exception(e, HTTPError) &&
-            RAI.unwrap_exception_to_root(e).status_code == 404
+           RAI.unwrap_exception_to_root(e).status_code == 404
             # This is an (unfortunately) expected case if the engine crashes during a
             # transaction, or the transaction is cancelled. The transaction is marked
             # as ABORTED, but it has no results.
@@ -540,7 +546,7 @@ function _execute_test(
         # Exec async really should return after 2-3 seconds
         exec_async(context, schema, engine, program; readtimeout=30, readonly)
     catch e
-        @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed=true
+        @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed = true
         if retry_number < 3
             # Try again
             return _execute_test(
@@ -556,7 +562,7 @@ function _execute_test(
         end
         rethrow()
     end
- 
+
     txn_id = rsp.transaction.id
     @info "$name: Executing with txn $txn_id" transaction_id = txn_id
 
@@ -572,7 +578,7 @@ function _execute_test(
         # The transaction errored (not necessarily due to the timeout). Cancel the
         # transaction and rethrow.
         @info "$name: Cancelling failed transaction ($txn_id)" e txn_id name
-        RAI.cancel_transaction(context, txn_id; readtimeout = timeout_sec)
+        RAI.cancel_transaction(context, txn_id; readtimeout=timeout_sec)
         rethrow()
     end
 end
@@ -611,7 +617,15 @@ function _test_rel_step(
             return nothing
         end
 
-        response = _execute_test(name, get_context(), schema, engine, program, step.timeout_sec, step.readonly)
+        response = _execute_test(
+            name,
+            get_context(),
+            schema,
+            engine,
+            program,
+            step.timeout_sec,
+            step.readonly,
+        )
 
         state = response.transaction.state
         @debug("Response state:", state)
@@ -659,7 +673,9 @@ function _test_rel_step(
             @test state == "COMPLETED"
             @test !unexpected_errors_found
             if state == "ABORTED"
-                @info("$name: Transaction $(response.transaction.id) aborted due to \"$(response.transaction.abort_reason)\"")
+                @info(
+                    "$name: Transaction $(response.transaction.id) aborted due to \"$(response.transaction.abort_reason)\""
+                )
             end
         else
             @test state == "ABORTED"
