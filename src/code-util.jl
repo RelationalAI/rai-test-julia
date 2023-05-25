@@ -235,8 +235,8 @@ function contains_problem(problems, problem_needle)::Bool
     return any(p -> matches_problem(p, problem_needle), problems)
 end
 
-matches_problem(prob1::Union{Tuple,Pair}, prob2) = matches_problem(Dict(prob1), prob2)
-matches_problem(prob1, prob2::Union{Tuple,Pair}) = matches_problem(prob1, Dict(prob2))
+matches_problem(prob1::Union{Tuple, Pair}, prob2) = matches_problem(Dict(prob1), prob2)
+matches_problem(prob1, prob2::Union{Tuple, Pair}) = matches_problem(prob1, Dict(prob2))
 function matches_problem(prob1, prob2)::Bool
     match = string(prob1[:code]) == string(prob2[:code])
     # TODO: behaviour of line numbering in problem reports needs verification before
