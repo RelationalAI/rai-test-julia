@@ -100,7 +100,7 @@ end
 # Wrap a DefaultTestSet with some behavior specific to @test_rel.
 # 
 # Results are recorded, but not printed if nested=true.
-# This is helpful when used in a ConcurrentTestSet where the parent
+# This is helpful when used in a RAITestSet where the parent
 # linkage is lost due to the concurrency.
 #
 # Additionally the whole test set can be checked for broken-ness, this is

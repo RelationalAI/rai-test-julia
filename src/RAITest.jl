@@ -8,7 +8,6 @@ import Pkg
 export test_rel, @test_rel, @testset
 export RAITestSet
 export Problem, Step
-export ConcurrentTestSet
 
 export destroy_test_engines
 export resize_test_engine_pool
