@@ -18,12 +18,6 @@ end
 
 const TEST_CONTEXT = Ref{Option{Context}}(nothing)
 
-try
-    TEST_CONTEXT[] = Context(load_config())
-catch
-    @warn "No `default` RAI context found. Use `set_context` to pass in a context and enable usage of `RAITest`."
-end
-
 function get_context()
     return TEST_CONTEXT[]
 end
@@ -380,7 +374,6 @@ function test_rel_steps(;
 
     parent = Test.get_testset()
 
-    # make sure name is unique if reporting on it
     if isnothing(name)
         name = ""
     else
@@ -395,9 +388,10 @@ function test_rel_steps(;
     end
 
     if is_reportable(parent)
-        name_count = get!(parent.name_dict, name, 0)
+        # make sure name is unique if reporting on it
+        name_count = get!(parent.name_dict, name, 1)
         parent.name_dict[name] += 1
-        if name_count > 0
+        if name_count > 1
             name *= " ($name_count)"
         end
     end

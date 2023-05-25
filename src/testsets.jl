@@ -12,6 +12,7 @@ mutable struct RAITestSet <: Test.AbstractTestSet
     distributed::Bool
     distributed_tests::Vector{Task}
     junit::Union{JUnitTestSuites, JUnitTestSuite}
+    # Make sure tests reported in JUnit file have unique names
     name_dict::Dict{String, Int}
 
     function RAITestSet(dts, report, distributed, name_dict)
@@ -72,6 +73,7 @@ record(ts::RAITestSet, res::Test.Result) = record(ts.dts, res)
 # Record any results directly stored and fetch results from any listed concurrent tests
 # If this is the parent then show results
 function finish(ts::RAITestSet)
+    # Record the time manually so it's available for JUnit reporting
     ts.dts.time_end = time()
 
     for t in ts.distributed_tests
@@ -148,6 +150,7 @@ function record(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
 end
 
 function finish(ts::TestRelTestSet)
+    # Record the time manually so it's available for JUnit reporting
     ts.dts.time_end = time()
 
     if ts.broken_expected && !ts.broken_found
