@@ -77,7 +77,6 @@ function finish(ts::RAITestSet)
         record(parent_ts, ts)
         return ts
     end
-    finish(ts.dts)
 
     # We are the root testet, Write JUnit XML
     if is_reportable(ts)
@@ -86,6 +85,7 @@ function finish(ts::RAITestSet)
         ReTestItems.write_junit_file(proj_name, dirname(projectfile), ts.junit)
     end
     
+    finish(ts.dts)
     return ts
 end
 
