@@ -68,7 +68,33 @@ function record(ts::RAITestSet, child::RAITestSet)
 end
 record(ts::RAITestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::Test.DefaultTestSet, child::RAITestSet) = record(ts, child.dts)
-record(ts::RAITestSet, res::Test.Result) = record(ts.dts, res)
+function record(ts::RAITestSet, res::Test.Result)
+    # This is not typical, but if an error gets thrown in the testset, but 
+    # not in a `@test_rel`, we need to record it
+    counts = ReTestItems.JUnitCounts()
+    counts.tests += res isa Test.Result
+    counts.failures += res isa Test.Fail
+    counts.errors += res isa Test.Error
+    counts.skipped += res isa Test.Broken
+
+    name = ts.dts.description
+    name_count = get!(parent.name_dict, name, 1)
+    parent.name_dict[name] += 1
+    if name_count > 1
+        name *= " ($name_count)"
+    end
+
+    tc = ReTestItems.JUnitTestCase(name, counts, nothing, nothing, nothing)
+
+    if t isa Union{Test.Fail, Test.Error}
+        io = IOBuffer()
+        print(io, t)
+        tc.logs = take!(io)
+    end
+    
+    junit_record!(ts.junit, tc)
+    record(ts.dts, res)
+end
 
 # Record any results directly stored and fetch results from any listed concurrent tests
 # If this is the parent then show results
