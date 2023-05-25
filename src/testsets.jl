@@ -91,8 +91,14 @@ function record(ts::RAITestSet, res::Test.Result)
         print(io, t)
         tc.logs = take!(io)
     end
-    
-    junit_record!(ts.junit, tc)
+    if ts.junit isa ReTestItems.JUnitTestSuite
+        junit_record!(ts.junit, tc)
+    else
+        # Make a synthetic test suite to record the testcase into
+        suite = ReTestItems.JUnitTestSuite(name)
+        junit_record!(suite, tc)
+        junit_record!(ts.junit, suite)
+    end
     record(ts.dts, res)
 end
 
