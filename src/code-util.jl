@@ -235,6 +235,7 @@ function contains_problem(problems, problem_needle)::Bool
     return any(p -> matches_problem(p, problem_needle), problems)
 end
 
+matches_problem(actual, expected::Tuple) = matches_problem(actual, Dict(expected))
 function matches_problem(actual, expected)::Bool
     match = string(actual[:code]) == string(expected[:code])
     # TODO: behaviour of line numbering in problem reports needs verification before
