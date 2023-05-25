@@ -221,7 +221,7 @@ function extract_problems(results)
             if haskey(results, rel_severity_key)
                 problem_severity = problem_severities[2][i]
             end
-            problem = Problem(
+            problem = Dict{Symbol, Any}(
                 :code => problem_codes[2][i],
                 :severity => problem_severity,
                 :line => problem_line,
