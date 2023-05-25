@@ -2,7 +2,8 @@ import Test: Test, finish, record
 
 using Test
 using Test: AbstractTestSet
-using ReTestItems: JUnitTestSuites, JUnitTestSuite, JUnitTestCase, write_junit_file, junit_record!
+using ReTestItems:
+    JUnitTestSuites, JUnitTestSuite, JUnitTestCase, write_junit_file, junit_record!
 import ReTestItems
 
 mutable struct RAITestSet <: Test.AbstractTestSet
@@ -20,7 +21,7 @@ mutable struct RAITestSet <: Test.AbstractTestSet
         else
             junit = JUnitTestSuite(desc)
         end
-        new(dts, report, distributed, [], junit, name_dict)
+        return new(dts, report, distributed, [], junit, name_dict)
     end
 end
 
@@ -29,7 +30,7 @@ function RAITestSet(desc; report::Option{Bool}=nothing, distributed::Option{Bool
     is_nested = Test.get_testset_depth() > 0
     default_report = false
     default_distributed = true
-    default_name_dict = Dict{String,Int}()
+    default_name_dict = Dict{String, Int}()
 
     # Pass on the parent RAITestSet's options if nested
     if is_nested
@@ -41,7 +42,12 @@ function RAITestSet(desc; report::Option{Bool}=nothing, distributed::Option{Bool
         end
     end
 
-    return RAITestSet(dts, something(report, default_report), something(distributed, default_distributed), default_name_dict)
+    return RAITestSet(
+        dts,
+        something(report, default_report),
+        something(distributed, default_distributed),
+        default_name_dict,
+    )
 end
 
 is_distributed(ts::RAITestSet) = ts.distributed
@@ -52,12 +58,12 @@ is_reportable(ts::Test.AbstractTestSet) = false
 
 function distribute_test(f, ts::RAITestSet)
     ref = Threads.@spawn f()
-    push!(ts.distributed_tests, ref)
+    return push!(ts.distributed_tests, ref)
 end
 
 function record(ts::RAITestSet, child::RAITestSet)
     junit_record!(ts.junit, child.junit)
-    record(ts.dts, child.dts)
+    return record(ts.dts, child.dts)
 end
 record(ts::RAITestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::Test.DefaultTestSet, child::RAITestSet) = record(ts, child.dts)
@@ -67,7 +73,7 @@ record(ts::RAITestSet, res::Test.Result) = record(ts.dts, res)
 # If this is the parent then show results
 function finish(ts::RAITestSet)
     ts.dts.time_end = time()
- 
+
     for t in ts.distributed_tests
         record(ts, fetch(t))
     end
@@ -84,7 +90,7 @@ function finish(ts::RAITestSet)
         proj_name = something(Pkg.Types.read_project(projectfile).name, "")
         ReTestItems.write_junit_file(proj_name, dirname(projectfile), ts.junit)
     end
-    
+
     finish(ts.dts)
     return ts
 end
@@ -108,7 +114,7 @@ mutable struct TestRelTestSet <: AbstractTestSet
     logs::Vector{LogRecord}
     error_message::Option{String}
 
-    TestRelTestSet(desc; nested=false, broken=false) = 
+    TestRelTestSet(desc; nested=false, broken=false) =
         new(Test.DefaultTestSet(desc), nested, broken, false, [], nothing)
 end
 
@@ -122,7 +128,7 @@ function record(ts::RAITestSet, child::TestRelTestSet)
         tc.logs = take!(io)
     end
     junit_record!(ts.junit, tc)
-    record(ts.dts, child.dts)
+    return record(ts.dts, child.dts)
 end
 record(ts::TestRelTestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::Test.DefaultTestSet, child::TestRelTestSet) = record(ts, child.dts)
@@ -177,7 +183,7 @@ function get_log_header(ts::TestRelTestSet, duration, database, engine_name)
     anyfail(ts) && write(ctx, "[FAIL]")
     all_pass = !anyerror(ts) && !anyfail(ts)
     all_pass && write(ctx, "[PASS]")
-    
+
     # core info
     name = ts.dts.description
     write(ctx, " $name, duration=$duration")
@@ -194,7 +200,7 @@ function get_log_header(ts::TestRelTestSet, duration, database, engine_name)
     else
         write(ctx, "\n\ndatabase=$database\nengine_name=$engine_name")
     end
-    
+
     return String(take!(io))
 end
 

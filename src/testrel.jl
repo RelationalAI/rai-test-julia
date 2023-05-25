@@ -379,7 +379,7 @@ function test_rel_steps(;
     end
 
     parent = Test.get_testset()
-    
+
     # make sure name is unique if reporting on it
     if isnothing(name)
         name = ""
@@ -393,7 +393,7 @@ function test_rel_steps(;
 
         name *= resolved_location
     end
-    
+
     if is_reportable(parent)
         name_count = get!(parent.name_dict, name, 0)
         parent.name_dict[name] += 1
@@ -404,13 +404,7 @@ function test_rel_steps(;
 
     if is_distributed(parent)
         distribute_test(parent) do
-            _test_rel_steps(;
-                steps,
-                name,
-                nested=true,
-                clone_db,
-                user_engine=engine,
-            )
+            return _test_rel_steps(; steps, name, nested=true, clone_db, user_engine=engine)
         end
     else
         _test_rel_steps(; steps, name, clone_db, user_engine=engine)
@@ -421,9 +415,9 @@ end
 function _test_rel_steps(;
     steps::Vector{Step},
     name::Option{String},
-    nested::Bool = false,
-    clone_db::Option{String} = nothing,
-    user_engine::Option{String} = nothing,
+    nested::Bool=false,
+    clone_db::Option{String}=nothing,
+    user_engine::Option{String}=nothing,
 )
     # Generate a name for the test database
     schema = create_test_database_name()
@@ -446,9 +440,9 @@ function _test_rel_steps(;
         duration = sprint(show, stats.time; context=:compact => true)
         ts = stats.value
         ts.logs = logger.logs
-        
+
         check_flaky(name, logger.logs)
-        
+
         log_header = get_log_header(ts, duration, schema, test_engine)
         if anyerror(ts) || anyfail(ts)
             ts.error_message = log_header
