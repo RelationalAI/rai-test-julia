@@ -54,14 +54,12 @@ function input_element_to_string(input::Tuple)
         return input_element_to_string(input...)
     end
 
-
     program = "("
     program *= join(input_element_to_string.(input), ",")
     program *= ")"
 
     return program
 end
-
 
 # Extract relation names from the expected output and append them to output
 # Turns a dict of name=>vector, with names of form :othername/Type
@@ -260,9 +258,22 @@ function result_table_to_dict(results)
 end
 
 # Log a captured log via the current logger
-function playback_log(io::IO, (;level, message, _module, group, id, file, line, kwargs)::LogRecord)
+function playback_log(
+    io::IO,
+    (; level, message, _module, group, id, file, line, kwargs)::LogRecord,
+)
     logger = Logging.ConsoleLogger(io)
-    Logging.handle_message(logger, level, message, _module, group, id, file, line; kwargs...)
+    Logging.handle_message(
+        logger,
+        level,
+        message,
+        _module,
+        group,
+        id,
+        file,
+        line;
+        kwargs...,
+    )
     return nothing
 end
 

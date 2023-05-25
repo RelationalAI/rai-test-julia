@@ -55,7 +55,7 @@ mutable struct TestRelTestSet <: AbstractTestSet
     broken_expected::Bool
     broken_found::Bool
 
-    TestRelTestSet(desc; nested=false, broken=false) = 
+    TestRelTestSet(desc; nested=false, broken=false) =
         new(Test.DefaultTestSet(desc), nested, broken, false)
 end
 
