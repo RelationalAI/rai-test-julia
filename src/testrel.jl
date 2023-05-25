@@ -135,13 +135,7 @@ end
 
     - `expected_problems::Vector}`: expected problems. The semantics of
       `expected_problems` is that the program must contain a super set of the specified
-      errors. When `expected_problems` is 
-            Expected problems are defined by a code and an optional starting line number
-                  e.g. `Dict(:code => "name" [, :line => <number>])`
-                        Expected problems are defined by a code and an optional starting line number
-                              e.g. `Dict(:code => "name" [, :line => <number>])`
-                                    Expected problems are defined by a code and an optional starting line number
-                                          e.g. `Dict(:code => "name" [, :line => <number>])``[]`, this means that errors are allowed.
+      errors. When `expected_problems` is `[]`, this means that errors are allowed.
       Expected problems are defined by a code and an optional starting line number
       e.g. `Dict(:code => "name" [, :line => <number>])`
 """
