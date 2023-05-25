@@ -221,7 +221,7 @@ function extract_problems(results)
             if haskey(results, rel_severity_key)
                 problem_severity = problem_severities[2][i]
             end
-            problem = Dict{Symbol, Any}(
+            problem = Dict(
                 :code => problem_codes[2][i],
                 :severity => problem_severity,
                 :line => problem_line,
@@ -238,10 +238,6 @@ function contains_problem(problems, problem_needle)::Bool
 end
 
 function matches_problem(actual, expected)::Bool
-    return matches_problem(Dict(actual), Dict(expected))
-end
-
-function matches_problem(actual::Dict, expected::Dict)::Bool
     match = string(actual[:code]) == string(expected[:code])
     # TODO: behaviour of line numbering in problem reports needs verification before
     # enabling line number tests

@@ -109,12 +109,6 @@ function test_expected(expected::AbstractDict, results, testname::String)
     return true
 end
 
-"""
-Expected problems are defined by a code and an optional starting line number
-Dict(:code => "name" [, :line => <number>])
-"""
-const Problem = Union{Dict{Symbol, Any}, Pair{Symbol, Any}}
-
 const AcceptedSourceTypes =
     Union{String, Pair{String, String}, Vector{String}, Dict{String, String}}
 
@@ -141,7 +135,15 @@ end
 
     - `expected_problems::Vector}`: expected problems. The semantics of
       `expected_problems` is that the program must contain a super set of the specified
-      errors. When `expected_problems` is `[]`, this means that errors are allowed.
+      errors. When `expected_problems` is 
+            Expected problems are defined by a code and an optional starting line number
+                  e.g. `Dict(:code => "name" [, :line => <number>])`
+                        Expected problems are defined by a code and an optional starting line number
+                              e.g. `Dict(:code => "name" [, :line => <number>])`
+                                    Expected problems are defined by a code and an optional starting line number
+                                          e.g. `Dict(:code => "name" [, :line => <number>])``[]`, this means that errors are allowed.
+      Expected problems are defined by a code and an optional starting line number
+      e.g. `Dict(:code => "name" [, :line => <number>])`
 """
 struct Step
     query::Option{String}
@@ -163,7 +165,7 @@ function Step(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_problems::Vector = Problem[],
+    expected_problems::Vector = [],
     expect_abort::Bool = false,
     timeout_sec::Int64 = 1800,
     readonly::Bool = false,
@@ -256,7 +258,7 @@ function test_rel(;
     schema_inputs::AbstractDict = Dict(),
     inputs::AbstractDict = Dict(),
     expected::AbstractDict = Dict(),
-    expected_problems::Vector = Problem[],
+    expected_problems::Vector = [],
     expect_abort::Bool = false,
     timeout_sec::Int64 = 1800,
     broken::Bool = false,
