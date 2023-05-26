@@ -108,14 +108,20 @@ function finish(ts::RAITestSet)
     # Record the time manually so it's available for JUnit reporting
     ts.dts.time_end = time()
 
-    for t in ts.distributed_tests
-        record(ts, fetch(t))
-    end
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
         parent_ts = Test.get_testset()
-        record(parent_ts, ts)
+        distribute_test(parent_ts) do
+            for t in ts.distributed_tests
+                record(ts, fetch(t))
+            end
+            return ts
+        end
         return ts
+    end
+
+    for t in ts.distributed_tests
+        record(ts, fetch(t))
     end
 
     # We are the root testet, Write JUnit XML
