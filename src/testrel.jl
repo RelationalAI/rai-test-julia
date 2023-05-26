@@ -188,7 +188,8 @@ call.
 """
 macro test_rel(args...)
     # Arguments need to be escaped individually, not all at the same time.
-    kwargs = [esc(a) for a in args]
+    # `setup` keyword is silently ignored, for compatibility with our old internal @test_rel.
+    kwargs = [esc(a) for a in args if !(a isa Expr) || (a.args[1] != :setup)]
 
     # QuoteNode is needed around __source__ because it is a LineNumberNode, and
     # in quoted code these already have a meaning.
