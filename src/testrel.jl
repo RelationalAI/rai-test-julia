@@ -263,6 +263,7 @@ function test_rel(;
     broken::Bool=false,
     clone_db::Option{String}=nothing,
     engine::Option{String}=nothing,
+    kwargs...
 )
     query !== nothing && insert!(
         steps,
