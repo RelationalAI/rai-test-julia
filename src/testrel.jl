@@ -6,10 +6,6 @@ using Random: MersenneTwister
 using Test
 using UUIDs
 
-mutable struct ContextWrapper
-    context::Context
-end
-
 # Generates a name for the given base name that makes it unique between multiple
 # processing units
 # Generated names are truncated at 63 characters. This limit is reached when the
@@ -20,14 +16,14 @@ function gen_safe_name(basename)
     return name[1:min(sizeof(name), 63)]
 end
 
-TEST_CONTEXT_WRAPPER::ContextWrapper = ContextWrapper(Context(load_config()))
+const TEST_CONTEXT = Ref{Option{Context}}(nothing)
 
-function get_context()::Context
-    return TEST_CONTEXT_WRAPPER.context
+function get_context()
+    return TEST_CONTEXT[]
 end
 
 function set_context(new_context::Context)
-    return TEST_CONTEXT_WRAPPER.context = new_context
+    return TEST_CONTEXT[] = new_context
 end
 
 function create_test_database_name(; default_basename="test_rel")::String
@@ -373,30 +369,7 @@ function test_rel_steps(;
     end
 
     parent = Test.get_testset()
-    if parent isa ConcurrentTestSet
-        ref = Threads.@spawn _test_rel_steps(;
-            steps,
-            name,
-            location,
-            nested=true,
-            clone_db,
-            user_engine=engine,
-        )
-        add_test_ref(parent, ref)
-    else
-        _test_rel_steps(; steps, name, location, clone_db, user_engine=engine)
-    end
-end
 
-# This internal function executes `test_rel`
-function _test_rel_steps(;
-    steps::Vector{Step},
-    name::Option{String},
-    location::Option{LineNumberNode},
-    nested::Bool=false,
-    clone_db::Option{String}=nothing,
-    user_engine::Option{String}=nothing,
-)
     if isnothing(name)
         name = ""
     else
@@ -410,6 +383,32 @@ function _test_rel_steps(;
         name *= resolved_location
     end
 
+    if is_reportable(parent)
+        # make sure name is unique if reporting on it
+        name_count = get!(parent.name_dict, name, 1)
+        parent.name_dict[name] += 1
+        if name_count > 1
+            name *= " ($name_count)"
+        end
+    end
+
+    if is_distributed(parent)
+        distribute_test(parent) do
+            return _test_rel_steps(; steps, name, nested=true, clone_db, user_engine=engine)
+        end
+    else
+        _test_rel_steps(; steps, name, clone_db, user_engine=engine)
+    end
+end
+
+# This internal function executes `test_rel`
+function _test_rel_steps(;
+    steps::Vector{Step},
+    name::Option{String},
+    nested::Bool=false,
+    clone_db::Option{String}=nothing,
+    user_engine::Option{String}=nothing,
+)
     # Generate a name for the test database
     schema = create_test_database_name()
     @debug("$name: Using database name $schema")
@@ -430,29 +429,21 @@ function _test_rel_steps(;
         end
         duration = sprint(show, stats.time; context=:compact => true)
         ts = stats.value
+        ts.logs = logger.logs
 
         check_flaky(name, logger.logs)
 
+        log_header = get_log_header(ts, duration, schema, test_engine)
         if anyerror(ts) || anyfail(ts)
+            ts.error_message = log_header
             io, ctx = get_logging_io()
-            if anyerror(ts)
-                write(ctx, "[ERROR]")
-            end
-            if anyfail(ts)
-                write(ctx, "[FAIL]")
-            end
-            write(ctx, " $name duration=$duration\n\n CAPTURED LOGS:\n")
+            write(ctx, log_header)
+            write(ctx, "\n\nCAPTURED LOGS:\n")
             playback_log.(ctx, logger.logs)
             msg = String(take!(io))
             @error msg database = schema engine_name = test_engine
         else
-            txnids = Set()
-            for log in logger.logs
-                if haskey(log.kwargs, :transaction_id)
-                    push!(txnids, log.kwargs[:transaction_id])
-                end
-            end
-            @info """[PASS] $name duration=$duration TxIDs=[$(join(txnids, ", "))]"""
+            @info log_header
         end
 
         ts

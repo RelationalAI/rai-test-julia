@@ -6,14 +6,17 @@ version = "0.1.0"
 [deps]
 Arrow = "69666777-d1a9-59fb-9406-91d4454c9d45"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
+Pkg = "44cfe95a-1eb2-52ea-b672-e2afdf69b78f"
 RAI = "9c30249a-7e08-11ec-0e99-a323e937e79f"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
+ReTestItems = "817f1d60-ba6b-4fd5-9520-3cf149f6a823"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 UUIDs = "cf7118a7-6976-5b1a-9a39-7adc72f591a4"
 
 [compat]
 Arrow = "2"
 RAI = "0.2.2"
+ReTestItems = "1.4.2"
 julia = "1.8.2"
 
 [extras]
