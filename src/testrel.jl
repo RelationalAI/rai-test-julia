@@ -150,6 +150,7 @@ struct Step
     inputs::AbstractDict
     expected::AbstractDict
     expected_problems::Vector
+    allow_unexpected::Symbol
     expect_abort::Bool
     timeout_sec::Int64
     readonly::Bool
@@ -163,6 +164,7 @@ function Step(;
     inputs::AbstractDict=Dict(),
     expected::AbstractDict=Dict(),
     expected_problems::Vector=[],
+    allow_unexpected::Symbol=:warning,
     expect_abort::Bool=false,
     timeout_sec::Int64=1800,
     readonly::Bool=false,
@@ -175,6 +177,7 @@ function Step(;
         inputs,
         expected,
         expected_problems,
+        allow_unexpected,
         expect_abort,
         timeout_sec,
         readonly,
@@ -258,12 +261,13 @@ function test_rel(;
     inputs::AbstractDict=Dict(),
     expected::AbstractDict=Dict(),
     expected_problems::Vector=[],
+    allow_unexpected::Symbol=:warning,
     expect_abort::Bool=false,
     timeout_sec::Int64=1800,
     broken::Bool=false,
     clone_db::Option{String}=nothing,
     engine::Option{String}=nothing,
-    kwargs...
+    kwargs...,
 )
     query !== nothing && insert!(
         steps,
@@ -272,6 +276,7 @@ function test_rel(;
             query=query,
             expected=expected,
             expected_problems=expected_problems,
+            allow_unexpected=allow_unexpected,
             expect_abort=expect_abort,
             timeout_sec=timeout_sec,
             broken=broken,
@@ -634,17 +639,25 @@ function _test_rel_step(
         #   If an abort is expected it is encountered
         #   If no abort is expected it is not encountered
         #   If results are expected, they are found (other results are ignored)
-        #   If problems are expected, they are found (other problems are ignored)
-        #   If no problems are expected, warning level problems are ignored
+        #   If problems are expected, they are found
+        #   Unexpected problems with severity worse than allowable are not found
 
         unexpected_errors_found = false
+        error_levels = []
+        if step.allow_unexpected == :warning
+            push!(error_levels, "error")
+            push!(error_levels, "exception")
+        end
+        if step.allow_unexpected == :none
+            push!(error_levels, "warning")
+        end
+
         # Check if there were any unexpected errors/exceptions
         for problem in problems
             if contains_problem(step.expected_problems, problem)
                 @debug("$name: Expected problem", problem)
             else
-                unexpected_errors_found |= problem[:severity] == "error"
-                unexpected_errors_found |= problem[:severity] == "exception"
+                unexpected_errors_found |= in(problem[:severity], error_levels)
                 @info("$name: Unexpected problem: $(problem[:code])")
                 @debug("$name: Unexpected problem", problem)
             end
