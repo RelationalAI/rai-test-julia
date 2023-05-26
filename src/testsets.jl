@@ -86,9 +86,9 @@ function record(ts::RAITestSet, res::Test.Result)
 
     tc = ReTestItems.JUnitTestCase(name, counts, nothing, nothing, nothing)
 
-    if t isa Union{Test.Fail, Test.Error}
+    if res isa Union{Test.Fail, Test.Error}
         io = IOBuffer()
-        print(io, t)
+        print(io, res)
         tc.logs = take!(io)
     end
     if ts.junit isa ReTestItems.JUnitTestSuite
