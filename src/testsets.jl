@@ -58,8 +58,12 @@ is_reportable(ts::RAITestSet) = ts.report
 is_reportable(ts::Test.AbstractTestSet) = false
 
 function distribute_test(f, ts::RAITestSet)
-    ref = Threads.@spawn f()
-    return push!(ts.distributed_tests, ref)
+    if is_distributed(ts)
+        ref = Threads.@spawn f()
+        return push!(ts.distributed_tests, ref)
+    else
+        f()
+    end
 end
 
 function record(ts::RAITestSet, child::RAITestSet)
@@ -105,9 +109,6 @@ end
 # Record any results directly stored and fetch results from any listed concurrent tests
 # If this is the parent then show results
 function finish(ts::RAITestSet)
-    # Record the time manually so it's available for JUnit reporting
-    ts.dts.time_end = time()
-
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
         parent_ts = Test.get_testset()
@@ -115,6 +116,8 @@ function finish(ts::RAITestSet)
             for t in ts.distributed_tests
                 record(ts, fetch(t))
             end
+            # Record the time manually so it's available for JUnit reporting
+            ts.dts.time_end = time()
             return ts
         end
         return ts
@@ -123,6 +126,9 @@ function finish(ts::RAITestSet)
     for t in ts.distributed_tests
         record(ts, fetch(t))
     end
+
+    # Record the time manually so it's available for JUnit reporting
+    ts.dts.time_end = time()
 
     # We are the root testet, Write JUnit XML
     if is_reportable(ts)
