@@ -111,6 +111,9 @@ end
 function finish(ts::RAITestSet)
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
+        # If the test set is distrubted, this will push a ref
+        # into the parent test's queue to fetch upon finish.
+        # It allows inter-test set concurrency as opposed to only intra.
         parent_ts = Test.get_testset()
         distribute_test(parent_ts) do
             for t in ts.distributed_tests
