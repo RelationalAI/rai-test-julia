@@ -231,6 +231,8 @@ Note that `test_rel` creates a new schema for each test.
   - `expected_problems::Vector`: expected problems. The semantics of
     `expected_problems` is that the program must contain a super set of the specified
     error codes.
+  - `allow_unexpected::Symbol`: ignore problems with severity equal or lower than
+    specified. Accepted values are `:none`, `:warning`, `:error`.
   - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
   - `install::Dict{String, String}`: source files to install in the database.
   - `schema_inputs::AbstractDict`: input schema for the transaction
