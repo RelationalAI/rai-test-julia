@@ -73,7 +73,7 @@ end
 record(ts::RAITestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::Test.DefaultTestSet, child::RAITestSet) = record(ts, child.dts)
 function record(ts::RAITestSet, res::Test.Result)
-    # This is not typical, but if an error gets thrown in the testset, but 
+    # This is not typical, but if an error gets thrown in the testset, but
     # not in a `@test_rel`, we need to record it
     counts = ReTestItems.JUnitCounts()
     counts.tests += res isa Test.Result
@@ -103,7 +103,7 @@ function record(ts::RAITestSet, res::Test.Result)
         junit_record!(suite, tc)
         junit_record!(ts.junit, suite)
     end
-    record(ts.dts, res)
+    return record(ts.dts, res)
 end
 
 # Record any results directly stored and fetch results from any listed concurrent tests
@@ -145,7 +145,7 @@ function finish(ts::RAITestSet)
 end
 
 # Wrap a DefaultTestSet with some behavior specific to @test_rel.
-# 
+#
 # Results are recorded, but not printed if nested=true.
 # This is helpful when used in a RAITestSet where the parent
 # linkage is lost due to the concurrency.
@@ -183,7 +183,7 @@ record(ts::TestRelTestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::Test.DefaultTestSet, child::TestRelTestSet) = record(ts, child.dts)
 record(ts::TestRelTestSet, res::Test.Result) = record(ts.dts, res)
 
-# Change error/fail to broken if expected and record as such. If not expected, 
+# Change error/fail to broken if expected and record as such. If not expected,
 # log the failure and record the result.
 function record(ts::TestRelTestSet, t::Union{Test.Fail, Test.Error})
     if ts.broken_expected
@@ -201,14 +201,14 @@ function finish(ts::TestRelTestSet)
     ts.dts.time_end = time()
 
     if ts.broken_expected && !ts.broken_found
-        # If we expect broken tests and everything passes, drop the results and 
+        # If we expect broken tests and everything passes, drop the results and
         # replace with an unbroken Error
         ts.dts.n_passed = 0
         empty!(ts.dts.results)
 
         # Default unbroken message doesn't make sense for @test_rel
         @error """Unexpected pass
-        Got correct result: $(ts.dts.description) 
+        Got correct result: $(ts.dts.description)
         Please remove `broken` flag if no longer broken.
         """
         t = Test.Error(:test_unbroken, ts.dts.description, "", "", LineNumberNode(0))

@@ -150,6 +150,7 @@ struct Step
     inputs::AbstractDict
     expected::AbstractDict
     expected_problems::Vector
+    allow_unexpected::Symbol
     expect_abort::Bool
     timeout_sec::Int64
     readonly::Bool
@@ -163,6 +164,7 @@ function Step(;
     inputs::AbstractDict=Dict(),
     expected::AbstractDict=Dict(),
     expected_problems::Vector=[],
+    allow_unexpected::Symbol=:warning,
     expect_abort::Bool=false,
     timeout_sec::Int64=1800,
     readonly::Bool=false,
@@ -175,6 +177,7 @@ function Step(;
         inputs,
         expected,
         expected_problems,
+        allow_unexpected,
         expect_abort,
         timeout_sec,
         readonly,
@@ -229,6 +232,8 @@ Note that `test_rel` creates a new schema for each test.
   - `expected_problems::Vector`: expected problems. The semantics of
     `expected_problems` is that the program must contain a super set of the specified
     error codes.
+  - `allow_unexpected::Symbol`: ignore problems with severity equal or lower than
+    specified. Accepted values are `:none`, `:warning`, `:error`.
   - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
   - `install::Dict{String, String}`: source files to install in the database.
   - `schema_inputs::AbstractDict`: input schema for the transaction
@@ -259,6 +264,7 @@ function test_rel(;
     inputs::AbstractDict=Dict(),
     expected::AbstractDict=Dict(),
     expected_problems::Vector=[],
+    allow_unexpected::Symbol=:warning,
     expect_abort::Bool=false,
     timeout_sec::Int64=1800,
     broken::Bool=false,
@@ -272,6 +278,7 @@ function test_rel(;
             query=query,
             expected=expected,
             expected_problems=expected_problems,
+            allow_unexpected=allow_unexpected,
             expect_abort=expect_abort,
             timeout_sec=timeout_sec,
             broken=broken,
@@ -634,17 +641,29 @@ function _test_rel_step(
         #   If an abort is expected it is encountered
         #   If no abort is expected it is not encountered
         #   If results are expected, they are found (other results are ignored)
-        #   If problems are expected, they are found (other problems are ignored)
-        #   If no problems are expected, warning level problems are ignored
+        #   If problems are expected, they are found
+        #   Unexpected problems with severity worse than allowable are not found
 
         unexpected_errors_found = false
+        error_levels = Set()
+        # Exceptions are always unexpected
+        if step.allow_unexpected == :error
+            push!(error_levels, "exception")
+        elseif step.allow_unexpected == :warning
+            push!(error_levels, "error")
+            push!(error_levels, "exception")
+        elseif step.allow_unexpected == :none
+            push!(error_levels, "warning")
+            push!(error_levels, "error")
+            push!(error_levels, "exception")
+        end
+
         # Check if there were any unexpected errors/exceptions
         for problem in problems
             if contains_problem(step.expected_problems, problem)
                 @debug("$name: Expected problem", problem)
             else
-                unexpected_errors_found |= problem[:severity] == "error"
-                unexpected_errors_found |= problem[:severity] == "exception"
+                unexpected_errors_found |= in(problem[:severity], error_levels)
                 @info("$name: Unexpected problem: $(problem[:code])")
                 @debug("$name: Unexpected problem", problem)
             end
@@ -652,11 +671,6 @@ function _test_rel_step(
 
         if !isempty(step.expected)
             @test test_expected(step.expected, results_dict, name)
-        end
-
-        # Allow all errors if any problems were expected
-        if !isempty(step.expected_problems)
-            unexpected_errors_found = false
         end
 
         if !step.expect_abort
