@@ -648,10 +648,10 @@ function _test_rel_step(
         # Exceptions are always unexpected
         if step.allow_unexpected == :error
             push!(error_levels, "exception")
-        else if step.allow_unexpected == :warning
+        elseif step.allow_unexpected == :warning
             push!(error_levels, "error")
             push!(error_levels, "exception")
-        else if step.allow_unexpected == :none
+        elseif step.allow_unexpected == :none
             push!(error_levels, "warning")
             push!(error_levels, "error")
             push!(error_levels, "exception")
