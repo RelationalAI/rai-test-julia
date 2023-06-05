@@ -644,7 +644,7 @@ function _test_rel_step(
         #   Unexpected problems with severity worse than allowable are not found
 
         unexpected_errors_found = false
-        error_levels = Set{Symbol}()
+        error_levels = Set()
         # Exceptions are always unexpected
         if step.allow_unexpected == :error
             push!(error_levels, "exception")
