@@ -672,11 +672,6 @@ function _test_rel_step(
             @test test_expected(step.expected, results_dict, name)
         end
 
-        # Allow all errors if any problems were expected
-        if !isempty(step.expected_problems)
-            unexpected_errors_found = false
-        end
-
         if !step.expect_abort
             @test state == "COMPLETED"
             @test !unexpected_errors_found
