@@ -54,14 +54,12 @@ function input_element_to_string(input::Tuple)
         return input_element_to_string(input...)
     end
 
-
     program = "("
     program *= join(input_element_to_string.(input), ",")
     program *= ")"
 
     return program
 end
-
 
 # Extract relation names from the expected output and append them to output
 # Turns a dict of name=>vector, with names of form :othername/Type
@@ -221,7 +219,7 @@ function extract_problems(results)
             if haskey(results, rel_severity_key)
                 problem_severity = problem_severities[2][i]
             end
-            problem = Problem(
+            problem = Dict(
                 :code => problem_codes[2][i],
                 :severity => problem_severity,
                 :line => problem_line,
@@ -237,12 +235,10 @@ function contains_problem(problems, problem_needle)::Bool
     return any(p -> matches_problem(p, problem_needle), problems)
 end
 
-function matches_problem(actual, expected)::Bool
-    return matches_problem(Dict(actual), Dict(expected))
-end
-
-function matches_problem(actual::Dict, expected::Dict)::Bool
-    match = string(actual[:code]) == string(expected[:code])
+matches_problem(prob1::Union{Tuple, Pair}, prob2) = matches_problem(Dict(prob1), prob2)
+matches_problem(prob1, prob2::Union{Tuple, Pair}) = matches_problem(prob1, Dict(prob2))
+function matches_problem(prob1, prob2)::Bool
+    match = string(prob1[:code]) == string(prob2[:code])
     # TODO: behaviour of line numbering in problem reports needs verification before
     # enabling line number tests
     #haskey(expected, :line) && match &= actual[:line] = expected[:line]
@@ -264,9 +260,22 @@ function result_table_to_dict(results)
 end
 
 # Log a captured log via the current logger
-function playback_log(io::IO, (;level, message, _module, group, id, file, line, kwargs)::LogRecord)
+function playback_log(
+    io::IO,
+    (; level, message, _module, group, id, file, line, kwargs)::LogRecord,
+)
     logger = Logging.ConsoleLogger(io)
-    Logging.handle_message(logger, level, message, _module, group, id, file, line; kwargs...)
+    Logging.handle_message(
+        logger,
+        level,
+        message,
+        _module,
+        group,
+        id,
+        file,
+        line;
+        kwargs...,
+    )
     return nothing
 end
 
