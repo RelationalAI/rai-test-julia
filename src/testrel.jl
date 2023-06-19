@@ -623,7 +623,7 @@ function _test_rel_step(
 
         # Don't test empty strings
         if program == ""
-            return nothing
+            @goto end_of_test
         end
 
         response = _execute_test(
@@ -696,5 +696,7 @@ function _test_rel_step(
         else
             @test state == "ABORTED"
         end
+        
+        @label end_of_test
     end
 end
