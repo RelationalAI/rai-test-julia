@@ -434,7 +434,7 @@ function _test_rel_steps(;
                     inner_ts = _test_rel_step(index, step, schema, test_engine, name, length(steps))
                     # short circuit if something errored
                     if anyerror(inner_ts) && index < length(steps)
-                        @error "Error running $name - not executing further steps"
+                        @error "Terminal error running $name - not executing further steps"
                         break
                     end
                 end
