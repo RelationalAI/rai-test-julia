@@ -80,7 +80,9 @@ function record(ts::RAITestSet, res::Test.Result)
     counts.errors += res isa Test.Error
     counts.skipped += res isa Test.Broken
 
-    name = ts.dts.description
+    # Strip additional `file:line` info, so names are robust to movement in files.
+    # This currently relies on `" @ "` not appearing in the `name` of the `@test_rel`.
+    name = chopsuffix(ts.dts.description, r" @ .*")
 
     tc = ReTestItems.JUnitTestCase(name, counts, nothing, nothing, nothing)
 

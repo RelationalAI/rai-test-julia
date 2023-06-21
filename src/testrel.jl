@@ -386,7 +386,7 @@ function test_rel_steps(;
     if isnothing(name)
         name = ""
     else
-        name = name * " at "
+        name = name * " @ "  # Use `@` so it's easier to strip this info later.
     end
 
     if !isnothing(location)
