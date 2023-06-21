@@ -431,7 +431,12 @@ function _test_rel_steps(;
             @testset TestRelTestSet nested = nested "$name" begin
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
-                    _test_rel_step(index, step, schema, test_engine, name, length(steps))
+                    inner_ts = _test_rel_step(index, step, schema, test_engine, name, length(steps))
+                    # short circuit if something errored
+                    if anyerror(inner_ts) && index < length(steps)
+                        @error "Terminal error running $name - not executing further steps"
+                        break
+                    end
                 end
             end
         end
@@ -477,14 +482,19 @@ end
 
 function check_flaky(name::String, logs::Vector{LogRecord})
     retries = 0
+    request_ids = []
     for log in logs
-        if haskey(log.kwargs, :submit_failed) && log.kwargs[:retry_number] > retries
-            retries = log.kwargs[:retry_number]
+        if haskey(log.kwargs, :submit_failed)
+            if log.kwargs[:retry_number] > retries
+                retries = log.kwargs[:retry_number]
+            end
+            push!(request_ids, log.kwargs[:request_id])
         end
     end
 
     if retries > 0
-        @warn "[FLAKY] $name: transaction submission had to be retried $retries times"
+        req_ids = """ReqIds=[$(join(request_ids, ", "))]"""
+        @warn """[FLAKY] $name: transaction submission had to be retried $retries times $req_ids"""
     end
 end
 
@@ -538,12 +548,14 @@ function _execute_test(
     readonly::Bool;
     retry_number=1,
 )
-    @debug("$name: Starting execution")
+    request_id = string(UUIDs.uuid4())
+    @debug("$name: Starting execution ReqId=$request_id")
     rsp = try
         # Exec async really should return after 2-3 seconds
-        exec_async(context, schema, engine, program; readtimeout=30, readonly)
+        headers = ["X-Request-ID" => request_id]
+        exec_async(context, schema, engine, program; readtimeout=30, readonly, headers)
     catch e
-        @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed = true
+        @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed = true request_id
         if retry_number < 3
             # Try again
             return _execute_test(
@@ -611,7 +623,7 @@ function _test_rel_step(
 
         # Don't test empty strings
         if program == ""
-            return nothing
+            @goto end_of_test
         end
 
         response = _execute_test(
@@ -684,5 +696,7 @@ function _test_rel_step(
         else
             @test state == "ABORTED"
         end
+        
+        @label end_of_test
     end
 end
