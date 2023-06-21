@@ -12,17 +12,15 @@ mutable struct RAITestSet <: Test.AbstractTestSet
     distributed::Bool
     distributed_tests::Vector{Task}
     junit::Union{JUnitTestSuites, JUnitTestSuite}
-    # Make sure tests reported in JUnit file have unique names
-    name_dict::Dict{String, Int}
 
-    function RAITestSet(dts, report, distributed, name_dict)
+    function RAITestSet(dts, report, distributed)
         desc = dts.description
         if Test.get_testset_depth() == 0
             junit = JUnitTestSuites(desc)
         else
             junit = JUnitTestSuite(desc)
         end
-        return new(dts, report, distributed, [], junit, name_dict)
+        return new(dts, report, distributed, [], junit)
     end
 end
 
@@ -31,7 +29,6 @@ function RAITestSet(desc; report::Option{Bool}=nothing, distributed::Option{Bool
     is_nested = Test.get_testset_depth() > 0
     default_report = false
     default_distributed = true
-    default_name_dict = Dict{String, Int}()
 
     # Pass on the parent RAITestSet's options if nested
     if is_nested
@@ -39,7 +36,6 @@ function RAITestSet(desc; report::Option{Bool}=nothing, distributed::Option{Bool
         if parent isa RAITestSet
             default_report = parent.report
             default_distributed = parent.distributed
-            default_name_dict = parent.name_dict
         end
     end
 
@@ -47,7 +43,6 @@ function RAITestSet(desc; report::Option{Bool}=nothing, distributed::Option{Bool
         dts,
         something(report, default_report),
         something(distributed, default_distributed),
-        default_name_dict,
     )
 end
 
@@ -86,11 +81,6 @@ function record(ts::RAITestSet, res::Test.Result)
     counts.skipped += res isa Test.Broken
 
     name = ts.dts.description
-    name_count = get!(ts.name_dict, name, 1)
-    ts.name_dict[name] += 1
-    if name_count > 1
-        name *= " ($name_count)"
-    end
 
     tc = ReTestItems.JUnitTestCase(name, counts, nothing, nothing, nothing)
 

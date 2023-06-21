@@ -396,15 +396,6 @@ function test_rel_steps(;
         name *= resolved_location
     end
 
-    if is_reportable(parent)
-        # make sure name is unique if reporting on it
-        name_count = get!(parent.name_dict, name, 1)
-        parent.name_dict[name] += 1
-        if name_count > 1
-            name *= " ($name_count)"
-        end
-    end
-
     distribute_test(parent) do
         return _test_rel_steps(; steps, name, nested=is_distributed(parent), clone_db, user_engine=engine)
     end
@@ -702,7 +693,7 @@ function _test_rel_step(
         else
             @test state == "ABORTED"
         end
-        
+
         @label end_of_test
     end
 end
