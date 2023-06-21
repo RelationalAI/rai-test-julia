@@ -545,6 +545,11 @@ function _execute_test(
     catch e
         @error "$name: Failed to submit transaction\n\n$e" retry_number submit_failed = true
         if retry_number < 3
+            # Transactions may have been successfully submitted, even though the connection
+            # failed. Sleep for 30s to give the engine a chance to finish.
+            # This will help simple tests with a briefly flaky connection. Long tests will
+            # not benefit.
+            sleep(30)
             # Try again
             return _execute_test(
                 name,
