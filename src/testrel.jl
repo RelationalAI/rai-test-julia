@@ -184,6 +184,10 @@ function Step(;
     )
 end
 
+ReadQuery(s::String; kwargs...) = Step(; query=s, readonly=true, kwargs...)
+WriteQuery(s::String; kwargs...) = Step(; query=s, readonly=false, kwargs...)
+Install(x; kwargs...) = Step(; install=x, kwargs...)
+
 """
 The macro `@test_rel` takes a named tuple as an argument and calls the
 `test_rel` function, augmenting the parameters with the location of the macro
