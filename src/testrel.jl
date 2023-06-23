@@ -184,6 +184,7 @@ function Step(;
     )
 end
 
+# Helpers for commonly used Steps
 ReadQuery(s::String; kwargs...) = Step(; query=s, readonly=true, kwargs...)
 WriteQuery(s::String; kwargs...) = Step(; query=s, readonly=false, kwargs...)
 Install(x; kwargs...) = Step(; install=x, kwargs...)
