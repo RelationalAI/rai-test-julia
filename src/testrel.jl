@@ -405,12 +405,8 @@ function test_rel_steps(;
         end
     end
 
-    if is_distributed(parent)
-        distribute_test(parent) do
-            return _test_rel_steps(; steps, name, nested=true, clone_db, user_engine=engine)
-        end
-    else
-        _test_rel_steps(; steps, name, clone_db, user_engine=engine)
+    distribute_test(parent) do
+        return _test_rel_steps(; steps, name, nested=is_distributed(parent), clone_db, user_engine=engine)
     end
 end
 
@@ -706,7 +702,7 @@ function _test_rel_step(
         else
             @test state == "ABORTED"
         end
-        
+
         @label end_of_test
     end
 end

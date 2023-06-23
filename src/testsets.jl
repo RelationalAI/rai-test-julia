@@ -11,6 +11,7 @@ mutable struct RAITestSet <: Test.AbstractTestSet
     report::Bool
     distributed::Bool
     distributed_tests::Vector{Task}
+    serial_test_results::Vector{Any}
     junit::Union{JUnitTestSuites, JUnitTestSuite}
     # Make sure tests reported in JUnit file have unique names
     name_dict::Dict{String, Int}
@@ -22,7 +23,7 @@ mutable struct RAITestSet <: Test.AbstractTestSet
         else
             junit = JUnitTestSuite(desc)
         end
-        return new(dts, report, distributed, [], junit, name_dict)
+        return new(dts, report, distributed, [], [], junit, name_dict)
     end
 end
 
@@ -62,7 +63,8 @@ function distribute_test(f, ts::RAITestSet)
         ref = Threads.@spawn f()
         return push!(ts.distributed_tests, ref)
     else
-        f()
+        res = f()
+        return push!(ts.serial_test_results, res)
     end
 end
 
@@ -119,6 +121,9 @@ function finish(ts::RAITestSet)
             for t in ts.distributed_tests
                 record(ts, fetch(t))
             end
+            for r in ts.serial_test_results
+                record(ts, r)
+            end
             # Record the time manually so it's available for JUnit reporting
             ts.dts.time_end = time()
             return ts
@@ -128,6 +133,9 @@ function finish(ts::RAITestSet)
 
     for t in ts.distributed_tests
         record(ts, fetch(t))
+    end
+    for r in ts.serial_test_results
+        record(ts, r)
     end
 
     # Record the time manually so it's available for JUnit reporting
