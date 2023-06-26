@@ -686,7 +686,7 @@ function _test_rel_step(
                 @debug("$name: Expected problem", problem)
             else
                 unexpected_errors_found |= in(problem[:severity], error_levels)
-                @info("$name: Unexpected problem: $(problem[:code])")
+                @info("$name: Unexpected problem: $(problem)")
                 @debug("$name: Unexpected problem", problem)
             end
         end
