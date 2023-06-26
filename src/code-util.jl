@@ -232,19 +232,18 @@ function extract_problems(results)
 end
 
 function contains_problem(problems, problem_needle)::Bool
-    return any(p -> matches_problem(problem_needle, p), problems)
+    return any(p -> matches_problem(p, problem_needle), problems)
 end
 
-matches_problem(expected::Union{Tuple, Pair}, actual) = matches_problem(Dict(expected), actual)
-matches_problem(expected, actual::Union{Tuple, Pair}) = matches_problem(expected, Dict(actual))
+matches_problem(prob1::Union{Tuple, Pair}, prob2) = matches_problem(Dict(prob1), prob2)
+matches_problem(prob1, prob2::Union{Tuple, Pair}) = matches_problem(prob1, Dict(prob2))
 
-# Match problems based on :code (required) and :line (if given for expected)
-# `actual` must be a superset of `expected`
-function matches_problem(expected, actual)::Bool
-    match = string(expected[:code]) == string(actual[:code])
+# Match problems based on :code (required) and :line (if present in both)
+function matches_problem(prob1, prob2)::Bool
+    match = string(prob1[:code]) == string(prob2[:code])
 
-    if haskey(expected, :line)
-        match &= (expected[:line] == actual[:line])
+    if haskey(prob1, :line) && haskey(prob2, :line)
+        match &= (prob1[:line] == prob2[:line])
     end
 
     return match
