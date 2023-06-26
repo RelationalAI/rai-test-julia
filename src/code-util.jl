@@ -232,7 +232,7 @@ function extract_problems(results)
 end
 
 function contains_problem(problems, problem_needle)::Bool
-    return any(p -> matches_problem(p, problem_needle), problems)
+    return any(p -> matches_problem(problem_needle, p), problems)
 end
 
 matches_problem(expected::Union{Tuple, Pair}, actual) = matches_problem(Dict(expected), actual)
