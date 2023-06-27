@@ -62,7 +62,8 @@ function distribute_test(f, ts::RAITestSet)
         ref = Threads.@spawn f()
         return push!(ts.distributed_tests, ref)
     else
-        f()
+        res = f()
+        record(ts, res)
     end
 end
 
