@@ -237,11 +237,14 @@ end
 
 matches_problem(prob1::Union{Tuple, Pair}, prob2) = matches_problem(Dict(prob1), prob2)
 matches_problem(prob1, prob2::Union{Tuple, Pair}) = matches_problem(prob1, Dict(prob2))
+
+# Match problems based on :code (required) and :line (if present in both)
 function matches_problem(prob1, prob2)::Bool
     match = string(prob1[:code]) == string(prob2[:code])
-    # TODO: behaviour of line numbering in problem reports needs verification before
-    # enabling line number tests
-    #haskey(expected, :line) && match &= actual[:line] = expected[:line]
+
+    if haskey(prob1, :line) && haskey(prob2, :line)
+        match &= (prob1[:line] == prob2[:line])
+    end
 
     return match
 end
