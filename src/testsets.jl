@@ -62,8 +62,7 @@ function distribute_test(f, ts::RAITestSet)
         ref = Threads.@spawn f()
         return push!(ts.distributed_tests, ref)
     else
-        res = f()
-        record(ts, res)
+        f()
     end
 end
 
@@ -71,6 +70,7 @@ function record(ts::RAITestSet, child::RAITestSet)
     junit_record!(ts.junit, child.junit)
     return record(ts.dts, child.dts)
 end
+record(ts::RAITestSet, child::Nothing) = nothing
 record(ts::RAITestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::Test.DefaultTestSet, child::RAITestSet) = record(ts, child.dts)
 function record(ts::RAITestSet, res::Test.Result)
@@ -120,10 +120,13 @@ function finish(ts::RAITestSet)
             for t in ts.distributed_tests
                 record(ts, fetch(t))
             end
+            # record(parent_ts, ts)
             # Record the time manually so it's available for JUnit reporting
             ts.dts.time_end = time()
-            return ts
+            return nothing
         end
+        @debug "record" parent_ts.dts.description ts.dts.description
+        record(parent_ts, ts)
         return ts
     end
 
@@ -219,6 +222,7 @@ function finish(ts::TestRelTestSet)
     if Test.get_testset_depth() > 0
         # Attach this test set to the parent test set
         parent_ts = Test.get_testset()
+        @debug "record" parent_ts.dts.description ts.dts.description
         record(parent_ts, ts)
         return ts
     end
