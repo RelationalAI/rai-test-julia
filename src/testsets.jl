@@ -70,6 +70,7 @@ function record(ts::RAITestSet, child::RAITestSet)
     junit_record!(ts.junit, child.junit)
     return record(ts.dts, child.dts)
 end
+record(ts::RAITestSet, child::Nothing) = nothing
 record(ts::RAITestSet, child::AbstractTestSet) = record(ts.dts, child)
 record(ts::Test.DefaultTestSet, child::RAITestSet) = record(ts, child.dts)
 function record(ts::RAITestSet, res::Test.Result)
@@ -121,8 +122,9 @@ function finish(ts::RAITestSet)
             end
             # Record the time manually so it's available for JUnit reporting
             ts.dts.time_end = time()
-            return ts
+            return nothing
         end
+        record(parent_ts, ts)
         return ts
     end
 
