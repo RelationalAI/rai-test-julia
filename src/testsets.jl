@@ -66,6 +66,9 @@ function distribute_test(f, ts::RAITestSet)
     end
 end
 
+# fall back
+distribute_test(f, ts::Test.AbstractString) = f()
+
 function record(ts::RAITestSet, child::RAITestSet)
     junit_record!(ts.junit, child.junit)
     return record(ts.dts, child.dts)
