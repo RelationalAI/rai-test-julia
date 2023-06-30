@@ -174,7 +174,7 @@ const LOCATION_SUFFIX_RE = Regex(" @ \\S*(?!$sep\\S*$sep)\\S*.jl:\\d*\$")
 
 function record(ts::RAITestSet, child::TestRelTestSet)
     # Strip additional `file:line` info, so names are robust to movement in files.
-    name = chopsuffix(child.dts.description, LOCATION_SUFFIX_RE)
+    name = String(chopsuffix(child.dts.description, LOCATION_SUFFIX_RE))
     counts = ReTestItems.JUnitCounts(child.dts)
     # Populate logs if error message is set
     logs = if !isnothing(child.error_message)
