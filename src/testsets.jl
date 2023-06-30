@@ -172,9 +172,11 @@ end
 const sep = escape_string(Base.Filesystem.path_separator)
 const LOCATION_SUFFIX_RE = Regex(" @ \\S*(?!$sep\\S*$sep)\\S*.jl:\\d*\$")
 
+# Strip additional `@ file:line` info, so reported names are robust to movement in files.
+strip_location(name::AbstractString) = String(chopsuffix(name, LOCATION_SUFFIX_RE))
+
 function record(ts::RAITestSet, child::TestRelTestSet)
-    # Strip additional `file:line` info, so names are robust to movement in files.
-    name = String(chopsuffix(child.dts.description, LOCATION_SUFFIX_RE))
+    name = strip_location(child.dts.description)
     counts = ReTestItems.JUnitCounts(child.dts)
     # Populate logs if error message is set
     logs = if !isnothing(child.error_message)

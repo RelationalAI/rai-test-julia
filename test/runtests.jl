@@ -28,7 +28,7 @@ for distributed in (true, false)
     end
 end
 
-@testset "LOCATION_SUFFIX_RE" begin
+@testset "strip_location" begin
     for line in (0, 42, 999)
         for path in (
             "foo-tests.jl",
@@ -38,7 +38,7 @@ end
         )
             for name in ("name", "evil name @ looks/like/a/file.jl:123")
                 @show full_name = "$name @ $path:$line"
-                @test chopsuffix(full_name, RAITest.LOCATION_SUFFIX_RE) == name
+                @test RAITest.strip_location(full_name) == name
             end
         end
     end
