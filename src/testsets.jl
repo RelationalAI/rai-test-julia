@@ -80,10 +80,7 @@ function record(ts::RAITestSet, res::Test.Result)
     counts.errors += res isa Test.Error
     counts.skipped += res isa Test.Broken
 
-    # Strip additional `file:line` info, so names are robust to movement in files.
-    # This currently relies on `" @ "` not appearing in the `name` of the `@test_rel`.
-    name = chopsuffix(ts.dts.description, r" @ .*")
-
+    name = ts.dts.description
     tc = ReTestItems.JUnitTestCase(name, counts, nothing, nothing, nothing)
 
     if res isa Union{Test.Fail, Test.Error}
@@ -165,14 +162,19 @@ mutable struct TestRelTestSet <: AbstractTestSet
 end
 
 function record(ts::RAITestSet, child::TestRelTestSet)
-    tc = JUnitTestCase(child.dts)
+    # Strip additional `file:line` info, so names are robust to movement in files.
+    # This currently relies on `" @ "` not appearing in the `name` of the `@test_rel`.
+    name = chopsuffix(child.dts.description, r" @ .*")
+    counts = ReTestItems.JUnitCounts(child.dts)
     # Populate logs if error message is set
-    tc.error_message = child.error_message
-    if !isnothing(tc.error_message)
+    logs = if !isnothing(child.error_message)
         io = IOBuffer()
         playback_log.(io, child.logs)
-        tc.logs = take!(io)
+        take!(io)
+    else
+        nothing
     end
+    tc = JUnitTestCase(name, counts, nothing, child.error_message, logs)
     junit_record!(ts.junit, tc)
     return record(ts.dts, child.dts)
 end
