@@ -12,17 +12,15 @@ mutable struct RAITestSet <: Test.AbstractTestSet
     distributed::Bool
     distributed_tests::Vector{Task}
     junit::Union{JUnitTestSuites, JUnitTestSuite}
-    # Make sure tests reported in JUnit file have unique names
-    name_dict::Dict{String, Int}
 
-    function RAITestSet(dts, report, distributed, name_dict)
+    function RAITestSet(dts, report, distributed)
         desc = dts.description
         if Test.get_testset_depth() == 0
             junit = JUnitTestSuites(desc)
         else
             junit = JUnitTestSuite(desc)
         end
-        return new(dts, report, distributed, [], junit, name_dict)
+        return new(dts, report, distributed, [], junit)
     end
 end
 
@@ -31,7 +29,6 @@ function RAITestSet(desc; report::Option{Bool}=nothing, distributed::Option{Bool
     is_nested = Test.get_testset_depth() > 0
     default_report = false
     default_distributed = true
-    default_name_dict = Dict{String, Int}()
 
     # Pass on the parent RAITestSet's options if nested
     if is_nested
@@ -39,7 +36,6 @@ function RAITestSet(desc; report::Option{Bool}=nothing, distributed::Option{Bool
         if parent isa RAITestSet
             default_report = parent.report
             default_distributed = parent.distributed
-            default_name_dict = parent.name_dict
         end
     end
 
@@ -47,7 +43,6 @@ function RAITestSet(desc; report::Option{Bool}=nothing, distributed::Option{Bool
         dts,
         something(report, default_report),
         something(distributed, default_distributed),
-        default_name_dict,
     )
 end
 
@@ -86,12 +81,6 @@ function record(ts::RAITestSet, res::Test.Result)
     counts.skipped += res isa Test.Broken
 
     name = ts.dts.description
-    name_count = get!(ts.name_dict, name, 1)
-    ts.name_dict[name] += 1
-    if name_count > 1
-        name *= " ($name_count)"
-    end
-
     tc = ReTestItems.JUnitTestCase(name, counts, nothing, nothing, nothing)
 
     if res isa Union{Test.Fail, Test.Error}
@@ -172,15 +161,32 @@ mutable struct TestRelTestSet <: AbstractTestSet
         new(Test.DefaultTestSet(desc), nested, broken, false, [], nothing)
 end
 
+# Match `@ file:line` suffix, e.g.
+#  "name @ foo-test.jl:42"
+#  "name @ rai-test-julia/test/foo/bar-test.jl:42"
+# TestRelTestSet uses `@` to separate the user-given `name` from the `file:line` suffix, but
+# `@` is allowed in `name`, so we have to be careful to only strip the suffix we added.
+# Match ` @ ` (with spaces), followed by a file path (potentially with path separators)
+# and without any whitespace characters (`\S*`), followed by a line number (`:\d*`)
+# at the end of the string. Path separator depends on the Filesystem.
+const sep = escape_string(Base.Filesystem.path_separator)
+const LOCATION_SUFFIX_RE = Regex(" @ \\S*(?!$sep\\S*$sep)\\S*.jl:\\d*\$")
+
+# Strip additional `@ file:line` info, so reported names are robust to movement in files.
+strip_location(name::AbstractString) = String(chopsuffix(name, LOCATION_SUFFIX_RE))
+
 function record(ts::RAITestSet, child::TestRelTestSet)
-    tc = JUnitTestCase(child.dts)
+    name = strip_location(child.dts.description)
+    counts = ReTestItems.JUnitCounts(child.dts)
     # Populate logs if error message is set
-    tc.error_message = child.error_message
-    if !isnothing(tc.error_message)
+    logs = if !isnothing(child.error_message)
         io = IOBuffer()
         playback_log.(io, child.logs)
-        tc.logs = take!(io)
+        take!(io)
+    else
+        nothing
     end
+    tc = JUnitTestCase(name, counts, nothing, child.error_message, logs)
     junit_record!(ts.junit, tc)
     return record(ts.dts, child.dts)
 end

@@ -386,7 +386,7 @@ function test_rel_steps(;
     if isnothing(name)
         name = ""
     else
-        name = name * " at "
+        name = name * " @ "  # Use `@` so it's easier to strip this info later.
     end
 
     if !isnothing(location)
@@ -394,15 +394,6 @@ function test_rel_steps(;
         resolved_location = string(path, ":", location.line)
 
         name *= resolved_location
-    end
-
-    if is_reportable(parent)
-        # make sure name is unique if reporting on it
-        name_count = get!(parent.name_dict, name, 1)
-        parent.name_dict[name] += 1
-        if name_count > 1
-            name *= " ($name_count)"
-        end
     end
 
     distribute_test(parent) do
@@ -702,7 +693,7 @@ function _test_rel_step(
         else
             @test state == "ABORTED"
         end
-        
+
         @label end_of_test
     end
 end

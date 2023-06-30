@@ -27,3 +27,19 @@ for distributed in (true, false)
         @test inner.n_passed == 1
     end
 end
+
+@testset "strip_location" begin
+    for line in (0, 42, 999)
+        for path in (
+            "foo-tests.jl",
+            joinpath("bar", "foo.jl"),
+            joinpath("qux", "bar", "foo.jl"),
+            joinpath("test_dir", "qux", "bar", "foo-test.jl"),
+        )
+            for name in ("name", "evil name @ looks/like/a/file.jl:123")
+                @show full_name = "$name @ $path:$line"
+                @test RAITest.strip_location(full_name) == name
+            end
+        end
+    end
+end
