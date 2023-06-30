@@ -161,10 +161,20 @@ mutable struct TestRelTestSet <: AbstractTestSet
         new(Test.DefaultTestSet(desc), nested, broken, false, [], nothing)
 end
 
+# Match `@ file:line` suffix, e.g.
+#  "name @ foo-test.jl:42"
+#  "name @ rai-test-julia/test/foo/bar-test.jl:42"
+# TestRelTestSet uses `@` to separate the user-given `name` from the `file:line` suffix, but
+# `@` is allowed in `name`, so we have to be careful to only strip the suffix we added.
+# Match ` @ ` (with spaces), followed by a file path (potentially with path separators)
+# and without any whitespace characters (`\S*`), followed by a line number (`:\d*`)
+# at the end of the string. Path separator depends on the Filesystem.
+const sep = escape_string(Base.Filesystem.path_separator)
+const LOCATION_SUFFIX_RE = Regex(" @ \\S*(?!$sep\\S*$sep)\\S*.jl:\\d*\$")
+
 function record(ts::RAITestSet, child::TestRelTestSet)
     # Strip additional `file:line` info, so names are robust to movement in files.
-    # This currently relies on `" @ "` not appearing in the `name` of the `@test_rel`.
-    name = chopsuffix(child.dts.description, r" @ .*")
+    name = chopsuffix(child.dts.description, LOCATION_SUFFIX_RE)
     counts = ReTestItems.JUnitCounts(child.dts)
     # Populate logs if error message is set
     logs = if !isnothing(child.error_message)
