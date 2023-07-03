@@ -12,6 +12,18 @@ function get_context()
     return TEST_CONTEXT[]
 end
 
+"""
+    set_context(new_context::Context)
+
+Set the context to be used by the testing framework.
+
+The default intialiser will load the default RAI config from the `.rai` directory.
+
+# Examples
+```
+set_context(Context(RAI.load_config(fname="/Users/testing/.rai")))
+```
+"""
 function set_context(new_context::Context)
     return TEST_CONTEXT[] = new_context
 end
@@ -40,10 +52,17 @@ function delete_test_database(name::String)
 end
 
 """
-    test_expected(expected::AbstractDict, results, testname)
+    test_expected(expected::AbstractDict, results, testname::String)
 
 Given a Dict of expected relations, test if the actual results contain those relations.
-Types and contents of the relations must match.
+Types and contents of the relations must match. Expected results should be in the form of
+a mapping from a String or Symbol to a tuple or vector of tuples.
+
+# Examples
+````
+test_expected(Dict(:output => [(1, "a"), (2, "b")]), results, "letters")
+test_expected(Dict("/output/Int/String" => [(1, "a"), (2, "b")]), results, "letters")
+```
 """
 function test_expected(expected::AbstractDict, results, testname::String)
     # No testing to do, return immediaely
@@ -468,6 +487,7 @@ function check_flaky(name::String, logs::Vector{LogRecord})
     end
 end
 
+# Wait until a transaction has successfully finished or a timeout is reached.
 function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
     start_time_ns = time_ns()
     delta_sec = 1
@@ -507,7 +527,8 @@ function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
     end
 end
 
-# Execute the test query. Outputs the transaction id and returns the response when done.
+# Execute the test query. The transaction id will be output as soon as it is known and the
+# transaction response returned when done.
 function _execute_test(
     name::String,
     context::Context,
