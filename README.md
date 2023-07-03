@@ -2,7 +2,8 @@
 
 Enables developers to run tests using the RelationalAI SDK for Julia.
 
-RAITest requires a configuration file to use the RAI Julia SDK. Documentation for this can be found at https://docs.relational.ai/rkgms/sdk/julia-sdk
+RAITest requires a configuration file to use the RAI Julia SDK. Documentation for this can
+be found at https://docs.relational.ai/rkgms/sdk/julia-sdk
 
 Using a user specified engine to test with
 ```
@@ -15,7 +16,8 @@ using RAITest
 )
 ```
 
-Create a pool of engines to test with. Values greater than one are useful for larger test suites with concurrent testing
+Create a pool of engines to test with. Values greater than one are useful for larger test
+suites with concurrent testing.
 
 ```
 using RAITest
@@ -32,7 +34,7 @@ resize_engine_pool(2)
 destroy_test_engines()
 ```
 
-Add existing engines to the pool.
+Add an existing engine to the test engine pool.
 
 ```
 using RAITest
@@ -54,7 +56,7 @@ resize_engine_pool(3)
 # Instead of provisioning as needed, provision in advance
 provision_all_test_engines()
 
-@testset ConcurrentTestSet "My tests" begin
+@testset RAITestSet "My tests" begin
     for i in 1:10
         query = "def output = $i ic { output = $i }"
         @test_rel(query = query, debug = true)
