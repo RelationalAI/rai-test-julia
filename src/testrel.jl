@@ -6,16 +6,6 @@ using Random: MersenneTwister
 using Test
 using UUIDs
 
-# Generates a name for the given base name that makes it unique between multiple
-# processing units
-# Generated names are truncated at 63 characters. This limit is reached when the
-# base name is 28 characters long. Longer base names can be used but uniqueness
-# is not guaranteed
-function gen_safe_name(basename)
-    name = "$(basename)-$(UUIDs.uuid4(MersenneTwister()))"
-    return name[1:min(sizeof(name), 63)]
-end
-
 const TEST_CONTEXT = Ref{Option{Context}}(nothing)
 
 function get_context()
@@ -24,6 +14,16 @@ end
 
 function set_context(new_context::Context)
     return TEST_CONTEXT[] = new_context
+end
+
+# Generates a name for the given base name that makes it unique between multiple
+# processing units
+# Generated names are truncated at 63 characters. This limit is reached when the
+# base name is 28 characters long. Longer base names can be used but uniqueness
+# is not guaranteed
+function gen_safe_name(basename)
+    name = "$(basename)-$(UUIDs.uuid4(MersenneTwister()))"
+    return name[1:min(sizeof(name), 63)]
 end
 
 function create_test_database_name(; default_basename="test_rel")::String
@@ -54,19 +54,8 @@ function test_expected(expected::AbstractDict, results, testname::String)
     end
 
     for e in expected
-        name = string(e.first)
+        name = build_path(e.first, e.second)
         @debug("$testname: looking for expected result for relation " * name)
-        if e.first isa Symbol
-            name = "/:"
-            if !is_special_symbol(e.first)
-                name = "/:output/:"
-            end
-
-            name *= string(e.first)
-
-            # Now determine types
-            name *= type_string(e.second)
-        end
 
         # Expected results can be a tuple, or a vector of tuples
         # Actual results are an arrow table that can be iterated over
@@ -114,17 +103,6 @@ end
 
 const AcceptedSourceTypes =
     Union{String, Pair{String, String}, Vector{String}, Dict{String, String}}
-
-convert_to_install_kv(install_dict::Dict{String, String}) = install_dict
-convert_to_install_kv(install_pair::Pair{String, String}) = Dict(install_pair)
-convert_to_install_kv(install_string::String) = convert_to_install_kv([install_string])
-function convert_to_install_kv(install_vector::Vector{String})
-    models = Dict{String, String}()
-    for i in enumerate(install_vector)
-        models["test_install" * string(i[1])] = i[2]
-    end
-    return models
-end
 
 """
     Transaction Step used for `test_rel`
