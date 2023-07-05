@@ -384,16 +384,14 @@ function test_rel_steps(;
     parent = Test.get_testset()
 
     if isnothing(name)
-        name = ""
-    else
-        name = name * " @ "  # Use `@` so it's easier to strip this info later.
+        name = isnothing(location) ? "" : string(basename(string(location.file)), ":", location.line)
     end
 
     if !isnothing(location)
         path = joinpath(splitpath(string(location.file))[max(1, end - 2):end])
         resolved_location = string(path, ":", location.line)
-
-        name *= resolved_location
+        # Use `@` so it's easier to strip this info later.
+        name = string(name, " @ ", resolved_location)
     end
 
     distribute_test(parent) do
