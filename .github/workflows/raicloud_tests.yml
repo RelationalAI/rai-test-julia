@@ -22,22 +22,20 @@ jobs:
 
       - uses: ./.github/actions/setup-raicloud
         with:
-          profile: default
-          environment: staging
-          client_id: ${{ secrets.RAICLOUD_CLIENT_ID_STAGING }}
-          client_secret: ${{ secrets.RAICLOUD_CLIENT_SECRET_STAGING }}
+          client_id: ${{ secrets.RAICLOUD_CLIENT_ID }}
+          client_secret: ${{ secrets.RAICLOUD_CLIENT_SECRET }}
 
       - name: Build packages
         run: |
           julia --project=. -e 'using Pkg; Pkg.add("RAI")'
-      
+
       - name: RAITest tests
         run: |
          TEST_REL_DB_BASENAME="raitest" julia --project=. test/runtests.jl
 
   FinalizeResult:
     name: Finalize Result
-    needs: 
+    needs:
       - Publish-Pending-Status
       - run-tests
     runs-on: ubuntu-latest

@@ -2,10 +2,6 @@ name: 'Setup RAICloud'
 description: 'Set up RAICloud credentials'
 
 inputs:
-  environment:
-    required: true
-    description: 'Environment name'
-
   client_id:
     required: true
     description: 'Client ID'
@@ -14,10 +10,6 @@ inputs:
     required: true
     description: 'Client secret'
 
-  profile:
-    required: false
-    description: 'RAICloud profile name'
-
 runs:
   using: "composite"
   steps:
@@ -25,12 +17,8 @@ runs:
       shell: bash
 
     - run: |
-        echo -e "[${{ inputs.profile || inputs.environment }}]\n" >> $HOME/.rai/config
-        echo -e "region=us-east\n" >> $HOME/.rai/config
-        echo -e "infra=azure\n" >> $HOME/.rai/config
-        echo -e "port=443\n" >> $HOME/.rai/config
-        echo -e "host=azure-${{inputs.environment}}.relationalai.com\n" >> $HOME/.rai/config
-        echo -e "client_credentials_url=https://relationalai-${{inputs.environment}}.us.auth0.com/oauth/token\n" >> $HOME/.rai/config
+        echo -e "[default]\n" >> $HOME/.rai/config
+        echo -e "host=azure.relationalai.com\n" >> $HOME/.rai/config
         echo -e "client_id=${{ inputs.client_id }}\n" >> $HOME/.rai/config
         echo -e "client_secret=${{ inputs.client_secret }}\n" >> $HOME/.rai/config
       shell: bash
