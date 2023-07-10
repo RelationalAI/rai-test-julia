@@ -57,7 +57,6 @@
     broken = true,
 )
 
- 
 @test_rel(
     name = "Expected abort",
     query = """
@@ -76,7 +75,44 @@
     broken = true,
 )
 
-# Expected problems
-# Broken expected problem
-# problem + expected
-# expected abort + problem
+@test_rel(
+    name = "Expected problem",
+    query = """
+    def output = a
+    """,
+    expected_problems = [(:code => :UNDEFINED, :line => 1)],
+)
+
+@test_rel(
+    name = "Expected problem, allow all",
+    query = """
+    def output = a
+    """,
+    expected_problems = [(:code => :UNDEFINED, :line => 1)],
+    allow_unexpected = :error,
+)
+
+@test_rel(
+    name = "Expected problem, allow none",
+    query = """
+    def output = a
+    """,
+    expected_problems = [(:code => :UNDEFINED, :line => 1)],
+    allow_unexpected = :none,
+)
+
+@test_rel(
+    name = "Unexpected problem, ignore all",
+    query = """
+    def output = a
+    """,
+    allow_unexpected = :error,
+)
+
+@test_rel(
+    name = "Unexpected problem, broken",
+    query = """
+    def output = a
+    """,
+    broken = true,
+)
