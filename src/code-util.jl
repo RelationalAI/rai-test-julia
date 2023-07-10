@@ -189,43 +189,43 @@ function extract_problems(results)
     rel_code_key = "/:rel/:catalog/:diagnostic/:code/Int64/String"
     rel_line_key = "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"
     rel_severity_key = "/:rel/:catalog/:diagnostic/:severity/Int64/String"
+    rel_message_key = "/:rel/:catalog/:diagnostic/:message/Int64/String"
 
-    if !haskey(results, rel_code_key)
+    if !haskey(results, rel_code_key) || isempty(results[rel_code_key])
         return problems
     end
 
     # [index, code]
     problem_codes = results[rel_code_key]
+    # [index, subindex, line]
+    problem_lines = get(results, rel_line_key, Dict())
+    # [index, severity]
+    problem_severities = get(results, rel_severity_key, Dict())
+    # [index, message]
+    problem_messages = get(results, rel_message_key, Dict())
 
-    problem_lines = Dict()
-    if haskey(results, rel_line_key)
-        # [index, ?, line]
-        problem_lines = results[rel_line_key]
-    end
-
-    problem_severities = Dict()
-    if haskey(results, rel_severity_key)
-        # [index, severity]
-        problem_severities = results[rel_severity_key]
-    end
-    if length(problem_codes) > 0
-        for i in 1:1:length(problem_codes[1])
-            # Not all problems have a line number
-            problem_line = nothing
-            if haskey(results, rel_line_key)
-                problem_line = problem_lines[3][i]
-            end
-            problem_severity = nothing
-            if haskey(results, rel_severity_key)
-                problem_severity = problem_severities[2][i]
-            end
-            problem = Dict(
-                :code => problem_codes[2][i],
-                :severity => problem_severity,
-                :line => problem_line,
-            )
-            push!(problems, problem)
+    for i in 1:1:length(problem_codes[1])
+        problem_code = problem_codes[2][i]
+        problem_line = nothing
+        if haskey(results, rel_line_key)
+            problem_line = problem_lines[3][i]
         end
+        problem_severity = nothing
+        if haskey(results, rel_severity_key)
+            problem_severity = problem_severities[2][i]
+        end
+        problem_message = nothing
+        if haskey(results, rel_message_key)
+            problem_message = problem_messages[2][i]
+        end
+
+        problem = Dict(
+            :code => problem_code,
+            :severity => problem_severity,
+            :line => problem_line,
+            :message => problem_message,
+        )
+        push!(problems, problem)
     end
 
     return problems
