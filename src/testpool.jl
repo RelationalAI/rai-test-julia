@@ -110,7 +110,8 @@ function add_test_engine!(name::String)
 end
 
 function get_next_engine_name(id::Int64)
-    return "julia-sdk-test-$(id)"
+    basename = get(ENV, "TEST_REL_ENGINE_BASENAME", "RAITest")
+    return "$(basename)-$(id)"
 end
 
 """
