@@ -126,7 +126,7 @@ function provision_all_test_engines()
 end
 
 """
-    resize_test_engine_pool(size::Int64, generator::Option{Function})
+    resize_test_engine_pool(size::Int64, generator::Option{Function}=nothing)
 
 Resize the engine pool
 
