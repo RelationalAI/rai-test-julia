@@ -98,6 +98,8 @@ function list_test_engines()
 end
 
 """
+    add_test_engine!(name::String)
+
 Add an engine to the pool of test engines
 """
 function add_test_engine!(name::String)
@@ -127,20 +129,41 @@ end
 
 """
     resize_test_engine_pool(5)
-    resize_test_engine_pool(5, get_next_engine_name)
 
 Resize the engine pool using the given name generator
 
-If an name generator is given it will be passed a unique id each time it is called.
+If a name generator is given it will be passed a unique id each time it is called.
+
 If the pool size is smaller than the current size, engines will be de-provisioned and
 removed from the list until the desired size is reached.
+# Example
+```
+resize_test_engine_pool(5, id->"RAITest-test-\$id")
+```
 """
-function resize_test_engine_pool(size::Int64, generator::Function=get_next_engine_name)
+function resize_test_engine_pool(size::Int64, generator::Function)
+    TEST_ENGINE_POOL.generator = generator
+
+    resize_test_engine_pool(size)
+end
+
+"""
+    resize_test_engine_pool(5)
+
+Resize the engine pool
+
+If the pool size is smaller than the current size, engines will be de-provisioned and
+removed from the list until the desired size is reached.
+# Example
+```
+resize_test_engine_pool(5)
+resize_test_engine_pool(0)
+```
+"""
+function resize_test_engine_pool(size::Int64)
     if size < 0
         size = 0
     end
-
-    TEST_ENGINE_POOL.generator = generator
 
     @lock TEST_SERVER_LOCK begin
         engines = TEST_ENGINE_POOL.engines
