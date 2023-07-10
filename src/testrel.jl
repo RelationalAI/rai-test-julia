@@ -126,19 +126,28 @@ const AcceptedSourceTypes =
 """
     Transaction Step used for `test_rel`
 
-    - `install::Dict{String, String}`:
-        sources to install in the database.
-
-    - `broken::Bool`: if the computed values are not currently correct (wrt the `expected`
-    results), then `broken` can be used to mark the tests as broken and prevent the test
-    from failing.
-
-    - `expected_problems::Vector}`: expected problems. The semantics of
-      `expected_problems` is that the program must contain a super set of the specified
-      errors. When `expected_problems` is `[]`, this means that errors are allowed.
-      Expected problems are defined by a code and an optional starting line number
-      e.g. `Dict(:code => "name" [, :line => <number>])`
-"""
+    - `query::String`: The query to use for the test
+    - `expected::AbstractDict`: Expected values in the form
+        `Dict("/:output/:a/Int64" => [1, 2])` or
+        `Dict(:a => p1, 2])`
+        Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the
+        values, or a type that can be converted to string and used as relation path.
+    - `expected_problems::Vector`: expected problems. The semantics of
+        `expected_problems` is that the program must contain a super set of the specified
+        error codes.
+    - `allow_unexpected::Symbol`: ignore problems with severity equal or lower than
+        specified. Accepted values are `:none`, `:warning`, `:error`.
+    - `install::Dict{String, String}`: source files to install in the database.
+    - `schema_inputs::AbstractDict`: input schema for the transaction
+    - `inputs::AbstractDict`: input data to the transaction
+    - `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it
+        is expected to abort, but it does not, then the test fails.
+    - `timeout_sec`: an upper bound on test execution time.
+    - `broken::Bool`: if the test is not currently correct (wrt the `expected`
+        results), then `broken` can be used to mark the tests as broken and prevent the test
+        from failing.
+    - `readonly`: If true, run the query as readonly
+ """
 struct Step
     query::Option{String}
     install::Dict{String, String}
