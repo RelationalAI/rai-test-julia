@@ -98,8 +98,6 @@ function list_test_engines()
 end
 
 """
-    add_test_engine!(name::String)
-
 Add an engine to the pool of test engines
 """
 function add_test_engine!(name::String)
