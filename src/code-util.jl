@@ -239,6 +239,10 @@ function matches_problem(prob1, prob2)::Bool
         match &= (prob1[:line] == prob2[:line])
     end
 
+    if haskey(prob1, :severity) && haskey(prob2, :severity)
+        match &= (string(prob1[:severity]) == string(prob2[:severity]))
+    end
+
     return match
 end
 
