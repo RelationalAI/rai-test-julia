@@ -208,16 +208,15 @@ function extract_problems(results)
     indices = results[rel_code_key][1]
 
     for i in 1:length(indices)
-        problem = Dict(
-            # index, code
-            :code => extract_detail(results, rel_code_key, 2, i),
-            # index, subindex, line
-            :line => extract_detail(results, rel_line_key, 3, i),
-            # index, severity
-            :severity => extract_detail(results, rel_severity_key, 2, i),
-            # index, message
-            :message => extract_detail(results, rel_message_key, 2, i),
-        )
+        code = extract_detail(results, rel_code_key, 2, i)
+        # index, subindex, line
+        line = extract_detail(results, rel_line_key, 3, i)
+        # index, severity
+        severity = extract_detail(results, rel_severity_key, 2, i)
+        # index, message
+        message = extract_detail(results, rel_message_key, 2, i)
+
+        problem = (; code, line, severity, message)
         push!(problems, problem)
     end
 
