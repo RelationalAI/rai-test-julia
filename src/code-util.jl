@@ -255,11 +255,7 @@ function result_table_to_dict(results::Nothing)
 end
 
 function result_table_to_dict(results)
-    dict_results = Dict{String, Arrow.Table}()
-    for result in results
-        dict_results[result[1]] = result[2]
-    end
-    return dict_results
+    return Dict{String, Arrow.Table}(results)
 end
 
 # Log a captured log via the current logger
