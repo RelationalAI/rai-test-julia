@@ -1,3 +1,5 @@
+using Arrow
+
 rel_code_key = "/:rel/:catalog/:diagnostic/:code/Int64/String"
 rel_line_key = "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"
 rel_severity_key = "/:rel/:catalog/:diagnostic/:severity/Int64/String"
