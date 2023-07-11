@@ -4,7 +4,7 @@ using Test
 
 # Test that results get recorded as expected.
 for distributed in (true, false)
-    ts = @testset RAITestSet "outer" distributed=distributed begin
+    ts = @testset RAITestSet "outer" distributed = distributed begin
         @testset "middle" begin
             @testset TestRelTestSet "inner" begin
                 @test (sleep(1); true)
@@ -43,3 +43,5 @@ end
         end
     end
 end
+
+include("problems.jl")
