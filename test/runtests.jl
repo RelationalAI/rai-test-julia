@@ -44,14 +44,20 @@ end
     end
 end
 
-# Test basic test_rel usage
-try
-    resize_test_engine_pool(5)
+# Test test_rel usage
+# A valid .rai/config is required to run these tests
+if isnothing(RAITest.get_context())
+    @warn "No RAI config provided. Skipping integration tests"
+else
+    try
+        resize_test_engine_pool(1, (i)->"RAITest-test-$i")
+        provision_all_test_engines()
 
-    @testset ConcurrentTestSet "Basics" begin
-        include("basic.jl")
+        @testset RAITestSet "Basics" begin
+            include("basic.jl")
+        end
+
+    finally
+        resize_test_engine_pool(0)
     end
-
-finally
-    resize_test_engine_pool(0)
 end
