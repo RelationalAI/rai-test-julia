@@ -16,7 +16,7 @@ jobs:
 
       - name: Build packages
         run: |
-          julia --project=. -e 'using Pkg; Pkg.add("RAI")'
+          julia --project=. -e 'using Pkg; Pkg.build()'
 
       - name: RAITest tests
         run: |
