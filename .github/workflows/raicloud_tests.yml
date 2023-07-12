@@ -1,18 +1,7 @@
 name: test_rel raicloud tests
 on: [push]
 
-
 jobs:
-  Publish-Pending-Status:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v3
-      - uses: ./.github/actions/github-status
-        with:
-          sha: ${{ github.event.inputs.sha || github.sha }}
-          context: 'RAICloud Tests'
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          status: 'pending'
   run-tests:
     runs-on: ubuntu-latest
     steps:
@@ -32,20 +21,3 @@ jobs:
       - name: RAITest tests
         run: |
          TEST_REL_DB_BASENAME="raitest" julia --project=. test/runtests.jl
-
-  FinalizeResult:
-    name: Finalize Result
-    needs:
-      - Publish-Pending-Status
-      - run-tests
-    runs-on: ubuntu-latest
-    if: always()
-    steps:
-    - uses: technote-space/workflow-conclusion-action@v3
-    - uses: actions/checkout@v3
-    - uses: ./.github/actions/github-status
-      with:
-        sha: ${{ github.event.inputs.sha || github.sha }}
-        context: 'RAICloud Tests'
-        github_token: ${{ secrets.GITHUB_TOKEN }}
-        status: ${{ env.WORKFLOW_CONCLUSION }}
