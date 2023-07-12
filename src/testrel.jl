@@ -47,7 +47,7 @@ Types and contents of the relations must match.
 """
 function test_expected(expected::AbstractDict, results, testname::String)
     # No testing to do, return immediaely
-    isempty(expected) && return
+    isempty(expected) && return true
     if isnothing(results)
         @info("$testname: No results")
         return false
@@ -665,9 +665,7 @@ function _test_rel_step(
             end
         end
 
-        if !isempty(step.expected)
-            @test test_expected(step.expected, results_dict, name)
-        end
+        @test test_expected(step.expected, results_dict, name)
 
         if !step.expect_abort
             @test state == "COMPLETED"
