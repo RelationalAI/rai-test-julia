@@ -2,12 +2,18 @@ name: test_rel raicloud tests
 on: [push]
 
 jobs:
-  run-tests:
-    runs-on: ubuntu-latest
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        julia-version: ['~1.7', '~1.8', '~1.9']
+        os: [ubuntu-latest, windows-latest, macOS-latest]
     steps:
       - uses: actions/checkout@v3
 
       - uses: julia-actions/setup-julia@v1
+        with:
+          version: ${{ matrix.julia-version }}
 
       - uses: ./.github/actions/setup-raicloud
         with:
@@ -18,6 +24,6 @@ jobs:
         run: |
           julia --project=. -e 'using Pkg; Pkg.build()'
 
-      - name: RAITest tests
+      - name: Test RAITest
         run: |
          TEST_REL_DB_BASENAME="raitest" julia --project=. test/runtests.jl
