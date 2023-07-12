@@ -8,6 +8,8 @@ jobs:
       matrix:
         julia-version: ['~1.8', '~1.9']
         os: [ubuntu-latest, macOS-latest]
+    env:
+      TEST_REL_DB_BASENAME: raitest-test
     steps:
       - uses: actions/checkout@v3
 
@@ -26,4 +28,4 @@ jobs:
 
       - name: Test RAITest
         run: |
-         TEST_REL_DB_BASENAME="raitest-test" julia --project=. test/runtests.jl
+         julia --project=. test/runtests.jl
