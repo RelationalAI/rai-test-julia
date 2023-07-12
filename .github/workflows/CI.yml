@@ -1,4 +1,4 @@
-name: test_rel raicloud tests
+name: CI
 on: [push]
 
 jobs:
@@ -26,4 +26,4 @@ jobs:
 
       - name: Test RAITest
         run: |
-         TEST_REL_DB_BASENAME="raitest" julia --project=. test/runtests.jl
+         TEST_REL_DB_BASENAME="raitest-test" julia --project=. test/runtests.jl
