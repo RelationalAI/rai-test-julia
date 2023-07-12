@@ -54,19 +54,8 @@ function test_expected(expected::AbstractDict, results, testname::String)
     end
 
     for e in expected
-        name = string(e.first)
-        @debug("$testname: looking for expected result for relation " * name)
-        if e.first isa Symbol
-            name = "/:"
-            if !is_special_symbol(e.first)
-                name = "/:output/:"
-            end
-
-            name *= string(e.first)
-
-            # Now determine types
-            name *= type_string(e.second)
-        end
+        name = qualify_name(e.first, e.second)
+        @debug("$testname: looking for expected result for relation " * e.first)
 
         # Expected results can be a tuple, or a vector of tuples
         # Actual results are an arrow table that can be iterated over
