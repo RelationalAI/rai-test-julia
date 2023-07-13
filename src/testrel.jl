@@ -95,14 +95,14 @@ function test_expected(expected::AbstractDict, results, testname::String)
 
         if !isequal(expected_result_tuple_vector, actual_result_vector)
             @warn(
-                "$testname: Expected result vs. actual",
+                "$testname: Expected result vs. actual for $name",
                 expected_result_tuple_vector,
                 actual_result_vector
             )
             return false
         else
             @debug(
-                "$testname: Expected result vs. actual",
+                "$testname: Expected result vs. actual for $name",
                 expected_result_tuple_vector,
                 actual_result_vector
             )
