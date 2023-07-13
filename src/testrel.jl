@@ -415,7 +415,7 @@ function _test_rel_steps(;
     @debug("$name: using test engine: $test_engine")
 
     # Output logs directly if we're nested inside a concurrent RAITestSet or a standard
-    #  TestSet
+    # TestSet
     capture_logs = nested || Test.get_testset_depth() > 0
     if capture_logs
         logger = TestLogger(; catch_exceptions=true)
