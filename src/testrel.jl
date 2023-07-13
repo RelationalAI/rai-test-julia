@@ -439,6 +439,7 @@ function _test_rel_steps(;
         duration = sprint(show, stats.time; context=:compact => true)
         ts = stats.value
 
+        # If we're capturing logs then we need to make an exception to report error states
         if capture_logs
             ts.logs = logger.logs
             check_flaky(name, logger.logs)
