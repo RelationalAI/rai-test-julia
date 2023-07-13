@@ -468,9 +468,10 @@ function _test_rel_steps(;
             playback_log.(ctx, logger.logs)
             Base.show(ctx, err)
             msg = String(take!(io))
-
-            @error msg database = schema engine_name = test_engine test_name = name
+        else
+            msg = ""
         end
+        @error msg database = schema engine_name = test_engine test_name = name
     finally
         try
             delete_test_database(schema)
