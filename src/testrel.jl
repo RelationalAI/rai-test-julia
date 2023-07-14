@@ -403,14 +403,8 @@ function _test_rel_steps(;
     test_engine = user_engine === nothing ? get_test_engine() : user_engine
     @debug("$name: using test engine: $test_engine")
 
-    # Output logs directly if we're nested inside a concurrent RAITestSet or a standard
-    #  TestSet
-    capture_logs = nested || Test.get_testset_depth() > 0
-    if capture_logs
-        logger = TestLogger(; catch_exceptions=true)
-    else
-        logger = Base.current_logger()
-    end
+    logger = TestLogger(; catch_exceptions=true)
+
     try
         stats = @timed Logging.with_logger(logger) do
             @testset TestRelTestSet nested = nested "$name" begin
@@ -427,26 +421,24 @@ function _test_rel_steps(;
         end
         duration = sprint(show, stats.time; context=:compact => true)
         ts = stats.value
+        ts.logs = logger.logs
 
-        if capture_logs
-            ts.logs = logger.logs
-            check_flaky(name, logger.logs)
+        check_flaky(name, logger.logs)
 
-            log_header = get_log_header(ts, duration, schema, test_engine)
-            if anyerror(ts) || anyfail(ts)
-                ts.error_message = log_header
-                io, ctx = get_logging_io()
-                write(ctx, log_header)
-                write(ctx, "\n\nCAPTURED LOGS:\n")
-                playback_log.(ctx, logger.logs)
-                msg = String(take!(io))
-                @error msg database = schema engine_name = test_engine
-            else
-                @info log_header
-            end
+        log_header = get_log_header(ts, duration, schema, test_engine)
+        if anyerror(ts) || anyfail(ts)
+            ts.error_message = log_header
+            io, ctx = get_logging_io()
+            write(ctx, log_header)
+            write(ctx, "\n\nCAPTURED LOGS:\n")
+            playback_log.(ctx, logger.logs)
+            msg = String(take!(io))
+            @error msg database = schema engine_name = test_engine
+        else
+            @info log_header
         end
 
-        return ts
+        ts
     catch err
         io, ctx = get_logging_io()
         write(ctx, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
