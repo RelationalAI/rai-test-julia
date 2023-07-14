@@ -572,10 +572,6 @@ function _execute_test(
     txn_id = rsp.transaction.id
     @info "$name: Executing with txn $txn_id" transaction_id = txn_id
 
-    # The response may already contain the result. If so, we can return it immediately
-    if !isnothing(rsp.results)
-        return rsp
-    end
     # The transaction was not immediately completed.
     # Poll until the transaction is done, or times out, then return the results.
     try
