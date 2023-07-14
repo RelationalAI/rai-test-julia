@@ -448,17 +448,15 @@ function _test_rel_steps(;
 
         return ts
     catch err
-        if capture_logs
-            io, ctx = get_logging_io()
-            write(ctx, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
+        io, ctx = get_logging_io()
+        write(ctx, "[ERROR] Something went wrong running test $name \n\n CAPTURED LOGS:\n")
 
-            # dump all of the captured logs
-            playback_log.(ctx, logger.logs)
-            Base.show(ctx, err)
-            msg = String(take!(io))
+        # dump all of the captured logs
+        playback_log.(ctx, logger.logs)
+        Base.show(ctx, err)
+        msg = String(take!(io))
 
-            @error msg database = schema engine_name = test_engine test_name = name
-        end
+        @error msg database = schema engine_name = test_engine test_name = name
     finally
         try
             delete_test_database(schema)
