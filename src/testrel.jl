@@ -75,7 +75,14 @@ function test_expected(expected::AbstractDict, results, testname::String)
         # Empty results will not be in the output so check for non-presence
         if isempty(expected_result_tuple_vector)
             if haskey(results, name)
-                @info("$testname: Expected empty " * name * " not empty")
+                actual_result = results[name]
+                actual_result_vector = sort(collect(zip(actual_result...)))
+
+                @info(
+                    "$testname: Expected result vs actual for $name",
+                    expected_result_tuple_vector,
+                    actual_result_vector
+                )
                 return false
             end
             continue
