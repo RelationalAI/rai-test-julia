@@ -76,7 +76,11 @@ function test_expected(expected::AbstractDict, results, testname::String)
         if isempty(expected_result_tuple_vector)
             if haskey(results, name)
                 actual_result = results[name]
-                actual_result_vector = sort(collect(zip(actual_result...)))
+                if isempty(actual_result)
+                    actual_result_vector = [()]
+                else
+                    actual_result_vector = sort(collect(zip(actual_result...)))
+                end
 
                 @info(
                     "$testname: Expected result vs actual for $name",
