@@ -90,24 +90,48 @@ function is_special_symbol(symbol::Symbol)::Bool
 end
 
 # Generate a string representing the Rel type for the input
-# Expected inputs are a vector of types, a tuple of types, or a type
 function type_string(input::Vector)
-    if isempty(input)
-        return ""
-    end
-    return type_string(input[1])
-end
+    type = eltype(input)
+    # []
+    type == Any && return ""
+    # Non-container type
+    type == eltype(type) && return "/$type"
+    # Strings (otherwise treated as containers by Julia)
+    type == String && return "/$type"
 
-function type_string(input::Tuple)
+    # Container type
     result = ""
-    for t in input
-        result *= type_string(t)
+    for e_type in fieldtypes(type)
+        result *= type_string(e_type)
     end
+
     return result
 end
 
-function type_string(input)
-    return "/" * string(typeof(input))
+function type_string(input::Tuple)
+    type = typeof(input)
+    result = ""
+    for e_type in fieldtypes(type)
+        result *= type_string(e_type)
+    end
+
+    return result
+end
+
+type_string(input) = "/" * string(typeof(input))
+
+function type_string(type::DataType)
+    # Strings (otherwise treated as containers by Julia)
+    type == String && return "/$type"
+    # Non-container type
+    eltype(type) == type && return "/$type"
+    # container type: presumably a Tuple
+    result = "/("
+    for e_type in fieldtypes(type)
+        result *= type_string(e_type)
+    end
+    result *= ")"
+    return result
 end
 
 function key_to_array(input::Tuple)

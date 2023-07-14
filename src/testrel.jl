@@ -73,13 +73,10 @@ function test_expected(expected::AbstractDict, results, testname::String)
         expected_result_tuple_vector = sort(to_vector_of_tuples(e.second))
 
         # Empty results will not be in the output so check for non-presence
-        if isempty(expected_result_tuple_vector)
-            if haskey(results, name)
-                @info("$testname: Expected empty " * name * " not empty")
-                return false
-            end
+        if isempty(expected_result_tuple_vector) && !haskey(results, name)
             continue
         end
+
         if !haskey(results, name)
             @info("$testname: Expected relation $name not found")
             @debug("$testname: Results", results)
