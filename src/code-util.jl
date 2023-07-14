@@ -262,6 +262,22 @@ function result_table_to_dict(results)
     return dict_results
 end
 
+qualify_name(name::String, ::Any) = return name
+
+function qualify_name(base_name::Symbol, values)
+        name = "/:"
+        if !is_special_symbol(base_name)
+            name = "/:output/:"
+        end
+
+        name *= string(base_name)
+
+        # Now determine types
+        name *= type_string(values)
+
+        return name
+end
+
 # Log a captured log via the current logger
 function playback_log(
     io::IO,
