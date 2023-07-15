@@ -397,7 +397,7 @@ function test_rel_steps(;
     end
 
     distribute_test(parent) do
-        return _test_rel_steps(; steps, name, nested=is_distributed(parent), clone_db, user_engine=engine)
+        return _test_rel_steps(; steps, name, nested=is_distributed(parent), debug, clone_db, user_engine=engine)
     end
 end
 
@@ -406,6 +406,7 @@ function _test_rel_steps(;
     steps::Vector{Step},
     name::Option{String},
     nested::Bool=false,
+    debug::Bool=false,
     clone_db::Option{String}=nothing,
     user_engine::Option{String}=nothing,
 )
@@ -447,6 +448,11 @@ function _test_rel_steps(;
             playback_log.(ctx, logger.logs)
             msg = String(take!(io))
             @error msg database = schema engine_name = test_engine
+        elseif debug || !nested
+            io, ctx = get_logging_io()
+            playback_log.(ctx, logger.logs)
+            msg = String(take!(io))
+            println(msg)
         else
             @info log_header
         end
