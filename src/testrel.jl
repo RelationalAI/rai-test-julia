@@ -62,13 +62,10 @@ function test_expected(expected::AbstractDict, results, testname::String)
         expected_result_tuple_vector = sort(to_vector_of_tuples(e.second))
 
         # Empty results will not be in the output so check for non-presence
-        if isempty(expected_result_tuple_vector)
-            if haskey(results, name)
-                @info("$testname: Expected empty " * name * " not empty")
-                return false
-            end
+        if isempty(expected_result_tuple_vector) && !haskey(results, name)
             continue
         end
+
         if !haskey(results, name)
             @info("$testname: Expected relation $name not found")
             @debug("$testname: Results", results)
@@ -80,18 +77,23 @@ function test_expected(expected::AbstractDict, results, testname::String)
 
         # convert actual results to a vector for comparison
         actual_result = results[name]
-        actual_result_vector = sort(collect(zip(actual_result...)))
+        if isempty(actual_result)
+            actual_result_vector = [()]
+        else
+            actual_result_vector = sort(collect(zip(actual_result...)))
+        end
 
-        if !isequal(expected_result_tuple_vector, actual_result_vector)
+        if isempty(expected_result_tuple_vector) ||
+                !isequal(expected_result_tuple_vector, actual_result_vector)
             @warn(
-                "$testname: Expected result vs. actual",
+                "$testname: Expected result vs. actual for $name",
                 expected_result_tuple_vector,
                 actual_result_vector
             )
             return false
         else
             @debug(
-                "$testname: Expected result vs. actual",
+                "$testname: Expected result vs. actual for $name",
                 expected_result_tuple_vector,
                 actual_result_vector
             )
@@ -384,7 +386,7 @@ function test_rel_steps(;
     end
 
     distribute_test(parent) do
-        return _test_rel_steps(; steps, name, nested=is_distributed(parent), clone_db, user_engine=engine)
+        return _test_rel_steps(; steps, name, nested=is_distributed(parent), debug, clone_db, user_engine=engine)
     end
 end
 
@@ -393,6 +395,7 @@ function _test_rel_steps(;
     steps::Vector{Step},
     name::Option{String},
     nested::Bool=false,
+    debug::Bool=false,
     clone_db::Option{String}=nothing,
     user_engine::Option{String}=nothing,
 )
@@ -434,6 +437,11 @@ function _test_rel_steps(;
             playback_log.(ctx, logger.logs)
             msg = String(take!(io))
             @error msg database = schema engine_name = test_engine
+        elseif debug || !nested
+            io, ctx = get_logging_io()
+            playback_log.(ctx, logger.logs)
+            msg = String(take!(io))
+            println(msg)
         else
             @info log_header
         end
@@ -559,10 +567,6 @@ function _execute_test(
     txn_id = rsp.transaction.id
     @info "$name: Executing with txn $txn_id" transaction_id = txn_id
 
-    # The response may already contain the result. If so, we can return it immediately
-    if !isnothing(rsp.results)
-        return rsp
-    end
     # The transaction was not immediately completed.
     # Poll until the transaction is done, or times out, then return the results.
     try
