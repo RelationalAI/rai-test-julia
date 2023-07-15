@@ -128,21 +128,31 @@ function provision_all_test_engines()
 end
 
 """
-    resize_test_engine_pool(5)
-    resize_test_engine_pool(5, get_next_engine_name)
+    resize_test_engine_pool(size::Int64, generator::Option{Function}=nothing)
 
-Resize the engine pool using the given name generator
+Resize the engine pool
 
-If an name generator is given it will be passed a unique id each time it is called.
+If a name generator is given it will be used to generate all new engine names. When called
+it will be passed a unique id each time it is called.
+
 If the pool size is smaller than the current size, engines will be de-provisioned and
 removed from the list until the desired size is reached.
+
+# Example
+```
+resize_test_engine_pool(5)
+resize_test_engine_pool(10, id->"RAITest-test-\$id")
+resize_test_engine_pool(0)
+```
 """
-function resize_test_engine_pool(size::Int64, generator::Function=get_next_engine_name)
+function resize_test_engine_pool(size::Int64, generator::Option{Function}=nothing)
     if size < 0
         size = 0
     end
 
-    TEST_ENGINE_POOL.generator = generator
+    if !isnothing(generator)
+        TEST_ENGINE_POOL.generator = generator
+    end
 
     @lock TEST_SERVER_LOCK begin
         engines = TEST_ENGINE_POOL.engines
