@@ -116,3 +116,10 @@
     """,
     broken = true,
 )
+
+@test_rel(
+    name = "abort_on_error",
+    query = "def output = a",
+    abort_on_error = true,
+    expect_abort = true,
+)
