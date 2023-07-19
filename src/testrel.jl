@@ -54,7 +54,7 @@ function test_expected(expected::AbstractDict, results, testname::String)
     end
 
     for e in expected
-        name = qualify_name(e.first, e.second)
+        name = relation_id(e.first, e.second)
         @debug("$testname: looking for expected result for relation " * string(e.first))
 
         # Expected results can be a tuple, or a vector of tuples

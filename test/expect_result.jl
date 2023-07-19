@@ -7,7 +7,7 @@ enumerate_row(value::String) = [(1, value)]
 function generate_arrow(results)
     arrowed_results = Dict()
     for result in results
-        key = RAITest.qualify_name(result[1], result[2])
+        key = RAITest.relation_id(result[1], result[2])
         value = []
         if isempty(result[2])
             value = (v1=[],)

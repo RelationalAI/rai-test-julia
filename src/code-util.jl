@@ -262,20 +262,20 @@ function result_table_to_dict(results)
     return dict_results
 end
 
-qualify_name(name::String, ::Any) = return name
+relation_id(name, ::Any) = return string(name)
 
-function qualify_name(base_name::Symbol, values)
-        name = "/:"
-        if !is_special_symbol(base_name)
-            name = "/:output/:"
-        end
+function relation_id(base_name::Symbol, values)
+    name = "/:"
+    if !is_special_symbol(base_name)
+        name = "/:output/:"
+    end
 
-        name *= string(base_name)
+    name *= string(base_name)
 
-        # Now determine types
-        name *= type_string(values)
+    # Now determine types
+    name *= type_string(values)
 
-        return name
+    return name
 end
 
 # Log a captured log via the current logger
