@@ -49,6 +49,23 @@
 )
 
 @test_rel(
+    name = "Empty expected, empty actual",
+    query = """
+    def output = false
+    """,
+    expected = Dict(:output => []),
+)
+
+@test_rel(
+    name = "Empty expected, present actual",
+    query = """
+    def output = true
+    """,
+    expected = Dict(:output => []),
+    broken = true,
+)
+
+@test_rel(
     name = "Broken expected",
     query = """
     def output = 1
