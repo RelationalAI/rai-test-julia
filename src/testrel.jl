@@ -84,8 +84,7 @@ function test_expected(expected::AbstractDict, results, testname::String)
             actual_result_vector = sort(collect(zip(actual_result...)))
         end
 
-        if isempty(expected_result_tuple_vector) ||
-                !isequal(expected_result_tuple_vector, actual_result_vector)
+        if !isequal(expected_result_tuple_vector, actual_result_vector)
             @warn(
                 "$testname: Expected result vs. actual for $name",
                 expected_result_tuple_vector,
