@@ -544,8 +544,8 @@ function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
     end
 end
 
-# Execute the test query. The transaction id will be output as soon as it is known and the
-# transaction response returned when done.
+# Execute the test query. The transaction id will be output as soon as it is known, and the
+# corresponding transaction response is returned when finished.
 function _execute_test(
     name::String,
     context::Context,
