@@ -6,6 +6,16 @@ using Random: MersenneTwister
 using Test
 using UUIDs
 
+# Generates a name for the given base name that makes it unique between multiple
+# processing units
+# Generated names are truncated at 63 characters. This limit is reached when the
+# base name is 28 characters long. Longer base names can be used but uniqueness
+# is not guaranteed
+function gen_safe_name(basename)
+    name = "$(basename)-$(UUIDs.uuid4(MersenneTwister()))"
+    return name[1:min(sizeof(name), 63)]
+end
+
 const TEST_CONTEXT = Ref{Option{Context}}(nothing)
 
 function get_context()
@@ -27,16 +37,6 @@ set_context(Context(RAI.load_config(fname="/Users/testing/.rai")))
 """
 function set_context(new_context::Context)
     return TEST_CONTEXT[] = new_context
-end
-
-# Generates a name for the given base name that makes it unique between multiple
-# processing units
-# Generated names are truncated at 63 characters. This limit is reached when the
-# base name is 28 characters long. Longer base names can be used but uniqueness
-# is not guaranteed
-function gen_safe_name(basename)
-    name = "$(basename)-$(UUIDs.uuid4(MersenneTwister()))"
-    return name[1:min(sizeof(name), 63)]
 end
 
 function create_test_database_name(; default_basename="test_rel")::String
