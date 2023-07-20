@@ -139,6 +139,7 @@ If the pool size is smaller than the current size, engines will be de-provisione
 removed from the list until the desired size is reached.
 
 # Example
+
 ```
 resize_test_engine_pool(5)
 resize_test_engine_pool(10, id->"RAITest-test-\$id")

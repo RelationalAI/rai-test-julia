@@ -20,6 +20,7 @@ Set the context to be used by the testing framework.
 The default intialiser will load the default RAI config from the `.rai` directory.
 
 # Examples
+
 ```
 set_context(Context(RAI.load_config(fname="/Users/testing/.rai")))
 ```
@@ -59,7 +60,8 @@ Types and contents of the relations must match. Expected results should be in th
 a mapping from a String or Symbol to a tuple or vector of tuples.
 
 # Examples
-````
+
+```
 test_expected(Dict(:output => [(1, "a"), (2, "b")]), results, "letters")
 test_expected(Dict("/output/Int/String" => [(1, "a"), (2, "b")]), results, "letters")
 ```
@@ -126,30 +128,30 @@ const AcceptedSourceTypes =
     Union{String, Pair{String, String}, Vector{String}, Dict{String, String}}
 
 """
-    Transaction Step used for `test_rel`
+Transaction Step used for `test_rel`
 
-    - `query::String`: The query to use for the test
-    - `expected::AbstractDict`: Expected values in the form
-        `Dict("/:output/:a/Int64" => [1, 2])` or
-        `Dict(:a => p1, 2])`
-        Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the
-        values, or a type that can be converted to string and used as relation path.
-    - `expected_problems::Vector`: expected problems. The semantics of
-        `expected_problems` is that the program must contain a super set of the specified
-        error codes.
-    - `allow_unexpected::Symbol`: ignore problems with severity equal or lower than
-        specified. Accepted values are `:none`, `:warning`, `:error`.
-    - `install::Dict{String, String}`: source files to install in the database.
-    - `schema_inputs::AbstractDict`: input schema for the transaction
-    - `inputs::AbstractDict`: input data to the transaction
-    - `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it
-        is expected to abort, but it does not, then the test fails.
-    - `timeout_sec`: an upper bound on test execution time.
-    - `broken::Bool`: if the test is not currently correct (wrt the `expected`
-        results), then `broken` can be used to mark the tests as broken and prevent the test
-        from failing.
-    - `readonly`: If true, run the query as readonly
- """
+  - `query::String`: The query to use for the test
+  - `expected::AbstractDict`: Expected values in the form
+    `Dict("/:output/:a/Int64" => [1, 2])` or
+    `Dict(:a => p1, 2])`
+    Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the
+    values, or a type that can be converted to string and used as relation path.
+  - `expected_problems::Vector`: expected problems. The semantics of
+    `expected_problems` is that the program must contain a super set of the specified
+    error codes.
+  - `allow_unexpected::Symbol`: ignore problems with severity equal or lower than
+    specified. Accepted values are `:none`, `:warning`, `:error`.
+  - `install::Dict{String, String}`: source files to install in the database.
+  - `schema_inputs::AbstractDict`: input schema for the transaction
+  - `inputs::AbstractDict`: input data to the transaction
+  - `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it
+    is expected to abort, but it does not, then the test fails.
+  - `timeout_sec`: an upper bound on test execution time.
+  - `broken::Bool`: if the test is not currently correct (wrt the `expected`
+    results), then `broken` can be used to mark the tests as broken and prevent the test
+    from failing.
+  - `readonly`: If true, run the query as readonly
+"""
 struct Step
     query::Option{String}
     install::Dict{String, String}
