@@ -375,7 +375,11 @@ function test_rel_steps(;
     parent = Test.get_testset()
 
     if isnothing(name)
-        name = isnothing(location) ? "" : string(basename(string(location.file)), ":", location.line)
+        if isnothing(location)
+            name = ""
+        else
+            name = string(basename(string(location.file)), ":", location.line)
+        end
     end
 
     if !isnothing(location)
@@ -386,7 +390,14 @@ function test_rel_steps(;
     end
 
     distribute_test(parent) do
-        return _test_rel_steps(; steps, name, nested=is_distributed(parent), debug, clone_db, user_engine=engine)
+        return _test_rel_steps(;
+            steps,
+            name,
+            nested=is_distributed(parent),
+            debug,
+            clone_db,
+            user_engine=engine,
+        )
     end
 end
 
@@ -413,7 +424,14 @@ function _test_rel_steps(;
             @testset TestRelTestSet nested = nested "$name" begin
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
-                    inner_ts = _test_rel_step(index, step, schema, test_engine, name, length(steps))
+                    inner_ts = _test_rel_step(
+                        index,
+                        step,
+                        schema,
+                        test_engine,
+                        name,
+                        length(steps),
+                    )
                     # short circuit if something errored
                     if anyerror(inner_ts) && index < length(steps)
                         @error "Terminal error running $name - not executing further steps"
