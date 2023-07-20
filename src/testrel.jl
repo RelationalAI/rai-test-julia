@@ -63,6 +63,7 @@ function test_expected(expected::AbstractDict, results, testname::String)
 
         # Empty results will not be in the output so check for non-presence
         if isempty(expected_result_tuple_vector) && !haskey(results, name)
+            @debug("#testname: Expected empty $name was successfully not found")
             continue
         end
 
