@@ -22,7 +22,7 @@ suites with concurrent testing.
 ```
 using RAITest
 
-resize_engine_pool(2)
+resize_test_engine_pool(2)
 
 @test_rel("def output = 1 ic {output = 1}")
 
@@ -51,7 +51,7 @@ Run multiple tests concurrently.
 using RAITest
 using Test
 
-resize_engine_pool(3)
+resize_test_engine_pool(3)
 
 # Instead of provisioning as needed, provision in advance
 provision_all_test_engines()
@@ -72,7 +72,12 @@ Run multiple tests concurrently with a custom engine provider.
 using RAITest
 using Test
 
-set_engine_name_provider(()->"my_custom_engine_name")
+# Always use `my_existing_engine_name` as the engine name. This must already be created as
+# RAITest will not create the engine itself
+set_engine_name_provider(()->"my_existing_engine_name")
+
+# Releasing the engine does nothing. Controlling the engine use and cleanup is not handled
+# by RAITest
 set_engine_name_releaser((name::String)->return)
 
 @testset "My tests" begin
