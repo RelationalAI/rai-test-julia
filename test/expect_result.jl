@@ -35,47 +35,47 @@ function generate_arrow(results)
 end
 
 @testset "expected testing" begin
-    expected = Dict(:a=>[1, 2, 3])
+    expected = Dict(:a => [1, 2, 3])
     actual = nothing
     @test !RAITest.test_expected(expected, actual, "no results")
 
     expected = Dict()
-    actual = generate_arrow(Dict(:a=>[1, 2, 3], :b=>[]))
+    actual = generate_arrow(Dict(:a => [1, 2, 3], :b => []))
     @test RAITest.test_expected(expected, actual, "no expected")
 
     expected = Dict()
     actual = generate_arrow(Dict())
     @test RAITest.test_expected(expected, actual, "no results, no expected")
 
-    expected = Dict(:a=>[1, 2, 3])
+    expected = Dict(:a => [1, 2, 3])
     actual = generate_arrow(expected)
     @test RAITest.test_expected(expected, actual, "match")
 
-    expected = Dict(:a=>[1, 2, 3])
-    actual = generate_arrow(Dict(:a=>[1, 2, 4]))
+    expected = Dict(:a => [1, 2, 3])
+    actual = generate_arrow(Dict(:a => [1, 2, 4]))
     @test !RAITest.test_expected(expected, actual, "!match same type")
 
-    expected = Dict(:a=>[1, 2, 3])
-    actual = generate_arrow(Dict(:a=>["1", "2", "4"]))
+    expected = Dict(:a => [1, 2, 3])
+    actual = generate_arrow(Dict(:a => ["1", "2", "4"]))
     @test !RAITest.test_expected(expected, actual, "!match diff type")
 
-    expected = Dict(:a=>[1, 2, 3])
-    actual = generate_arrow(Dict(:a=>[]))
+    expected = Dict(:a => [1, 2, 3])
+    actual = generate_arrow(Dict(:a => []))
     @test !RAITest.test_expected(expected, actual, "!match empty a")
 
-    expected = Dict(:a=>[])
-    actual = generate_arrow(Dict(:a=>[1, 2, 3]))
+    expected = Dict(:a => [])
+    actual = generate_arrow(Dict(:a => [1, 2, 3]))
     @test RAITest.test_expected(expected, actual, "!match existence e")
 
-    expected = Dict(:a=>[1, 2, 3])
-    actual = generate_arrow(Dict(:a=>[1, 2, 3], :b=>[]))
+    expected = Dict(:a => [1, 2, 3])
+    actual = generate_arrow(Dict(:a => [1, 2, 3], :b => []))
     @test RAITest.test_expected(expected, actual, "match with extra")
 
-    expected = Dict(:a=>[1, 2, 3], :b=>["a"])
+    expected = Dict(:a => [1, 2, 3], :b => ["a"])
     actual = generate_arrow(expected)
     @test RAITest.test_expected(expected, actual, "match with extra 2")
 
-    expected = Dict(:a=>[(1, "a",), (2, "b",), (3, "c",)])
+    expected = Dict(:a => [(1, "a"), (2, "b"), (3, "c")])
     actual = generate_arrow(expected)
     @test RAITest.test_expected(expected, actual, "match tuple")
 end
