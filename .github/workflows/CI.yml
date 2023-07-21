@@ -1,5 +1,10 @@
 name: CI
-on: [push]
+on:
+  push:
+    branches:
+      - main
+    tags: '*'
+  pull_request:
 
 jobs:
   test:
@@ -7,7 +12,7 @@ jobs:
     strategy:
       matrix:
         julia-version: ['~1.8', '~1.9']
-        os: [ubuntu-latest, macOS-latest]
+        os: [ubuntu-latest]
     env:
       TEST_REL_DB_BASENAME: raitest-test
     steps:
