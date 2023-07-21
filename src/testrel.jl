@@ -47,39 +47,26 @@ Types and contents of the relations must match.
 """
 function test_expected(expected::AbstractDict, results, testname::String)
     # No testing to do, return immediaely
-    isempty(expected) && return
+    isempty(expected) && return true
     if isnothing(results)
         @info("$testname: No results")
         return false
     end
 
     for e in expected
-        name = string(e.first)
-        @debug("$testname: looking for expected result for relation " * name)
-        if e.first isa Symbol
-            name = "/:"
-            if !is_special_symbol(e.first)
-                name = "/:output/:"
-            end
-
-            name *= string(e.first)
-
-            # Now determine types
-            name *= type_string(e.second)
-        end
+        name = relation_id(e.first, e.second)
+        @debug("$testname: looking for expected result for relation " * string(e.first))
 
         # Expected results can be a tuple, or a vector of tuples
         # Actual results are an arrow table that can be iterated over
         expected_result_tuple_vector = sort(to_vector_of_tuples(e.second))
 
         # Empty results will not be in the output so check for non-presence
-        if isempty(expected_result_tuple_vector)
-            if haskey(results, name)
-                @info("$testname: Expected empty " * name * " not empty")
-                return false
-            end
+        if isempty(expected_result_tuple_vector) && !haskey(results, name)
+            @debug("$testname: Expected empty $name was successfully not found")
             continue
         end
+
         if !haskey(results, name)
             @info("$testname: Expected relation $name not found")
             @debug("$testname: Results", results)
@@ -91,18 +78,22 @@ function test_expected(expected::AbstractDict, results, testname::String)
 
         # convert actual results to a vector for comparison
         actual_result = results[name]
-        actual_result_vector = sort(collect(zip(actual_result...)))
+        if isempty(actual_result)
+            actual_result_vector = [()]
+        else
+            actual_result_vector = sort(collect(zip(actual_result...)))
+        end
 
         if !isequal(expected_result_tuple_vector, actual_result_vector)
             @warn(
-                "$testname: Expected result vs. actual",
+                "$testname: Expected result vs. actual for $name",
                 expected_result_tuple_vector,
                 actual_result_vector
             )
             return false
         else
             @debug(
-                "$testname: Expected result vs. actual",
+                "$testname: Expected result vs. actual for $name",
                 expected_result_tuple_vector,
                 actual_result_vector
             )
@@ -384,7 +375,11 @@ function test_rel_steps(;
     parent = Test.get_testset()
 
     if isnothing(name)
-        name = isnothing(location) ? "" : string(basename(string(location.file)), ":", location.line)
+        if isnothing(location)
+            name = ""
+        else
+            name = string(basename(string(location.file)), ":", location.line)
+        end
     end
 
     if !isnothing(location)
@@ -395,7 +390,14 @@ function test_rel_steps(;
     end
 
     distribute_test(parent) do
-        return _test_rel_steps(; steps, name, nested=is_distributed(parent), clone_db, user_engine=engine)
+        return _test_rel_steps(;
+            steps,
+            name,
+            nested=is_distributed(parent),
+            debug,
+            clone_db,
+            user_engine=engine,
+        )
     end
 end
 
@@ -404,6 +406,7 @@ function _test_rel_steps(;
     steps::Vector{Step},
     name::Option{String},
     nested::Bool=false,
+    debug::Bool=false,
     clone_db::Option{String}=nothing,
     user_engine::Option{String}=nothing,
 )
@@ -421,7 +424,14 @@ function _test_rel_steps(;
             @testset TestRelTestSet nested = nested "$name" begin
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
-                    inner_ts = _test_rel_step(index, step, schema, test_engine, name, length(steps))
+                    inner_ts = _test_rel_step(
+                        index,
+                        step,
+                        schema,
+                        test_engine,
+                        name,
+                        length(steps),
+                    )
                     # short circuit if something errored
                     if anyerror(inner_ts) && index < length(steps)
                         @error "Terminal error running $name - not executing further steps"
@@ -445,6 +455,11 @@ function _test_rel_steps(;
             playback_log.(ctx, logger.logs)
             msg = String(take!(io))
             @error msg database = schema engine_name = test_engine
+        elseif debug || !nested
+            io, ctx = get_logging_io()
+            playback_log.(ctx, logger.logs)
+            msg = String(take!(io))
+            println(msg)
         else
             @info log_header
         end
@@ -570,10 +585,6 @@ function _execute_test(
     txn_id = rsp.transaction.id
     @info "$name: Executing with txn $txn_id" transaction_id = txn_id
 
-    # The response may already contain the result. If so, we can return it immediately
-    if !isnothing(rsp.results)
-        return rsp
-    end
     # The transaction was not immediately completed.
     # Poll until the transaction is done, or times out, then return the results.
     try
@@ -676,9 +687,7 @@ function _test_rel_step(
             end
         end
 
-        if !isempty(step.expected)
-            @test test_expected(step.expected, results_dict, name)
-        end
+        @test test_expected(step.expected, results_dict, name)
 
         if !step.expect_abort
             @test state == "COMPLETED"
