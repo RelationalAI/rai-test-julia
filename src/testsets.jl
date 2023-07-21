@@ -187,7 +187,16 @@ function record(ts::RAITestSet, child::TestRelTestSet)
         nothing
     end
     tc = JUnitTestCase(name, counts, nothing, child.error_message, logs)
-    junit_record!(ts.junit, tc)
+
+    # A top level RAITestSet will contain a set of testsuites, so we need to wrap the
+    # testcase in a testsuite to record it
+    if Test.get_testset_depth() == 0
+        juts = JUnitTestSuite(ts.dts.description)
+        junit_record!(juts, tc)
+        junit_record!(ts.junit, juts)
+    else
+        junit_record!(ts.junit, tc)
+    end
     return record(ts.dts, child.dts)
 end
 record(ts::TestRelTestSet, child::AbstractTestSet) = record(ts.dts, child)
