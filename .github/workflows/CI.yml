@@ -1,0 +1,36 @@
+name: CI
+on:
+  push:
+    branches:
+      - main
+    tags: '*'
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        julia-version: ['~1.8', '~1.9']
+        os: [ubuntu-latest]
+    env:
+      TEST_REL_DB_BASENAME: raitest-test
+    steps:
+      - uses: actions/checkout@v3
+
+      - uses: julia-actions/setup-julia@v1
+        with:
+          version: ${{ matrix.julia-version }}
+
+      - uses: ./.github/actions/setup-raicloud
+        with:
+          client_id: ${{ secrets.RAICLOUD_CLIENT_ID }}
+          client_secret: ${{ secrets.RAICLOUD_CLIENT_SECRET }}
+
+      - name: Build packages
+        run: |
+          julia --project=. -e 'using Pkg; Pkg.build()'
+
+      - name: Test RAITest
+        run: |
+         julia --project=. test/runtests.jl

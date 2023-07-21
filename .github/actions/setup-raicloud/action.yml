@@ -1,0 +1,24 @@
+name: 'Setup RAICloud'
+description: 'Set up RAICloud credentials'
+
+inputs:
+  client_id:
+    required: true
+    description: 'Client ID'
+
+  client_secret:
+    required: true
+    description: 'Client secret'
+
+runs:
+  using: "composite"
+  steps:
+    - run: mkdir -p $HOME/.rai
+      shell: bash
+
+    - run: |
+        echo -e "[default]\n" >> $HOME/.rai/config
+        echo -e "host=azure.relationalai.com\n" >> $HOME/.rai/config
+        echo -e "client_id=${{ inputs.client_id }}\n" >> $HOME/.rai/config
+        echo -e "client_secret=${{ inputs.client_secret }}\n" >> $HOME/.rai/config
+      shell: bash
