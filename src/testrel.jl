@@ -68,15 +68,15 @@ test_expected(Dict("/output/Int/String" => [(1, "a"), (2, "b")]), results, "lett
 """
 function test_expected(expected::AbstractDict, results, testname::String)
     # No testing to do, return immediaely
-    isempty(expected) && return
+    isempty(expected) && return true
     if isnothing(results)
         @info("$testname: No results")
         return false
     end
 
     for e in expected
-        name = build_path(e.first, e.second)
-        @debug("$testname: looking for expected result for relation " * name)
+        name = relation_id(e.first, e.second)
+        @debug("$testname: looking for expected result for relation " * string(e.first))
 
         # Expected results can be a tuple, or a vector of tuples
         # Actual results are an arrow table that can be iterated over
@@ -84,6 +84,7 @@ function test_expected(expected::AbstractDict, results, testname::String)
 
         # Empty results will not be in the output so check for non-presence
         if isempty(expected_result_tuple_vector) && !haskey(results, name)
+            @debug("$testname: Expected empty $name was successfully not found")
             continue
         end
 
@@ -104,8 +105,7 @@ function test_expected(expected::AbstractDict, results, testname::String)
             actual_result_vector = sort(collect(zip(actual_result...)))
         end
 
-        if isempty(expected_result_tuple_vector) ||
-                !isequal(expected_result_tuple_vector, actual_result_vector)
+        if !isequal(expected_result_tuple_vector, actual_result_vector)
             @warn(
                 "$testname: Expected result vs. actual for $name",
                 expected_result_tuple_vector,
@@ -394,7 +394,11 @@ function test_rel_steps(;
     parent = Test.get_testset()
 
     if isnothing(name)
-        name = isnothing(location) ? "" : string(basename(string(location.file)), ":", location.line)
+        if isnothing(location)
+            name = ""
+        else
+            name = string(basename(string(location.file)), ":", location.line)
+        end
     end
 
     if !isnothing(location)
@@ -405,7 +409,14 @@ function test_rel_steps(;
     end
 
     distribute_test(parent) do
-        return _test_rel_steps(; steps, name, nested=is_distributed(parent), debug, clone_db, user_engine=engine)
+        return _test_rel_steps(;
+            steps,
+            name,
+            nested=is_distributed(parent),
+            debug,
+            clone_db,
+            user_engine=engine,
+        )
     end
 end
 
@@ -432,7 +443,14 @@ function _test_rel_steps(;
             @testset TestRelTestSet nested = nested "$name" begin
                 create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
-                    inner_ts = _test_rel_step(index, step, schema, test_engine, name, length(steps))
+                    inner_ts = _test_rel_step(
+                        index,
+                        step,
+                        schema,
+                        test_engine,
+                        name,
+                        length(steps),
+                    )
                     # short circuit if something errored
                     if anyerror(inner_ts) && index < length(steps)
                         @error "Terminal error running $name - not executing further steps"
@@ -690,9 +708,7 @@ function _test_rel_step(
             end
         end
 
-        if !isempty(step.expected)
-            @test test_expected(step.expected, results_dict, name)
-        end
+        @test test_expected(step.expected, results_dict, name)
 
         if !step.expect_abort
             @test state == "COMPLETED"

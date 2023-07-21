@@ -7,22 +7,22 @@ for distributed in (true, false)
     ts = @testset RAITestSet "outer" distributed=distributed begin
         @testset "middle" begin
             @testset TestRelTestSet "inner" begin
-                @test (sleep(1); true)
+                @test (sleep(2); true)
             end
         end
     end
     @testset "record (distributed=$distributed)" begin
         outer = ts.dts
         @test outer.description == "outer"
-        @test 1 < outer.time_end - outer.time_start < 2
+        @test 2 < outer.time_end - outer.time_start < 4
         @test length(outer.results) == 1
         middle = only(outer.results)
         @test middle.description == "middle"
-        @test 1 < middle.time_end - middle.time_start < 2
+        @test 2 < middle.time_end - middle.time_start < 4
         @test length(middle.results) == 1
         inner = only(middle.results)
         @test inner.description == "inner"
-        @test 1 < inner.time_end - inner.time_start < 2
+        @test 2 < inner.time_end - inner.time_start < 4
         @test isempty(inner.results)
         @test inner.n_passed == 1
     end
@@ -43,3 +43,23 @@ end
         end
     end
 end
+
+# Test test_rel usage
+# A valid .rai/config is required to run these tests
+if isnothing(RAITest.get_context())
+    @warn "No RAI config provided. Skipping integration tests"
+else
+    try
+        resize_test_engine_pool(2, (i)->"RAITest-test-$i")
+        provision_all_test_engines()
+
+        @testset RAITestSet "Basic Integration" begin
+            include("integration.jl")
+        end
+
+    finally
+        resize_test_engine_pool(0)
+    end
+end
+
+include("expect_result.jl")
