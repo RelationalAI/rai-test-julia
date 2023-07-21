@@ -125,7 +125,8 @@ function type_string(type::DataType)
     type == String && return "/$type"
     # Non-container type
     eltype(type) == type && return "/$type"
-    # container type: presumably a Tuple
+
+    # Container type: presumably a Tuple
     result = "/("
     for e_type in fieldtypes(type)
         result *= type_string(e_type)
