@@ -4,20 +4,20 @@ using Test
 enumerate_row(value) = enumerate(value)
 enumerate_row(value::String) = [(1, value)]
 
+# Generate a mapping from relation id to Arrow values
+# Takes as input a Dict mapping relation symbolic name to expected values
 function generate_arrow(results)
     arrowed_results = Dict()
-    for result in results
-        key = RAITest.relation_id(result[1], result[2])
+    for (name, expected) in results
+        key = RAITest.relation_id(name, expected)
         value = []
-        if isempty(result[2])
+        if isempty(expected)
             value = (v1=[],)
         else
             # Generate a v column for each column in multi-value rows
-            vs = []
-            for _ in first(result[2])
-                push!(vs, [])
-            end
-            for row in result[2]
+            vs = [[] for _ in 1:length(first(expected))]
+
+            for row in expected
                 for (i, v) in enumerate_row(row)
                     push!(vs[i], v)
                 end
