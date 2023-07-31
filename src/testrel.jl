@@ -45,11 +45,11 @@ function create_test_database_name(; default_basename="test_rel")::String
 end
 
 function create_test_database(name::String, clone_db::Option{String}=nothing)
-    return create_database(get_context(), name; source=clone_db).database
+    return create_database(get_context(), name; source=clone_db, readtimeout=30).database
 end
 
 function delete_test_database(name::String)
-    return delete_database(get_context(), name)
+    return delete_database(get_context(), name; readtimeout=30)
 end
 
 """

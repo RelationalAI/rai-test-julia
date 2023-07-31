@@ -4,7 +4,7 @@ using Test
 
 # Test that results get recorded as expected.
 for distributed in (true, false)
-    ts = @testset RAITestSet "outer" distributed=distributed begin
+    ts = @testset RAITestSet "outer" distributed = distributed begin
         @testset "middle" begin
             @testset TestRelTestSet "inner" begin
                 @test (sleep(2); true)
@@ -43,7 +43,6 @@ end
         end
     end
 end
-
 # Test test_rel usage
 # A valid .rai/config is required to run these tests
 if isnothing(RAITest.get_context())
@@ -63,3 +62,5 @@ else
 end
 
 include("expect_result.jl")
+
+include("expect_problem.jl")
