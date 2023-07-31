@@ -55,8 +55,8 @@ using Dates
 
 # Float
 @test input_element_to_string(Float64(1)) == "1.0"
-@test input_element_to_string(Float32(1)) == "1.0"
-@test input_element_to_string(Float16(1)) == "1.0"
+@test input_element_to_string(Float32(1)) == "float[32, 1.0]"
+@test input_element_to_string(Float16(1)) == "float[16, 1.0]"
 
 @test input_element_to_string("s") == "\"s\""
 @test input_element_to_string("s\ns") == "\"s\\ns\""

@@ -39,17 +39,17 @@ function input_element_to_string(input)
     return repr(input)
 end
 
-function input_element_to_string(input::AbstractFloat)
-    # `repr`` will generate non-parseable `1.0f0`/`Float16(1.0)`
-    return string(input)
+function input_element_to_string(input::Float16)
+    # `repr`` will generate non-parseable Float16(1.0)`
+    return "float[16, $input]"
 end
 
-function input_element_to_string(input::Dates.Date)
-    # `repr` will generate un-rel-parseable values
-    return string(input)
+function input_element_to_string(input::Float32)
+    # `repr`` will generate non-parseable `1.0f0`
+    return "float[32, $input]"
 end
 
-function input_element_to_string(input::Dates.DateTime)
+function input_element_to_string(input::Union{Dates.Date, Dates.DateTime})
     # `repr` will generate un-rel-parseable values
     return string(input)
 end
