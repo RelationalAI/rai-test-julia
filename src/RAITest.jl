@@ -2,6 +2,7 @@ module RAITest
 
 using Test: @testset, TestLogger, LogRecord
 
+import Dates
 import Logging
 import Pkg
 
