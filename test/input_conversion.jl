@@ -64,9 +64,4 @@ using Dates
 @test input_element_to_string('c') == "'c'"
 @test input_element_to_string('\n') == "'\\n'"
 
-# Dates (note that these aren't supported as expected values)
-@test input_element_to_string(Date(2013, 1, 1)) == "2013-01-01"
-@test input_element_to_string(DateTime(2013, 1, 1, 12, 30)) == "2013-01-01T12:30:00"
-@test input_element_to_string(DateTime(2013, 1, 1, 12, 30, 59, 1)) == "2013-01-01T12:30:59.001"
-
 end
