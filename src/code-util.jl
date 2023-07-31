@@ -49,6 +49,26 @@ function input_element_to_string(input::Float32)
     return "float[32, $input]"
 end
 
+function input_element_to_string(input::Int8)
+    # `repr`` will generate non-parseable Float16(1.0)`
+    return "int[8, $input]"
+end
+
+function input_element_to_string(input::Int16)
+    # `repr`` will generate non-parseable Float16(1.0)`
+    return "int[16, $input]"
+end
+
+function input_element_to_string(input::Int32)
+    # `repr`` will generate non-parseable `1.0f0`
+    return "int[32, $input]"
+end
+
+function input_element_to_string(input::Int128)
+    # `repr`` will generate non-parseable `1.0f0`
+    return "int[128, $input]"
+end
+
 # Escape strings in a format that is valid rel
 # repr() would be nice, but does not produce valid rel-escaped strings
 function input_element_to_string(input::String)

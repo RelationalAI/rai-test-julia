@@ -140,3 +140,20 @@
     abort_on_error = true,
     expect_abort = true,
 )
+
+# Input -> Rel -> Expected types
+
+@test_rel(
+    name = "input to expected",
+    query = "",
+    input = Dict(
+        :a => Int8[1, 2],
+        :b => Int16[1, 2],
+        :c => Int32[1, 2],
+        :d => Int64[1, 2]),
+    expected = Dict(
+        :a => Int8[1, 2],
+        :b => Int16[1, 2],
+        :c => Int32[1, 2],
+        :d => Int64[1, 2]),
+)
