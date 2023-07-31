@@ -205,9 +205,9 @@ function extract_problems(results)
         return problems
     end
 
-    indices = results[rel_code_key][1]
-
-    for i in 1:length(indices)
+    # Every diagnostic must have a code, and is indexed from 1 to length, so we use that
+    # for a ley.
+    for i in 1:length(results[rel_code_key][1])
         code = extract_detail(results, rel_code_key, 2, i)
         # index, subindex, line
         line = extract_detail(results, rel_line_key, 3, i)
