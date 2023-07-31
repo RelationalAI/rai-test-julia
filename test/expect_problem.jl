@@ -1,10 +1,5 @@
 using Arrow
 
-rel_code_key = "/:rel/:catalog/:diagnostic/:code/Int64/String"
-rel_line_key = "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"
-rel_severity_key = "/:rel/:catalog/:diagnostic/:severity/Int64/String"
-rel_message_key = "/:rel/:catalog/:diagnostic/:message/Int64/String"
-
 function generate_arrow(problems)
     code_table = []
     line_table = []
@@ -30,15 +25,15 @@ function generate_arrow(problems)
     end
 
     results = Dict()
-    results[rel_code_key] = Arrow.Table(Arrow.tobuffer(code_table))
+    results[RAITest.REL_CODE_KEY] = Arrow.Table(Arrow.tobuffer(code_table))
     if !isempty(line_table)
-        results[rel_line_key] = Arrow.Table(Arrow.tobuffer(line_table))
+        results[RAITest.REL_LINE_KEY] = Arrow.Table(Arrow.tobuffer(line_table))
     end
     if !isempty(severity_table)
-        results[rel_severity_key] = Arrow.Table(Arrow.tobuffer(severity_table))
+        results[RAITest.REL_SEVERITY_KEY] = Arrow.Table(Arrow.tobuffer(severity_table))
     end
     if !isempty(message_table)
-        results[rel_message_key] = Arrow.Table(Arrow.tobuffer(message_table))
+        results[RAITest.REL_MESSAGE_KEY] = Arrow.Table(Arrow.tobuffer(message_table))
     end
 
     return results
@@ -59,7 +54,7 @@ end
             :message => "message",
         ),
         (
-            :index => 1,
+            :index => 2,
             :code => "UNBOUND_VARIABLE",
             :severity => "error",
             :line => 3,

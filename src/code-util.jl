@@ -1,6 +1,11 @@
 # helper for optional types
 const Option{T} = Union{Nothing, T}
 
+const REL_CODE_KEY = "/:rel/:catalog/:diagnostic/:code/Int64/String"
+const REL_LINE_KEY = "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"
+const REL_SEVERITY_KEY = "/:rel/:catalog/:diagnostic/:severity/Int64/String"
+const REL_MESSAGE_KEY = "/:rel/:catalog/:diagnostic/:message/Int64/String"
+
 # Extract relation names from the inputs and adds them to the program
 # Turns a dict of name=>vector, with names of form :othername/Type,
 # into a series of def name = list of tuples
@@ -196,25 +201,21 @@ end
 function extract_problems(results)
     problems = []
 
-    rel_code_key = "/:rel/:catalog/:diagnostic/:code/Int64/String"
-    rel_line_key = "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"
-    rel_severity_key = "/:rel/:catalog/:diagnostic/:severity/Int64/String"
-    rel_message_key = "/:rel/:catalog/:diagnostic/:message/Int64/String"
-
-    if !haskey(results, rel_code_key)
+    if !haskey(results, REL_CODE_KEY)
         return problems
     end
 
+    indices = results[REL_CODE_KEY][1]
     # Every diagnostic must have a code, and is indexed from 1 to length, so we use that
-    # for a ley.
-    for i in 1:length(results[rel_code_key][1])
-        code = extract_detail(results, rel_code_key, 2, i)
+    # for a key.
+    for i in indices
+        code = extract_detail(results, REL_CODE_KEY, 2, i)
         # index, subindex, line
-        line = extract_detail(results, rel_line_key, 3, i)
+        line = extract_detail(results, REL_LINE_KEY, 3, i)
         # index, severity
-        severity = extract_detail(results, rel_severity_key, 2, i)
+        severity = extract_detail(results, REL_SEVERITY_KEY, 2, i)
         # index, message
-        message = extract_detail(results, rel_message_key, 2, i)
+        message = extract_detail(results, REL_MESSAGE_KEY, 2, i)
 
         problem = (; code, line, severity, message)
         push!(problems, problem)
