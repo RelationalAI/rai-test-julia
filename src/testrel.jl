@@ -52,20 +52,12 @@ function delete_test_database(name::String)
     return delete_database(get_context(), name; readtimeout=30)
 end
 
-"""
-    test_expected(expected::AbstractDict, results, testname::String)
-
-Given a Dict of expected relations, test if the actual results contain those relations.
-Types and contents of the relations must match. Expected results should be in the form of
-a mapping from a String or Symbol to a tuple or vector of tuples.
-
+# Given a Dict of expected relations, test if the actual results contain those relations.
+# Types and contents of the relations must match. Expected results should be in the form of
+# a mapping from a String or Symbol to a tuple or vector of tuples.
 # Examples
-
-```
-test_expected(Dict(:output => [(1, "a"), (2, "b")]), results, "letters")
-test_expected(Dict("/output/Int/String" => [(1, "a"), (2, "b")]), results, "letters")
-```
-"""
+# test_expected(Dict(:output => [(1, "a"), (2, "b")]), results, "letters")
+# test_expected(Dict("/output/Int/String" => [(1, "a"), (2, "b")]), results, "letters")
 function test_expected(expected::AbstractDict, results, testname::String)
     # No testing to do, return immediaely
     isempty(expected) && return true
