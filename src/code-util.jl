@@ -12,8 +12,8 @@ convert_to_install_kv(install_pair::Pair{String, String}) = Dict(install_pair)
 convert_to_install_kv(install_string::String) = convert_to_install_kv([install_string])
 function convert_to_install_kv(install_vector::Vector{String})
     models = Dict{String, String}()
-    for i in enumerate(install_vector)
-        models["test_install" * string(i[1])] = i[2]
+    for (i, src) in enumerate(install_vector)
+        models["test_install_$i"] = src
     end
     return models
 end
