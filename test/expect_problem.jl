@@ -47,14 +47,14 @@ end
     # Test matching on code, code + line, code + line + severity
     test_results = generate_arrow([
         (
-            :index => 1,
+            :index => 2,
             :code => "UNDEFINED",
             :severity => "error",
             :line => 2,
             :message => "message",
         ),
         (
-            :index => 2,
+            :index => 3,
             :code => "UNBOUND_VARIABLE",
             :severity => "error",
             :line => 3,
