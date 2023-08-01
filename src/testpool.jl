@@ -146,7 +146,7 @@ resize_test_engine_pool(10, id->"RAITest-test-\$id")
 resize_test_engine_pool(0)
 ```
 """
-function resize_test_engine_pool(size::Int64, generator::Option{Function}=nothing)
+function resize_test_engine_pool!(size::Int64, generator::Option{Function}=nothing)
     if size < 0
         size = 0
     end
@@ -189,7 +189,7 @@ end
 """
 Call delete for any provisioned engines and resize the engine pool to zero.
 """
-function destroy_test_engines()
-    resize_test_engine_pool(0)
+function destroy_test_engines!()
+    resize_test_engine_pool!(0)
     @info("Destroyed all test engine: ")
 end

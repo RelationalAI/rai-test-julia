@@ -80,7 +80,7 @@ set_engine_name_provider(() -> my_custom_engine_selector("MyEngine"))
 
 ```
 """
-function set_engine_name_provider(provider::Function)
+function set_engine_name_provider!(provider::Function)
     return TEST_ENGINE_PROVISION.provider = provider
 end
 
@@ -99,7 +99,7 @@ set_engine_name_releaser((::String) -> nothing)
 set_engine_name_releaser((name::String) -> delete_engine(context, name))
 ```
 """
-function set_engine_name_releaser(releaser::Function)
+function set_engine_name_releaser!(releaser::Function)
     return TEST_ENGINE_PROVISION.releaser = releaser
 end
 
@@ -114,7 +114,7 @@ Set a function used to create engines.
     set_engine_creater(create_default_engine)
 ```
 """
-function set_engine_creater(creater::Function)
+function set_engine_creater!(creater::Function)
     return TEST_ENGINE_PROVISION.creater = creater
 end
 

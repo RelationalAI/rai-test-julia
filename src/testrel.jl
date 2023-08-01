@@ -35,7 +35,7 @@ The default intialiser will load the default RAI config from the `.rai` director
 set_context(Context(RAI.load_config(fname="/Users/testing/.rai")))
 ```
 """
-function set_context(new_context::Context)
+function set_context!(new_context::Context)
     return TEST_CONTEXT[] = new_context
 end
 
