@@ -76,7 +76,7 @@ provider selects a name from a pool of available test engines.
 
 ```
 set_engine_name_provider(() -> "MyEngine")
-set_engine_name_provider(() -> create_default_engine("MyEngine"))
+set_engine_name_provider(() -> my_custom_engine_selector("MyEngine"))
 
 ```
 """
