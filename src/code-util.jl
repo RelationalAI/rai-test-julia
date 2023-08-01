@@ -205,10 +205,9 @@ function extract_problems(results)
         return problems
     end
 
-    indices = results[REL_CODE_KEY][1]
-    # Every diagnostic must have a code, and is indexed from 1 to length, so we use that
-    # for a key.
-    for i in indices
+    # Diagnostic categories have identical ordering so we can use row to find matches
+    # across categories, starting with row 1
+    for i in 1:length(results[REL_CODE_KEY][1])
         code = extract_detail(results, REL_CODE_KEY, 2, i)
         # index, subindex, line
         line = extract_detail(results, REL_LINE_KEY, 3, i)
