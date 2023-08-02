@@ -141,9 +141,9 @@ removed from the list until the desired size is reached.
 # Example
 
 ```
-resize_test_engine_pool(5)
-resize_test_engine_pool(10, id->"RAITest-test-\$id")
-resize_test_engine_pool(0)
+resize_test_engine_pool!(5)
+resize_test_engine_pool!(10, id->"RAITest-test-\$id")
+resize_test_engine_pool!(0)
 ```
 """
 function resize_test_engine_pool!(size::Int64, generator::Option{Function}=nothing)

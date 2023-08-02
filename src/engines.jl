@@ -75,8 +75,8 @@ provider selects a name from a pool of available test engines.
 # Examples
 
 ```
-set_engine_name_provider(() -> "MyEngine")
-set_engine_name_provider(() -> my_custom_engine_selector())
+set_engine_name_provider!() -> "MyEngine")
+set_engine_name_provider!() -> my_custom_engine_selector())
 
 ```
 """
@@ -85,7 +85,7 @@ function set_engine_name_provider!(provider::Function)
 end
 
 """
-    set_engine_name_releaser(releaser::Function)
+    set_engine_name_releaser!(releaser::Function)
 
 Set a releaser for test engine names.
 
@@ -95,8 +95,8 @@ marks an engine in the test engine pool as available for use by another test.
 # Examples
 
 ```
-set_engine_name_releaser((::String) -> nothing)
-set_engine_name_releaser((name::String) -> delete_engine(context, name))
+set_engine_name_releaser!(::String) -> nothing)
+set_engine_name_releaser!(name::String) -> my_custom_engine_releaser(name))
 ```
 """
 function set_engine_name_releaser!(releaser::Function)
@@ -104,7 +104,7 @@ function set_engine_name_releaser!(releaser::Function)
 end
 
 """
-    set_engine_creater(creater::Function)
+    set_engine_creater!(creater::Function)
 
 Set a function used to create engines.
 
