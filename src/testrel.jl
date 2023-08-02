@@ -134,7 +134,6 @@ Transaction Step used for `test_rel`
   - `allow_unexpected::Symbol`: ignore problems with severity equal or lower than
     specified. Accepted values are `:none`, `:warning`, `:error`.
   - `install::Dict{String, String}`: source files to install in the database.
-  - `schema_inputs::AbstractDict`: input schema for the transaction
   - `inputs::AbstractDict`: input data to the transaction
   - `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it
     is expected to abort, but it does not, then the test fails.
@@ -243,7 +242,6 @@ Note that `test_rel` creates a new schema for each test.
     specified. Accepted values are `:none`, `:warning`, `:error`.
   - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
   - `install::Dict{String, String}`: source files to install in the database.
-  - `schema_inputs::AbstractDict`: input schema for the transaction
   - `inputs::AbstractDict`: input data to the transaction
   - `abort_on_error::Bool`: boolean that specifies whether to abort on any
     triggered error.
