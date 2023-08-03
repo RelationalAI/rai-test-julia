@@ -635,7 +635,13 @@ function _test_rel_step(
 
     @testset TestRelTestSet "$name" broken = step.broken begin
         if !isempty(step.install)
-            load_models(get_context(), schema, engine, step.install)
+            load_models(
+                get_context(),
+                schema,
+                engine,
+                step.install;
+                readtimeout=step.timeout_sec,
+            )
         end
 
         # Don't test empty strings
