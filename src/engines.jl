@@ -65,7 +65,7 @@ get_test_engine()::String = TEST_ENGINE_PROVISION.provider()
 release_test_engine(name::String) = TEST_ENGINE_PROVISION.releaser(name)
 
 """
-    set_engine_name_provider(provider::Function)
+    set_engine_name_provider!(provider::Function)
 
 Set a provider for test engine names.
 
@@ -111,7 +111,7 @@ Set a function used to create engines.
 # Examples
 
 ```
-    set_engine_creater(create_default_engine)
+    set_engine_creater!(create_default_engine)
 ```
 """
 function set_engine_creater!(creater::Function)

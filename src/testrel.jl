@@ -23,7 +23,7 @@ function get_context()
 end
 
 """
-    set_context(new_context::Context)
+    set_context!(new_context::Context)
 
 Set the context to be used by the testing framework.
 
@@ -32,7 +32,7 @@ The default intialiser will load the default RAI config from the `.rai` director
 # Examples
 
 ```
-set_context(Context(RAI.load_config(fname="/Users/testing/.rai")))
+set_context!(Context(RAI.load_config(fname="/Users/testing/.rai")))
 ```
 """
 function set_context!(new_context::Context)
