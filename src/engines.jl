@@ -32,7 +32,10 @@ function _wait_till_provisioned(engine_name, max_wait_time_s=600)
 end
 
 """
+    create_default_engine(name::String)
+
 Create an XS engine with default settings and the provided name.
+
 If the engine already exists, return immediately. If not, create the engine then
 return once the provisioning process is complete, or failed.
 """
@@ -61,15 +64,57 @@ get_test_engine()::String = TEST_ENGINE_PROVISION.provider()
 # Release test engine. Notifies the provider that this engine is no longer in use.
 release_test_engine(name::String) = TEST_ENGINE_PROVISION.releaser(name)
 
-function set_engine_name_provider(provider::Function)
+"""
+    set_engine_name_provider!(provider::Function)
+
+Set a provider for test engine names.
+
+The provider is called by each test to select an engine to run the test with. The default
+provider selects a name from a pool of available test engines.
+
+# Examples
+
+```
+set_engine_name_provider!() -> "MyEngine")
+set_engine_name_provider!() -> my_custom_engine_selector())
+
+```
+"""
+function set_engine_name_provider!(provider::Function)
     return TEST_ENGINE_PROVISION.provider = provider
 end
 
-function set_engine_name_releaser(releaser::Function)
+"""
+    set_engine_name_releaser!(releaser::Function)
+
+Set a releaser for test engine names.
+
+The releaser will be called after a test has been run. The default releaser
+marks an engine in the test engine pool as available for use by another test.
+
+# Examples
+
+```
+set_engine_name_releaser!(::String) -> nothing)
+set_engine_name_releaser!(name::String) -> my_custom_engine_releaser(name))
+```
+"""
+function set_engine_name_releaser!(releaser::Function)
     return TEST_ENGINE_PROVISION.releaser = releaser
 end
 
-function set_engine_creater(creater::Function)
+"""
+    set_engine_creater!(creater::Function)
+
+Set a function used to create engines.
+
+# Examples
+
+```
+    set_engine_creater!(create_default_engine)
+```
+"""
+function set_engine_creater!(creater::Function)
     return TEST_ENGINE_PROVISION.creater = creater
 end
 

@@ -1,6 +1,40 @@
 # helper for optional types
 const Option{T} = Union{Nothing, T}
 
+const REL_CODE_KEY = "/:rel/:catalog/:diagnostic/:code/Int64/String"
+const REL_LINE_KEY = "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"
+const REL_SEVERITY_KEY = "/:rel/:catalog/:diagnostic/:severity/Int64/String"
+const REL_MESSAGE_KEY = "/:rel/:catalog/:diagnostic/:message/Int64/String"
+
+# Convert accepted install source types to Dict{String, String}
+convert_to_install_kv(install_dict::Dict{String, String}) = install_dict
+convert_to_install_kv(install_pair::Pair{String, String}) = Dict(install_pair)
+convert_to_install_kv(install_string::String) = convert_to_install_kv([install_string])
+function convert_to_install_kv(install_vector::Vector{String})
+    models = Dict{String, String}()
+    for (i, src) in enumerate(install_vector)
+        models["test_install_$i"] = src
+    end
+    return models
+end
+
+# Build a path/key to identify an expected relation in the output
+function build_path(base::Symbol, values)
+    name = "/:"
+    if !is_special_symbol(base)
+        name = "/:output/:"
+    end
+
+    name *= string(base)
+
+    # Now determine types
+    name *= type_string(values)
+
+    return name
+end
+
+build_path(name::Any, ::Any) = string(name)
+
 # Extract relation names from the inputs and adds them to the program
 # Turns a dict of name=>vector, with names of form :othername/Type,
 # into a series of def name = list of tuples
@@ -203,6 +237,16 @@ function Base.isequal(expected::UInt128, actual::Tuple{UInt64, UInt64})
     return isequal(expected, a)
 end
 
+function extract_detail(results, key, cat_index, row_index)
+    problem_category = get(results, key, nothing)
+    if isnothing(problem_category)
+        return nothing
+    end
+    rows = get(problem_category, cat_index, Dict())
+
+    return get(rows, row_index, nothing)
+end
+
 # In some error cases the results may be nothing, rather than empty
 function extract_problems(results::Nothing)
     return []
@@ -211,46 +255,23 @@ end
 function extract_problems(results)
     problems = []
 
-    rel_code_key = "/:rel/:catalog/:diagnostic/:code/Int64/String"
-    rel_line_key = "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64/Int64"
-    rel_severity_key = "/:rel/:catalog/:diagnostic/:severity/Int64/String"
-
-    if !haskey(results, rel_code_key)
+    if !haskey(results, REL_CODE_KEY)
         return problems
     end
 
-    # [index, code]
-    problem_codes = results[rel_code_key]
+    # Diagnostic categories have identical ordering so we can use row to find matches
+    # across categories, starting with row 1
+    for i in 1:length(results[REL_CODE_KEY][1])
+        code = extract_detail(results, REL_CODE_KEY, 2, i)
+        # index, subindex, line
+        line = extract_detail(results, REL_LINE_KEY, 3, i)
+        # index, severity
+        severity = extract_detail(results, REL_SEVERITY_KEY, 2, i)
+        # index, message
+        message = extract_detail(results, REL_MESSAGE_KEY, 2, i)
 
-    problem_lines = Dict()
-    if haskey(results, rel_line_key)
-        # [index, ?, line]
-        problem_lines = results[rel_line_key]
-    end
-
-    problem_severities = Dict()
-    if haskey(results, rel_severity_key)
-        # [index, severity]
-        problem_severities = results[rel_severity_key]
-    end
-    if length(problem_codes) > 0
-        for i in 1:1:length(problem_codes[1])
-            # Not all problems have a line number
-            problem_line = nothing
-            if haskey(results, rel_line_key)
-                problem_line = problem_lines[3][i]
-            end
-            problem_severity = nothing
-            if haskey(results, rel_severity_key)
-                problem_severity = problem_severities[2][i]
-            end
-            problem = Dict(
-                :code => problem_codes[2][i],
-                :severity => problem_severity,
-                :line => problem_line,
-            )
-            push!(problems, problem)
-        end
+        problem = (; code, line, severity, message)
+        push!(problems, problem)
     end
 
     return problems
@@ -271,6 +292,10 @@ function matches_problem(prob1, prob2)::Bool
         match &= (prob1[:line] == prob2[:line])
     end
 
+    if haskey(prob1, :severity) && haskey(prob2, :severity)
+        match &= (string(prob1[:severity]) == string(prob2[:severity]))
+    end
+
     return match
 end
 
@@ -280,11 +305,7 @@ function result_table_to_dict(results::Nothing)
 end
 
 function result_table_to_dict(results)
-    dict_results = Dict{String, Arrow.Table}()
-    for result in results
-        dict_results[result[1]] = result[2]
-    end
-    return dict_results
+    return Dict{String, Arrow.Table}(results)
 end
 
 relation_id(name, ::Any) = return string(name)

@@ -119,6 +119,19 @@
 )
 
 @test_rel(
+    name = "Expected problems, allow none",
+    query = """
+    // Line 1
+    def output = a
+    def output = b
+    """,
+    expected_problems = [
+        (:code => :UNDEFINED, :line => 2),
+        (:code => :UNDEFINED, :line => 3)],
+    allow_unexpected = :none,
+)
+
+@test_rel(
     name = "Unexpected problem, ignore all",
     query = """
     def output = a
