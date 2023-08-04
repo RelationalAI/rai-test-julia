@@ -22,7 +22,20 @@ function get_context()
     return TEST_CONTEXT[]
 end
 
-function set_context(new_context::Context)
+"""
+    set_context!(new_context::Context)
+
+Set the context to be used by the testing framework.
+
+The default intialiser will load the default RAI config from the `.rai` directory.
+
+# Examples
+
+```
+set_context!(Context(RAI.load_config(fname="/Users/testing/.rai")))
+```
+"""
+function set_context!(new_context::Context)
     return TEST_CONTEXT[] = new_context
 end
 
@@ -39,12 +52,12 @@ function delete_test_database(name::String)
     return delete_database(get_context(), name; readtimeout=30)
 end
 
-"""
-    test_expected(expected::AbstractDict, results, testname)
-
-Given a Dict of expected relations, test if the actual results contain those relations.
-Types and contents of the relations must match.
-"""
+# Given a Dict of expected relations, test if the actual results contain those relations.
+# Types and contents of the relations must match. Expected results should be in the form of
+# a mapping from a String or Symbol to a tuple or vector of tuples.
+# Examples
+# test_expected(Dict(:output => [(1, "a"), (2, "b")]), results, "letters")
+# test_expected(Dict("/output/Int/String" => [(1, "a"), (2, "b")]), results, "letters")
 function test_expected(expected::AbstractDict, results, testname::String)
     # No testing to do, return immediaely
     isempty(expected) && return true
@@ -106,32 +119,29 @@ end
 const AcceptedSourceTypes =
     Union{String, Pair{String, String}, Vector{String}, Dict{String, String}}
 
-convert_to_install_kv(install_dict::Dict{String, String}) = install_dict
-convert_to_install_kv(install_pair::Pair{String, String}) = Dict(install_pair)
-convert_to_install_kv(install_string::String) = convert_to_install_kv([install_string])
-function convert_to_install_kv(install_vector::Vector{String})
-    models = Dict{String, String}()
-    for i in enumerate(install_vector)
-        models["test_install" * string(i[1])] = i[2]
-    end
-    return models
-end
-
 """
-    Transaction Step used for `test_rel`
+Transaction Step used for `test_rel`
 
-    - `install::Dict{String, String}`:
-        sources to install in the database.
-
-    - `broken::Bool`: if the computed values are not currently correct (wrt the `expected`
+  - `query::String`: The query to use for the test
+  - `expected::AbstractDict`: Expected values in the form
+    `Dict("/:output/:a/Int64" => [1, 2])` or
+    `Dict(:a => p1, 2])`
+    Keys can be symbols, which are mapped to /:output/:[symbol] and type derived from the
+    values, or a type that can be converted to string and used as relation path.
+  - `expected_problems::Vector`: expected problems. The semantics of
+    `expected_problems` is that the program must contain a super set of the specified
+    error codes.
+  - `allow_unexpected::Symbol`: ignore problems with severity equal or lower than
+    specified. Accepted values are `:none`, `:warning`, `:error`.
+  - `install::Dict{String, String}`: source files to install in the database.
+  - `inputs::AbstractDict`: input data to the transaction
+  - `expect_abort::Bool`: boolean indicating if the transaction is expected to abort. If it
+    is expected to abort, but it does not, then the test fails.
+  - `timeout_sec`: an upper bound on test execution time.
+  - `broken::Bool`: if the test is not currently correct (wrt the `expected`
     results), then `broken` can be used to mark the tests as broken and prevent the test
     from failing.
-
-    - `expected_problems::Vector}`: expected problems. The semantics of
-      `expected_problems` is that the program must contain a super set of the specified
-      errors. When `expected_problems` is `[]`, this means that errors are allowed.
-      Expected problems are defined by a code and an optional starting line number
-      e.g. `Dict(:code => "name" [, :line => <number>])`
+  - `readonly`: If true, run the query as readonly
 """
 struct Step
     query::Option{String}
@@ -232,7 +242,6 @@ Note that `test_rel` creates a new schema for each test.
     specified. Accepted values are `:none`, `:warning`, `:error`.
   - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
   - `install::Dict{String, String}`: source files to install in the database.
-  - `schema_inputs::AbstractDict`: input schema for the transaction
   - `inputs::AbstractDict`: input data to the transaction
   - `abort_on_error::Bool`: boolean that specifies whether to abort on any
     triggered error.
@@ -503,6 +512,7 @@ function check_flaky(name::String, logs::Vector{LogRecord})
     end
 end
 
+# Wait until a transaction has successfully finished or a timeout is reached.
 function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
     start_time_ns = time_ns()
     delta_sec = 1
@@ -542,7 +552,8 @@ function wait_until_done(ctx::Context, id::AbstractString, timeout_sec::Int64)
     end
 end
 
-# Execute the test query. Outputs the transaction id and returns the response when done.
+# Execute the test query. The transaction id will be output as soon as it is known, and the
+# corresponding transaction response is returned when finished.
 function _execute_test(
     name::String,
     context::Context,

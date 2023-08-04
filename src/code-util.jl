@@ -6,6 +6,35 @@ const REL_LINE_KEY = "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64
 const REL_SEVERITY_KEY = "/:rel/:catalog/:diagnostic/:severity/Int64/String"
 const REL_MESSAGE_KEY = "/:rel/:catalog/:diagnostic/:message/Int64/String"
 
+# Convert accepted install source types to Dict{String, String}
+convert_to_install_kv(install_dict::Dict{String, String}) = install_dict
+convert_to_install_kv(install_pair::Pair{String, String}) = Dict(install_pair)
+convert_to_install_kv(install_string::String) = convert_to_install_kv([install_string])
+function convert_to_install_kv(install_vector::Vector{String})
+    models = Dict{String, String}()
+    for (i, src) in enumerate(install_vector)
+        models["test_install_$i"] = src
+    end
+    return models
+end
+
+# Build a path/key to identify an expected relation in the output
+function build_path(base::Symbol, values)
+    name = "/:"
+    if !is_special_symbol(base)
+        name = "/:output/:"
+    end
+
+    name *= string(base)
+
+    # Now determine types
+    name *= type_string(values)
+
+    return name
+end
+
+build_path(name::Any, ::Any) = string(name)
+
 # Extract relation names from the inputs and adds them to the program
 # Turns a dict of name=>vector, with names of form :othername/Type,
 # into a series of def name = list of tuples
