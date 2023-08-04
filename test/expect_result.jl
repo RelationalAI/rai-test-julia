@@ -72,8 +72,12 @@ end
     @test RAITest.test_expected(expected, actual, "match non-existence e")
 
     expected = Dict(:a => Int64[])
+    actual = generate_arrow(Dict(:a => [Int32(1), Int32(2), Int32(3)]))
+    @test RAITest.test_expected(expected, actual, "match non-existence e 32bit")
+
+    expected = Dict(:a => Int64[])
     actual = generate_arrow(Dict(:a => ["1", "2", "3"]))
-    @test RAITest.test_expected(expected, actual, "match non-existence e S")
+    @test RAITest.test_expected(expected, actual, "match non-existence e String")
 
     expected = Dict(:a => [])
     actual = generate_arrow(Dict(:a => [()]))
