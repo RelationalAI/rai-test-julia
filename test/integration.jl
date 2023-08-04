@@ -159,7 +159,7 @@
 @test_rel(
     name = "input to expected",
     query = "",
-    input = Dict(
+    inputs = Dict(
         :a => Int8[1, 2],
         :b => Int16[1, 2],
         :c => Int32[1, 2],
