@@ -4,7 +4,7 @@ using Test
 
 # Test that results get recorded as expected.
 for distributed in (true, false)
-    ts = @testset RAITestSet "outer" distributed=distributed begin
+    ts = @testset RAITestSet "outer" distributed = distributed begin
         @testset "middle" begin
             @testset TestRelTestSet "inner" begin
                 @test (sleep(2); true)
@@ -43,14 +43,13 @@ end
         end
     end
 end
-
 # Test test_rel usage
 # A valid .rai/config is required to run these tests
 if isnothing(RAITest.get_context())
     @warn "No RAI config provided. Skipping integration tests"
 else
     try
-        resize_test_engine_pool(2, (i)->"RAITest-test-$i")
+        resize_test_engine_pool!(2, (i)->"RAITest-test-$i")
         provision_all_test_engines()
 
         @testset RAITestSet "Basic Integration" begin
@@ -58,9 +57,10 @@ else
         end
 
     finally
-        resize_test_engine_pool(0)
+        resize_test_engine_pool!(0)
     end
 end
 
 include("expect_result.jl")
+include("expect_problem.jl")
 include("input_conversion.jl")

@@ -78,7 +78,7 @@ function replace_engine(name::String)
     end
     # If the engine could not be deleted, notify and continue
     try
-        delete_engine(get_context(), name)
+        delete_engine(get_context(), name, readtimeout=30)
     catch
         @warn("Could not delete engine: ", name)
         name = TEST_ENGINE_POOL.generator(TEST_ENGINE_POOL.next_id)
@@ -98,6 +98,8 @@ function list_test_engines()
 end
 
 """
+    add_test_engine!(name::String)
+
 Add an engine to the pool of test engines
 """
 function add_test_engine!(name::String)
@@ -126,7 +128,7 @@ function provision_all_test_engines()
 end
 
 """
-    resize_test_engine_pool(size::Int64, generator::Option{Function}=nothing)
+    resize_test_engine_pool!(size::Int64, generator::Option{Function}=nothing)
 
 Resize the engine pool
 
@@ -139,12 +141,12 @@ removed from the list until the desired size is reached.
 # Example
 
 ```
-resize_test_engine_pool(5)
-resize_test_engine_pool(10, id->"RAITest-test-\$id")
-resize_test_engine_pool(0)
+resize_test_engine_pool!(5)
+resize_test_engine_pool!(10, id->"RAITest-test-\$id")
+resize_test_engine_pool!(0)
 ```
 """
-function resize_test_engine_pool(size::Int64, generator::Option{Function}=nothing)
+function resize_test_engine_pool!(size::Int64, generator::Option{Function}=nothing)
     if size < 0
         size = 0
     end
@@ -174,7 +176,7 @@ function resize_test_engine_pool(size::Int64, generator::Option{Function}=nothin
         Threads.@sync for engine in engines_to_delete
             @info("Deleting engine", engine)
             @async try
-                delete_engine(get_context(), engine)
+                delete_engine(get_context(), engine, readtimeout=30)
             catch e
                 # The engine may not exist if it hasn't been used yet
                 # For other errors, we just report the error and delete what we can
@@ -187,7 +189,7 @@ end
 """
 Call delete for any provisioned engines and resize the engine pool to zero.
 """
-function destroy_test_engines()
-    resize_test_engine_pool(0)
+function destroy_test_engines!()
+    resize_test_engine_pool!(0)
     @info("Destroyed all test engine: ")
 end
