@@ -34,7 +34,7 @@ function __init__()
     try
         set_context!(Context(load_config()))
     catch
-        @warn "No `default` RAI context found. Use `set_context` to pass in a context and enable usage of `RAITest`."
+        @warn "No `default` RAI context found. Use `set_context!` to pass in a context and enable usage of `RAITest`."
     end
 end
 
