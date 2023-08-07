@@ -123,7 +123,8 @@ function is_special_symbol(symbol::Symbol)::Bool
     return symbol == :abort || symbol == :output || symbol == :rel
 end
 
-# Generate a string representing the Rel type for the input
+# Generate a string representing the Rel type for input Vectors
+# :a => [...]
 function type_string(input::Vector)
     type = eltype(input)
     # []
@@ -142,6 +143,8 @@ function type_string(input::Vector)
     return result
 end
 
+# Generate a string representing the Rel type for input Tuples
+# :a => (...)
 function type_string(input::Tuple)
     type = typeof(input)
     result = ""
@@ -152,8 +155,12 @@ function type_string(input::Tuple)
     return result
 end
 
+# Generate a string representing the Rel type for input values
+# :a => 1
 type_string(input) = "/" * string(typeof(input))
 
+# Generate a string representing the Rel type for input types
+# We've extracted the type from the input so now we can convert it to a String result
 function type_string(type::DataType)
     # Strings (otherwise treated as containers by Julia)
     type == String && return "/$type"
