@@ -125,18 +125,17 @@ end
 
 # Generate a string representing the Rel type for input Vectors
 # :a => [...]
-function type_string(input::Vector)
-    type = eltype(input)
+function type_string(input::Vector{T}) where T
     # []
-    type == Any && return ""
+    T == Any && return ""
     # Non-container type
-    type == eltype(type) && return "/$type"
+    T == eltype(T) && return "/$T"
     # Strings (otherwise treated as containers by Julia)
-    type == String && return "/$type"
+    T == String && return "/$T"
 
     # Container type
     result = ""
-    for e_type in fieldtypes(type)
+    for e_type in fieldtypes(T)
         result *= type_string(e_type)
     end
 
@@ -145,10 +144,9 @@ end
 
 # Generate a string representing the Rel type for input Tuples
 # :a => (...)
-function type_string(input::Tuple)
-    type = typeof(input)
+function type_string(input::T) where { T <: Tuple}
     result = ""
-    for e_type in fieldtypes(type)
+    for e_type in fieldtypes(T)
         result *= type_string(e_type)
     end
 
@@ -157,7 +155,7 @@ end
 
 # Generate a string representing the Rel type for input values
 # :a => 1
-type_string(input) = "/" * string(typeof(input))
+type_string(input::T) where T = "/" * string(T)
 
 # Generate a string representing the Rel type for input types
 # We've extracted the type from the input so now we can convert it to a String result
