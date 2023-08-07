@@ -161,7 +161,7 @@ type_string(input) = "/" * string(typeof(input))
 
 # Generate a string representing the Rel type for input types
 # We've extracted the type from the input so now we can convert it to a String result
-function type_string(type::DataType)
+function type_string(type::Type{T}) where T
     # Strings (otherwise treated as containers by Julia)
     type == String && return "/$type"
     # Non-container type
