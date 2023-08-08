@@ -148,6 +148,7 @@ type_string(::Type{Any}) = ""
 # :a => 1
 type_string(::Union{T, Type{T}}) where T = "/" * string(T)
 
+# The value tuple contains an inner tuple. Recurse into it.
 function type_string(::Type{T}) where { T <: Tuple }
     result = "/("
     for e_type in fieldtypes(T)
