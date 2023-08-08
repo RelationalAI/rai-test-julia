@@ -128,11 +128,11 @@ end
 # Vectors.
 
 # :a => [3, 4, 5]
-type_string(input::Vector{T}) where T = type_string(T)
+type_string(::Vector{T}) where T = type_string(T)
 
 # :a => [(1, 2)]
 # :a => (1, 2)
-function type_string(input::Union{T, Vector{T}}) where { T <: Tuple }
+function type_string(::Union{T, Vector{T}}) where { T <: Tuple }
     result = ""
     for e_type in fieldtypes(T)
         result *= type_string(e_type)
@@ -142,13 +142,13 @@ function type_string(input::Union{T, Vector{T}}) where { T <: Tuple }
 end
 
 # []
-type_string(input::Type{Any}) = ""
+type_string(::Type{Any}) = ""
 
 # Generate a string representing the Rel type for single values
 # :a => 1
-type_string(input::Union{T, Type{T}}) where T = "/" * string(T)
+type_string(::Union{T, Type{T}}) where T = "/" * string(T)
 
-function type_string(input::Type{T}) where { T <: Tuple }
+function type_string(::Type{T}) where { T <: Tuple }
     result = "/("
     for e_type in fieldtypes(T)
         result *= type_string(e_type)
