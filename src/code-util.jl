@@ -123,25 +123,39 @@ function is_special_symbol(symbol::Symbol)::Bool
     return symbol == :abort || symbol == :output || symbol == :rel
 end
 
-# Generate a string representing the Rel type for the input
-# Expected inputs are a vector of types, a tuple of types, or a type
-function type_string(input::Vector)
-    if isempty(input)
-        return ""
-    end
-    return type_string(input[1])
-end
+# Values can be a single value, a single tuple, a Vector of values, or a typed but empty
+# Vector. Types are extracted directly from single values and recursively from Tuples and
+# Vectors.
 
-function type_string(input::Tuple)
+# :a => [3, 4, 5]
+type_string(::Vector{T}) where T = type_string(T)
+
+# :a => [(1, 2)]
+# :a => (1, 2)
+function type_string(::Union{T, Vector{T}}) where { T <: Tuple }
     result = ""
-    for t in input
-        result *= type_string(t)
+    for e_type in fieldtypes(T)
+        result *= type_string(e_type)
     end
+
     return result
 end
 
-function type_string(input)
-    return "/" * string(typeof(input))
+# []
+type_string(::Type{Any}) = ""
+
+# Generate a string representing the Rel type for single values
+# :a => 1
+type_string(::Union{T, Type{T}}) where T = "/" * string(T)
+
+# The value tuple contains an inner tuple. Recurse into it.
+function type_string(::Type{T}) where { T <: Tuple }
+    result = "/("
+    for e_type in fieldtypes(T)
+        result *= type_string(e_type)
+    end
+    result *= ")"
+    return result
 end
 
 function key_to_array(input::Tuple)

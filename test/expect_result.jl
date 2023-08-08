@@ -63,9 +63,29 @@ end
     actual = generate_arrow(Dict(:a => []))
     @test !RAITest.test_expected(expected, actual, "!match empty a")
 
-    expected = Dict(:a => [])
+    expected = Dict("/:output/:a/Int64" => [()])
     actual = generate_arrow(Dict(:a => [1, 2, 3]))
-    @test RAITest.test_expected(expected, actual, "!match existence e")
+    @test RAITest.test_expected(expected, actual, "match existence e")
+
+    expected = Dict("/:output/:a/Int64" => [])
+    actual = generate_arrow(Dict(:a => ["1", "2", "3"]))
+    @test RAITest.test_expected(expected, actual, "match non-existence e")
+
+    expected = Dict(:a => Int64[])
+    actual = generate_arrow(Dict(:a => [Int32(1), Int32(2), Int32(3)]))
+    @test RAITest.test_expected(expected, actual, "match non-existence e 32bit")
+
+    expected = Dict(:a => Int64[])
+    actual = generate_arrow(Dict(:a => ["1", "2", "3"]))
+    @test RAITest.test_expected(expected, actual, "match non-existence e String")
+
+    expected = Dict(:a => [])
+    actual = generate_arrow(Dict(:a => [()]))
+    @test !RAITest.test_expected(expected, actual, "!match non-existence e true")
+
+    expected = Dict("/:output/:a/Int64" => [])
+    actual = generate_arrow(Dict(:a => [1, 2, 3]))
+    @test !RAITest.test_expected(expected, actual, "!match non-existence e")
 
     expected = Dict(:a => [1, 2, 3])
     actual = generate_arrow(Dict(:a => [1, 2, 3], :b => []))
