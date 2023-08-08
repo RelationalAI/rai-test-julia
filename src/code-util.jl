@@ -123,17 +123,16 @@ function is_special_symbol(symbol::Symbol)::Bool
     return symbol == :abort || symbol == :output || symbol == :rel
 end
 
-# Generate a string representing the Rel type for input Vectors
-# :a => [...]
-function type_string(input::Vector{T}) where T
-    # []
-    T == Any && return ""
-    # Non-container type
-    T == eltype(T) && return "/$T"
-    # Strings (otherwise treated as containers by Julia)
-    T == String && return "/$T"
+# Values can be a single value, a single tuple, a Vector of values, or a typed but empty
+# Vector. Types are extracted directly from single values and recursively from Tuples and
+# Vectors.
 
-    # Container type
+# :a => [3, 4, 5]
+type_string(input::Vector{T}) where T = type_string(T)
+
+# :a => [(1, 2)]
+# :a => (1, 2)
+function type_string(input::Union{T, Vector{T}}) where { T <: Tuple }
     result = ""
     for e_type in fieldtypes(T)
         result *= type_string(e_type)
@@ -142,32 +141,16 @@ function type_string(input::Vector{T}) where T
     return result
 end
 
-# Generate a string representing the Rel type for input Tuples
-# :a => (...)
-function type_string(input::T) where { T <: Tuple}
-    result = ""
-    for e_type in fieldtypes(T)
-        result *= type_string(e_type)
-    end
+# []
+type_string(input::Type{Any}) = ""
 
-    return result
-end
-
-# Generate a string representing the Rel type for input values
+# Generate a string representing the Rel type for single values
 # :a => 1
-type_string(input::T) where T = "/" * string(T)
+type_string(input::Union{T, Type{T}}) where T = "/" * string(T)
 
-# Generate a string representing the Rel type for input types
-# We've extracted the type from the input so now we can convert it to a String result
-function type_string(type::Type{T}) where T
-    # Strings (otherwise treated as containers by Julia)
-    type == String && return "/$type"
-    # Non-container type
-    eltype(type) == type && return "/$type"
-
-    # Container type: presumably a Tuple
+function type_string(input::Type{T}) where { T <: Tuple }
     result = "/("
-    for e_type in fieldtypes(type)
+    for e_type in fieldtypes(T)
         result *= type_string(e_type)
     end
     result *= ")"
