@@ -19,6 +19,8 @@ mutable struct TestEnginePool
     # This is used to enable unique, simple, naming of engines
     # Switching to randomly generated UUIDs would be needed if tests are run independently
     next_id::Int64
+    # Number of tests per engine. Values > 1 invalidate test timing, and require careful
+    # attention to engine sizing
     concurrency::Int64
     name_generator::Function
     # Create an engine. This is expected to be used by the provider as needed.
