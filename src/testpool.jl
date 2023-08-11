@@ -219,10 +219,8 @@ function _create_and_add_engines!(size::Int64)
                     # Success! Move on and try the next engine
                     continue
                 end
-                @warn("no bueno", response)
                 # The engine exists, but is not provisioned despite our best attempts
             catch e
-                @warn("very no bueno", e)
                 # The engine does not exist
             end
             # Something went wrong. Remove from the list and attempt to delete
