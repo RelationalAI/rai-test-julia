@@ -16,8 +16,6 @@ export add_test_engine!
 
 export set_context!
 
-export set_engine_name_provider!
-export set_engine_name_releaser!
 export set_engine_creater!
 
 include("code-util.jl")

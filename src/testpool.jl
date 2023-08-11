@@ -5,21 +5,21 @@ function release_pooled_test_engine(name::String)
         if !haskey(TEST_ENGINE_POOL.engines, name)
             return
         end
-        TEST_ENGINE_POOL.engines[name] = 0
+        TEST_ENGINE_POOL.engines[name] -= 1
+        # Sanity check that the threaded world still makes sense
+        @assert TEST_ENGINE_POOL.engines[name] >= 0 "Engine $name over-released"
     end
 end
 
-function get_pooled_test_engine(engine_name::Option{String}=nothing)
-    if isnothing(engine_name)
-        engine_name = get_free_test_engine_name()
-    end
+function get_pooled_test_engine()
+    engine_name = get_free_test_engine_name()
 
     # If the engine already exists, return it
     is_valid_engine(engine_name) && return engine_name
 
     # The engine does not exist yet, so create it
     try
-        return TEST_ENGINE_PROVISION.creater(engine_name)
+        return TEST_ENGINE_POOL.creater(engine_name)
     catch
         # Provisioning failed - remove the name from the pool and rethrow
         delete!(TEST_ENGINE_POOL.engines, engine_name)
@@ -35,7 +35,19 @@ mutable struct TestEnginePool
     # This is used to enable unique, simple, naming of engines
     # Switching to randomly generated UUIDs would be needed if tests are run independently
     next_id::Int64
-    generator::Function
+    concurrency::Int64
+    name_generator::Function
+    # Create an engine. This is expected to be used by the provider as needed.
+    creater::Function
+end
+
+function TestEnginePool(;
+    engines::Dict{String, Int64}=Dict{String, Int64}(),
+    name_generator::Function=get_next_engine_name,
+    creater::Function=create_default_engine,
+    concurrency::Int64=1,
+)
+    return TestEnginePool(engines, 0, concurrency, name_generator, creater)
 end
 
 function get_free_test_engine_name()::String
@@ -48,8 +60,11 @@ function get_free_test_engine_name()::String
         end
 
         @lock TEST_SERVER_LOCK for e in TEST_ENGINE_POOL.engines
-            if e.second == 0
-                TEST_ENGINE_POOL.engines[e.first] = Base.Threads.threadid()
+            if e.second < TEST_ENGINE_POOL.concurrency
+                TEST_ENGINE_POOL.engines[e.first] += 1
+                @info(
+                    "Acquired engine $(e.first) with $(TEST_ENGINE_POOL.engines[e.first])"
+                )
                 return e.first
             end
         end
@@ -63,7 +78,7 @@ Test if an engine has been created and can be returned via the API.
 """
 function is_valid_engine(name::String)
     try
-        get_engine(get_context(), name)
+        get_engine(get_context(), name; readtimeout=30)
         # The engine exists and does not immediately return an error
         return true
     catch
@@ -78,11 +93,12 @@ function replace_engine(name::String)
     end
     # If the engine could not be deleted, notify and continue
     try
-        delete_engine(get_context(), name, readtimeout=30)
+        delete_engine(get_context(), name; readtimeout=30)
     catch
         @warn("Could not delete engine: ", name)
-        name = TEST_ENGINE_POOL.generator(TEST_ENGINE_POOL.next_id)
     end
+
+    name = TEST_ENGINE_POOL.name_generator(TEST_ENGINE_POOL.next_id)
 
     @lock TEST_SERVER_LOCK begin
         TEST_ENGINE_POOL.engines[name] = 0
@@ -122,7 +138,7 @@ all engines in the current pool.
 function provision_all_test_engines()
     @lock TEST_SERVER_LOCK begin
         Threads.@sync for engine in TEST_ENGINE_POOL.engines
-            Threads.@async get_pooled_test_engine(engine.first)
+            Threads.@async TEST_ENGINE_POOL.creater(engine.first)
         end
     end
 end
@@ -146,20 +162,20 @@ resize_test_engine_pool!(10, id->"RAITest-test-\$id")
 resize_test_engine_pool!(0)
 ```
 """
-function resize_test_engine_pool!(size::Int64, generator::Option{Function}=nothing)
+function resize_test_engine_pool!(size::Int64, name_generator::Option{Function}=nothing)
     if size < 0
         size = 0
     end
 
-    if !isnothing(generator)
-        TEST_ENGINE_POOL.generator = generator
+    if !isnothing(name_generator)
+        TEST_ENGINE_POOL.name_generator = name_generator
     end
 
     @lock TEST_SERVER_LOCK begin
         engines = TEST_ENGINE_POOL.engines
         # Add engines while length < size
         while (length(engines) < size)
-            new_name = TEST_ENGINE_POOL.generator(TEST_ENGINE_POOL.next_id)
+            new_name = TEST_ENGINE_POOL.name_generator(TEST_ENGINE_POOL.next_id)
             if haskey(engines, new_name)
                 throw(ArgumentError("Engine name already exists"))
             end
@@ -176,7 +192,7 @@ function resize_test_engine_pool!(size::Int64, generator::Option{Function}=nothi
         Threads.@sync for engine in engines_to_delete
             @info("Deleting engine", engine)
             @async try
-                delete_engine(get_context(), engine, readtimeout=30)
+                delete_engine(get_context(), engine; readtimeout=30)
             catch e
                 # The engine may not exist if it hasn't been used yet
                 # For other errors, we just report the error and delete what we can
@@ -192,4 +208,19 @@ Call delete for any provisioned engines and resize the engine pool to zero.
 function destroy_test_engines!()
     resize_test_engine_pool!(0)
     @info("Destroyed all test engine: ")
+end
+
+"""
+    set_engine_creater!(creater::Function)
+
+Set a function used to create engines.
+
+# Examples
+
+```
+    set_engine_creater!(create_default_engine)
+```
+"""
+function set_engine_creater!(creater::Function)
+    return TEST_ENGINE_POOL.creater = creater
 end
