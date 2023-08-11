@@ -48,9 +48,6 @@ function get_free_test_engine_name()::String
         @lock TEST_SERVER_LOCK for e in TEST_ENGINE_POOL.engines
             if e.second < TEST_ENGINE_POOL.concurrency
                 TEST_ENGINE_POOL.engines[e.first] += 1
-                @info(
-                    "Acquired engine $(e.first) with $(TEST_ENGINE_POOL.engines[e.first])"
-                )
                 return e.first
             end
         end
