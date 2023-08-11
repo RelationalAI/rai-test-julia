@@ -148,14 +148,14 @@ function resize_test_engine_pool!(size::Int64, name_generator::Option{Function}=
 
     @lock TEST_SERVER_LOCK begin
         # Add engines if size > length
-        _create_and_add_engines(size)
-        _validate_engine_pool()
+        _create_and_add_engines!(size)
+        _validate_engine_pool!()
         _trim_engine_pool!(size)
     end
 end
 
 # Test all engines and remove if they are unavailable or not successfully provisioned
-function _validate_engine_pool()
+function _validate_engine_pool!()
     @lock TEST_SERVER_LOCK begin
         @sync for engine in TEST_ENGINE_POOL.engines
             try
@@ -182,7 +182,7 @@ function _validate_engine_pool()
     end
 end
 
-function _create_and_add_engines(size::Int64)
+function _create_and_add_engines!(size::Int64)
     @lock TEST_SERVER_LOCK begin
         engines = TEST_ENGINE_POOL.engines
         increase = size - length(engines)
