@@ -14,26 +14,17 @@ end
 const TEST_SERVER_LOCK = ReentrantLock()
 const TEST_SERVER_ACQUISITION_LOCK = ReentrantLock()
 
-mutable struct TestEnginePool
-    engines::Dict{String, Int64}
+Base.@kwdef mutable struct TestEnginePool
+    engines::Dict{String, Int64} = Dict()
     # This is used to enable unique, simple, naming of engines
     # Switching to randomly generated UUIDs would be needed if tests are run independently
-    next_id::Int64
+    next_id::Int64 = 0
     # Number of tests per engine. Values > 1 invalidate test timing, and require careful
     # attention to engine sizing
-    concurrency::Int64
-    name_generator::Function
+    concurrency::Int64 = 1
+    name_generator::Function = get_next_engine_name
     # Create an engine. This is expected to be used by the provider as needed.
-    creater::Function
-end
-
-function TestEnginePool(;
-    engines::Dict{String, Int64}=Dict{String, Int64}(),
-    name_generator::Function=get_next_engine_name,
-    creater::Function=create_default_engine,
-    concurrency::Int64=1,
-)
-    return TestEnginePool(engines, 0, concurrency, name_generator, creater)
+    creater::Function = create_default_engine
 end
 
 function get_free_test_engine_name()::String
