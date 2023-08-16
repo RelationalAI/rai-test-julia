@@ -159,9 +159,13 @@ function _validate_engine_pool!()
                     continue
                 end
                 # The engine exists, but is not provisioned despite our best attempts
-                @warn("$engine was not provisioned. Reported state was <$(response.state)>")
+                @warn("$engine was not provisioned. Reported state was: $(response.state)")
             catch e
-                @warn("$engine was not provisioned. Reported error was <$e>")
+                if e isa HTTPError
+                    @warn("$engine was not provisioned. Reported error was: $e")
+                else
+                    rethrow()
+                end
             end
             # Something went wrong. Remove from the list and attempt to delete
             delete!(TEST_ENGINE_POOL.engines, engine)
