@@ -23,14 +23,14 @@ function _wait_till_provisioned(engine_name, max_wait_time_s=600)
 end
 
 """
-    create_default_engine(name::String, size::String)
+    create_default_engine(name::String; size::String)
 
-Create an XS engine with default settings and the provided name.
+Create an engine with the default configuration.
 
 If the engine already exists, return immediately. If not, create the engine then
 return once the provisioning process is complete, or failed.
 """
-function create_default_engine(name::String, size::String="XS")
+function create_default_engine(name::String; size::String="XS")
     max_wait_time_s = 600
 
     try
