@@ -83,6 +83,9 @@ function replace_engine(name::String)
 
     name = TEST_ENGINE_POOL.name_generator(TEST_ENGINE_POOL.next_id)
 
+    # Provision the engine if it does not already exist.
+    TEST_ENGINE_POOL.creater(new_name)
+
     @lock TEST_SERVER_LOCK begin
         TEST_ENGINE_POOL.engines[name] = 0
     end
@@ -103,13 +106,13 @@ Add an engine to the pool of test engines. The engine will be provisioned if it 
 already.
 """
 function add_test_engine!(name::String)
+    # Provision the engine if it does not already exist.
+    TEST_ENGINE_POOL.creater(new_name)
+
     @lock TEST_SERVER_LOCK begin
         engines = TEST_ENGINE_POOL.engines
         engines[name] = 0
     end
-
-    # Provision the engine if it does not already exist.
-    TEST_ENGINE_POOL.creater(new_name)
 
     return nothing
 end
