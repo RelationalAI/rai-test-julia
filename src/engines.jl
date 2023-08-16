@@ -1,8 +1,3 @@
-mutable struct TestEngineProvision
-    # Create an engine. This is expected to be used by the provider as needed.
-    creater::Function
-end
-
 function _wait_till_provisioned(engine_name, max_wait_time_s=600)
     start_time = time()
     # This should be a rare event, so a coarse-grained period is acceptable
