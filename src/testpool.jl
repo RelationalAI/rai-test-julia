@@ -165,8 +165,9 @@ function _validate_engine_pool!()
                     continue
                 end
                 # The engine exists, but is not provisioned despite our best attempts
-            catch
-                # The engine does not exist
+                @warn("$engine was not provisioned. Reported state was <$(response.state)>")
+            catch e
+                @warn("$engine was not provisioned. Reported error was <$e>")
             end
             # Something went wrong. Remove from the list and attempt to delete
             delete!(TEST_ENGINE_POOL.engines, engine)
@@ -202,33 +203,13 @@ function _create_and_add_engines!(size::Int64)
             engines[new_name] = 0
         end
 
+        # Provision separately so we can do it asynchronously
         @info("Provisioning $(increase) new engines")
         @sync for new_name in new_names
             @async try
                 TEST_ENGINE_POOL.creater(new_name)
             catch
                 # Ignore any errors here as we check more thoroughly below
-            end
-        end
-
-        # Test all new engines and remove if they were not successfully provisioned
-        for new_name in new_names
-            try
-                response = get_engine(get_context(), new_name; readtimeout=30)
-                if response.state == "PROVISIONED"
-                    # Success! Move on and try the next engine
-                    continue
-                end
-                # The engine exists, but is not provisioned despite our best attempts
-            catch e
-                # The engine does not exist
-            end
-            # Something went wrong. Remove from the list and attempt to delete
-            delete!(engines, new_name)
-            try
-                delete_engine(get_context(), new_name; readtimeout=30)
-            catch
-                info("Attempted to remove failed engine provision", e)
             end
         end
     end
