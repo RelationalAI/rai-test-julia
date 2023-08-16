@@ -34,7 +34,7 @@ function create_default_engine(name::String; size::String="XS")
     max_wait_time_s = 600
 
     try
-        create_engine(get_context(), name; size=size, readtimeout=max_wait_time_s)
+        create_engine(get_context(), name; size, readtimeout=max_wait_time_s)
     catch e
         # If the status code is 409 then the engine already exists and we can wait for it
         # to be ready
