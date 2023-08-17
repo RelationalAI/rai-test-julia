@@ -147,7 +147,6 @@ struct Step
     query::Option{String}
     install::Dict{String, String}
     broken::Bool
-    schema_inputs::AbstractDict
     inputs::AbstractDict
     expected::AbstractDict
     expected_problems::Vector
@@ -161,7 +160,6 @@ function Step(;
     query::Option{String}=nothing,
     install::AcceptedSourceTypes=Dict{String, String}(),
     broken::Bool=false,
-    schema_inputs::AbstractDict=Dict(),
     inputs::AbstractDict=Dict(),
     expected::AbstractDict=Dict(),
     expected_problems::Vector=[],
@@ -174,7 +172,6 @@ function Step(;
         query,
         convert_to_install_kv(install),
         broken,
-        schema_inputs,
         inputs,
         expected,
         expected_problems,
@@ -265,7 +262,6 @@ function test_rel(;
     abort_on_error::Bool=false,
     debug::Bool=false,
     debug_trace::Bool=false,
-    schema_inputs::AbstractDict=Dict(),
     inputs::AbstractDict=Dict(),
     expected::AbstractDict=Dict(),
     expected_problems::Vector=[],
@@ -293,9 +289,6 @@ function test_rel(;
     # Perform all inserts before other tests
     if !isempty(install)
         insert!(steps, 1, Step(; install=convert_to_install_kv(install)))
-    end
-    if !isempty(schema_inputs)
-        insert!(steps, 1, Step(; schema_inputs=schema_inputs))
     end
     if !isempty(inputs)
         insert!(steps, 1, Step(; inputs=inputs))
@@ -622,9 +615,6 @@ function _test_rel_step(
 
     #Append inputs to program
     program *= convert_input_dict_to_string(step.inputs)
-
-    #Append schema inputs to program
-    program *= convert_input_dict_to_string(step.schema_inputs)
 
     #TODO: Remove this when the incoming tests are appropriately rewritten
     program *= generate_output_string_from_expected(step.expected)
