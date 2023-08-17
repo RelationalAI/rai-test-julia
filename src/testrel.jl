@@ -167,7 +167,7 @@ function Step(;
     expected_problems::Vector=[],
     allow_unexpected::Symbol=:warning,
     expect_abort::Bool=false,
-    timeout_sec::Int64=1800,
+    timeout_sec::Int64=300,
     readonly::Bool=false,
 )
     return Step(
@@ -271,7 +271,7 @@ function test_rel(;
     expected_problems::Vector=[],
     allow_unexpected::Symbol=:warning,
     expect_abort::Bool=false,
-    timeout_sec::Int64=1800,
+    timeout_sec::Int64=300,
     broken::Bool=false,
     clone_db::Option{String}=nothing,
     engine::Option{String}=nothing,
