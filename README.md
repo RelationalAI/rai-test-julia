@@ -72,14 +72,7 @@ Run multiple tests concurrently with a custom engine provider.
 using RAITest
 using Test
 
-# Always use `my_existing_engine_name` as the engine name. This must already be created as
-# RAITest will not create the engine itself
-set_engine_name_provider!()->"my_existing_engine_name")
-
-# Releasing the engine does nothing. Controlling the engine use and cleanup is not handled
-# by RAITest
-set_engine_name_releaser!(name::String)->return)
-
+set_engine_creater!((name)->create_default_engine(name, "M"))
 @testset "My tests" begin
     for i in 1:10
         query = "def output = $i ic { output = $i }"
