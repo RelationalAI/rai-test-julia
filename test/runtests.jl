@@ -50,7 +50,6 @@ if isnothing(RAITest.get_context())
 else
     try
         resize_test_engine_pool!(2, (i)->"RAITest-test-$i")
-        provision_all_test_engines()
 
         @testset RAITestSet "Basic Integration" begin
             include("integration.jl")
