@@ -38,7 +38,7 @@ function create_default_engine(name::String; size::String="XS")
     catch e
         # If the status code is 409 then the engine already exists and we can wait for it
         # to be ready
-        if e.status_code != 409
+        if !(e isa HTTPError) || e.status_code != 409
             rethrow()
         end
     end
