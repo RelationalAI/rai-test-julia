@@ -345,3 +345,6 @@ function get_logging_io()
     ctx = IOContext(io, stream)
     return io, ctx
 end
+
+default_timeout() = parse(Int64, get(ENV, "TEST_REL_TEST_TIMEOUT", "300"))
+default_allowed() = Symbol(get(ENV, "TEST_REL_ALLOWED", ":warning"))

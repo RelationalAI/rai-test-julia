@@ -163,9 +163,9 @@ function Step(;
     inputs::AbstractDict=Dict(),
     expected::AbstractDict=Dict(),
     expected_problems::Vector=[],
-    allow_unexpected::Symbol=:warning,
+    allow_unexpected::Symbol=default_allowed(),
     expect_abort::Bool=false,
-    timeout_sec::Int64=300,
+    timeout_sec::Int64=default_timeout(),
     readonly::Bool=false,
 )
     return Step(
@@ -265,9 +265,9 @@ function test_rel(;
     inputs::AbstractDict=Dict(),
     expected::AbstractDict=Dict(),
     expected_problems::Vector=[],
-    allow_unexpected::Symbol=:warning,
+    allow_unexpected::Symbol=default_timeout(),
     expect_abort::Bool=false,
-    timeout_sec::Int64=300,
+    timeout_sec::Int64=default_timeout(),
     broken::Bool=false,
     clone_db::Option{String}=nothing,
     engine::Option{String}=nothing,
