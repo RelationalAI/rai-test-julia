@@ -132,7 +132,8 @@ function delete_test_engine!(name::String)
 end
 
 function get_next_engine_name(id::Int64)
-    return "julia-sdk-test-$(id)"
+    base_name = default_engine_name()
+    return "$(base_name)-$(id)"
 end
 
 """
