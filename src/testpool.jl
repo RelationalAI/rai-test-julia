@@ -132,7 +132,7 @@ function delete_test_engine!(name::String)
 end
 
 function get_next_engine_name(id::Int64)
-    return "julia-sdk-test-$(id)"
+    return "test_rel-$(id)"
 end
 
 """
