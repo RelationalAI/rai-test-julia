@@ -265,7 +265,7 @@ function test_rel(;
     inputs::AbstractDict=Dict(),
     expected::AbstractDict=Dict(),
     expected_problems::Vector=[],
-    allow_unexpected::Symbol=default_timeout(),
+    allow_unexpected::Symbol=default_allowed(),
     expect_abort::Bool=false,
     timeout_sec::Int64=default_timeout(),
     broken::Bool=false,
