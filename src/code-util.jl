@@ -347,6 +347,6 @@ function get_logging_io()
 end
 
 default_timeout() = parse(Int64, get(ENV, "TEST_REL_TEST_TIMEOUT", "300"))
-default_allowed() = Symbol(get(ENV, "TEST_REL_ALLOWED", ":warning"))
+default_allowed() = Symbol(get(ENV, "TEST_REL_ALLOWED", "warning"))
 default_db_name() = get(ENV, "TEST_REL_DB_NAME", "test_rel")
 default_engine_name() = get(ENV, "TEST_REL_ENGINE_NAME", "test_rel")
