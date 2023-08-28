@@ -39,8 +39,8 @@ function set_context!(new_context::Context)
     return TEST_CONTEXT[] = new_context
 end
 
-function create_test_database_name(; default_basename="test_rel")::String
-    basename = get(ENV, "TEST_REL_DB_BASENAME", default_basename)
+function create_test_database_name()::String
+    basename = default_db_name()
     return gen_safe_name(basename)
 end
 
@@ -163,9 +163,9 @@ function Step(;
     inputs::AbstractDict=Dict(),
     expected::AbstractDict=Dict(),
     expected_problems::Vector=[],
-    allow_unexpected::Symbol=:warning,
+    allow_unexpected::Symbol=default_allowed(),
     expect_abort::Bool=false,
-    timeout_sec::Int64=300,
+    timeout_sec::Int64=default_timeout(),
     readonly::Bool=false,
 )
     return Step(
@@ -265,9 +265,9 @@ function test_rel(;
     inputs::AbstractDict=Dict(),
     expected::AbstractDict=Dict(),
     expected_problems::Vector=[],
-    allow_unexpected::Symbol=:warning,
+    allow_unexpected::Symbol=default_allowed(),
     expect_abort::Bool=false,
-    timeout_sec::Int64=300,
+    timeout_sec::Int64=default_timeout(),
     broken::Bool=false,
     clone_db::Option{String}=nothing,
     engine::Option{String}=nothing,
