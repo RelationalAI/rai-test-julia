@@ -153,3 +153,27 @@
     abort_on_error = true,
     expect_abort = true,
 )
+
+# `setup` and `tags` keywords ignored
+# --------------------------------------------------------
+
+@test_rel(
+    name = "tags keyword ignored",
+    query = "def result = 1",
+    tags=[:foo],
+)
+
+module FooSetup end
+
+@test_rel(
+    name = "setup keyword ignored",
+    query = "def result = 1",
+    setup=Foo,
+)
+
+@test_rel(
+    name = "setup and tags keywords ignored",
+    query = "def result = 1",
+    setup=Foo,
+    tags=[:foo],
+)
