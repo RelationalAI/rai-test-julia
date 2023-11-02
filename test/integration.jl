@@ -174,6 +174,6 @@ module FooSetup end
 @test_rel(
     name = "setup and tags keywords ignored",
     query = "def result = 1",
-    setup=Foo,
+    setup=FooSetup,
     tags=[:foo],
 )
