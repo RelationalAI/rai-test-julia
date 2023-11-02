@@ -168,7 +168,7 @@ module FooSetup end
 @test_rel(
     name = "setup keyword ignored",
     query = "def result = 1",
-    setup=Foo,
+    setup=FooSetup,
 )
 
 @test_rel(
