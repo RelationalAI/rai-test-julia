@@ -63,10 +63,10 @@ function validate_engine(name::String)
             return true
         end
         # The engine exists, but is not provisioned
-        @warn("$engine was not provisioned. Reported state was: $(response.state)")
+        @warn("$name was not provisioned. Reported state was: $(response.state)")
     catch e
         if e isa HTTPError
-            @warn("$engine was not provisioned. Reported error was: $e")
+            @warn("$name was not provisioned. Reported error was: $e")
         else
             rethrow()
         end
