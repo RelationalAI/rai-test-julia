@@ -6,6 +6,9 @@ const REL_LINE_KEY = "/:rel/:catalog/:diagnostic/:range/:start/:line/Int64/Int64
 const REL_SEVERITY_KEY = "/:rel/:catalog/:diagnostic/:severity/Int64/String"
 const REL_MESSAGE_KEY = "/:rel/:catalog/:diagnostic/:message/Int64/String"
 
+const IC_LINE_KEY = "/:rel/:catalog/:ic_violation/:range/:start/:line/HashValue/Int64"
+const IC_REPORT_KEY = "/:rel/:catalog/:ic_violation/:report/HashValue/String"
+
 # Convert accepted install source types to Dict{String, String}
 convert_to_install_kv(install_dict::Dict{String, String}) = install_dict
 convert_to_install_kv(install_pair::Pair{String, String}) = Dict(install_pair)
@@ -264,6 +267,31 @@ function extract_problems(results)
     end
 
     return problems
+end
+
+# In some error cases the results may be nothing, rather than empty
+function extract_ics(results::Nothing)
+    return []
+end
+
+function extract_ics(results)
+    ics = []
+
+    if !haskey(results, IC_LINE_KEY)
+        return ics
+    end
+
+    # Diagnostic categories have identical ordering so we can use row to find matches
+    # across categories, starting with row 1
+    for i in 1:length(results[IC_LINE_KEY][1])
+        line = extract_detail(results, IC_LINE_KEY, 2, i)
+        report = extract_detail(results, IC_REPORT_KEY, 2, i)
+
+        ic = (; line, report)
+        push!(ics, ic)
+    end
+
+    return ics
 end
 
 function contains_problem(problems, problem_needle)::Bool
