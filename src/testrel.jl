@@ -704,6 +704,13 @@ function _test_rel_step(
                     "$name: Transaction $(response.transaction.id) aborted due to \"$(response.transaction.abort_reason)\""
                 )
             end
+
+            ics = extract_ics(results_dict)
+            if !isempty(ics)
+                for ic in ics
+                    @info "Integrity constraint violated: $ic"
+                end
+            end
         else
             @test state == "ABORTED"
         end
