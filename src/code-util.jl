@@ -7,7 +7,7 @@ const REL_SEVERITY_KEY = "/:rel/:catalog/:diagnostic/:severity/Int64/String"
 const REL_MESSAGE_KEY = "/:rel/:catalog/:diagnostic/:message/Int64/String"
 
 const IC_LINE_KEY = "/:rel/:catalog/:ic_violation/:range/:start/:line/HashValue/Int64"
-const IC_OUTPUT_KEY = "/:rel/:catalog/:ic_violation/:output/HashValue/String"
+const IC_OUTPUT_KEY = "/:rel/:catalog/:ic_violation/:output/HashValue/"
 const IC_REPORT_KEY = "/:rel/:catalog/:ic_violation/:report/HashValue/String"
 
 # Convert accepted install source types to Dict{String, String}
@@ -270,6 +270,26 @@ function extract_problems(results)
     return problems
 end
 
+# Extract the IC results for a given hash
+function extract_ic_results(results, path, index, h)
+    ics = []
+
+    for (key, row) in results
+        if !startswith(key, path)
+            continue
+        end
+
+        for i in 1:length(row[1])
+            if row[1][i] != h
+                continue
+            end
+            push!(ics, row[index][i])
+        end
+    end
+    return ics
+
+end
+
 # In some error cases the results may be nothing, rather than empty
 function extract_ics(results::Nothing)
     return []
@@ -282,14 +302,19 @@ function extract_ics(results)
         return ics
     end
 
-    # Diagnostic categories have identical ordering so we can use row to find matches
-    # across categories, starting with row 1
     for i in 1:length(results[IC_LINE_KEY][1])
         line = extract_detail(results, IC_LINE_KEY, 2, i)
         report = extract_detail(results, IC_REPORT_KEY, 2, i)
-        values = extract_detail(results, IC_OUTPUT_KEY, 2, i)
 
-        if isnothing(values)
+        # IC Diagnostic values are indexed by hash and type so we extract them separately
+        h = extract_detail(results, IC_LINE_KEY, 1, i)
+        vs = extract_ic_results(results, IC_OUTPUT_KEY, 2, h)
+        if length(vs) > 11
+            vs = vcat(vs[1:9], "...", last(vs))
+        end
+
+        values = join(vs, "; ")
+        if isempty(values)
             ic = (; line, report)
         else
             ic = (; line, values, report)
