@@ -63,3 +63,5 @@ end
 include("expect_result.jl")
 
 include("expect_problem.jl")
+
+include("ic_extraction.jl")

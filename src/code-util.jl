@@ -271,23 +271,33 @@ function extract_problems(results)
 end
 
 # Extract the IC results for a given hash
-function extract_ic_results(results, path, index, h)
+# These are stored in the form:
+# /:rel/:catalog/:ic_violation/:xxxx/HashValue/Type[/Type]*
+function extract_ic_results(results::Dict, path::String, h)
     ics = []
 
+    # Find all the rows with the given path prefix in the key
     for (key, row) in results
         if !startswith(key, path)
             continue
         end
 
+        # For each result, check if the hash is a match
         for i in 1:length(row[1])
             if row[1][i] != h
                 continue
             end
-            push!(ics, row[index][i])
+
+            # Now that we have a match, extract all the values and construct a tuple
+            values = []
+            for j in 2:length(row)
+                push!(values, row[j][i])
+            end
+            push!(ics, (values...,))
         end
     end
-    return ics
 
+    return ics
 end
 
 # In some error cases the results may be nothing, rather than empty
@@ -308,7 +318,7 @@ function extract_ics(results)
 
         # IC Diagnostic values are indexed by hash and type so we extract them separately
         h = extract_detail(results, IC_LINE_KEY, 1, i)
-        vs = extract_ic_results(results, IC_OUTPUT_KEY, 2, h)
+        vs = extract_ic_results(results, IC_OUTPUT_KEY, h)
         if length(vs) > 11
             vs = vcat(vs[1:9], "...", last(vs))
         end
