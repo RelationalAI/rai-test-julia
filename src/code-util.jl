@@ -270,29 +270,52 @@ function extract_problems(results)
     return problems
 end
 
-# Extract the IC results for a given hash
-# These are stored in the form:
-# /:rel/:catalog/:ic_violation/:xxxx/HashValue/Type[/Type]*
-function extract_ic_results(results::Dict, path::String, h)
-    ics = []
+function filter_by_prefix(results::Dict{String, Arrow.Table}, path::String)
+    filtered = Dict()
 
-    # Find all the rows with the given path prefix in the key
-    for (key, row) in results
+    for (key, value) in results
         if !startswith(key, path)
             continue
         end
 
-        # For each result, check if the hash is a match
-        for i in 1:length(row[1])
-            if row[1][i] != h
+        filtered[key] = value
+    end
+
+    return filtered
+end
+
+function table_to_rows(table::Arrow.Table)
+    rows = []
+    if isempty(table)
+        return rows
+    end
+
+    for i in eachindex(table[1])
+        row = []
+        for j in eachindex(table)
+            push!(row, table[j][i])
+        end
+        push!(rows, row)
+    end
+
+    return rows
+end
+
+# Extract the IC results for a given hash
+# These are stored in the form:
+# /:rel/:catalog/:ic_violation/:xxxx/HashValue/Type[/Type]*
+function filter_ic_results(results::Dict, path::String, h)
+    ics = []
+
+    # Find all the rows with the given path prefix in the key
+    for arrow in values(filter_by_prefix(results, path))
+        for row in table_to_rows(arrow)
+            if row[1] != h
                 continue
             end
 
             # Now that we have a match, extract all the values and construct a tuple
-            values = []
-            for j in 2:length(row)
-                push!(values, row[j][i])
-            end
+            values = row[2:end]
             push!(ics, (values...,))
         end
     end
@@ -318,7 +341,7 @@ function extract_ics(results)
 
         # IC Diagnostic values are indexed by hash and type so we extract them separately
         h = extract_detail(results, IC_LINE_KEY, 1, i)
-        vs = extract_ic_results(results, IC_OUTPUT_KEY, h)
+        vs = filter_ic_results(results, IC_OUTPUT_KEY, h)
         if length(vs) > 11
             vs = vcat(vs[1:9], "...", last(vs))
         end

@@ -1,6 +1,7 @@
 module RAITest
 
 using Test: @testset, TestLogger, LogRecord
+using Arrow
 
 import Logging
 import Pkg
