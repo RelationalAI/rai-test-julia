@@ -333,7 +333,6 @@ end
 
 function extract_ics(results, limit::Int = 10)
     ics = []
-    limit = limit < 2 ? 2 : limit
 
     if !haskey(results, IC_LINE_KEY)
         return ics
