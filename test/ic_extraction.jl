@@ -1,9 +1,8 @@
 using Arrow
 using Test
 
-const IC_LINE_KEY = "/:rel/:catalog/:ic_violation/:range/:start/:line/HashValue/Int64"
-const IC_OUTPUT_KEY = "/:rel/:catalog/:ic_violation/:output/HashValue"
-const IC_REPORT_KEY = "/:rel/:catalog/:ic_violation/:report/HashValue/String"
+using RAITest: IC_LINE_KEY, IC_OUTPUT_KEY, filter_ic_results
+
 struct HashValue
     h1::UInt64
     h2::UInt64
@@ -50,51 +49,61 @@ end
     arrow = generate_arrow(
         Dict(
             IC_LINE_KEY => [(h, 1)],
-            IC_OUTPUT_KEY * "/Float64/Float64" => [(h, 1.0, 2.0); (h, 3.0, 4.0)],
+            IC_OUTPUT_KEY * "/Float64/Float64" => [(h, 1.0, 2.0), (h, 3.0, 4.0)],
         ),
     )
-    @test RAITest.filter_ic_results(arrow, IC_OUTPUT_KEY, h) == [(1.0, 2.0), (3.0, 4.0)]
+    @test filter_ic_results(arrow, IC_OUTPUT_KEY, h) == [[1.0, 2.0], [3.0, 4.0]]
 
     # Extraction of mixed result types
     arrow = generate_arrow(
         Dict(
             IC_LINE_KEY => [(h, 1)],
-            IC_OUTPUT_KEY * "/Int64/Int64" => [(h, 1, 2); (h, 3, 4)],
-            IC_OUTPUT_KEY * "/Float64/Float64" => [(h, 1.0, 2.0); (h, 3.0, 4.0)],
+            IC_OUTPUT_KEY * "/Int64/Int64" => [(h, 1, 2), (h, 3, 4)],
+            IC_OUTPUT_KEY * "/Float64/Float64" => [(h, 1.0, 2.0), (h, 3.0, 4.0)],
         ),
     )
-    @test RAITest.filter_ic_results(arrow, IC_OUTPUT_KEY, h) ==
-          [(1, 2), (3, 4), (1.0, 2.0), (3.0, 4.0)]
+    @test filter_ic_results(arrow, IC_OUTPUT_KEY, h) ==
+          [[1, 2], [3, 4], [1.0, 2.0], [3.0, 4.0]]
 
     # Sanity check that we don't extract results for a different hash
     arrow = generate_arrow(
         Dict(
             IC_LINE_KEY => [(h2, 1)],
-            IC_OUTPUT_KEY * "/Int64/Int64" => [(h2, 1, 2); (h2, 3, 4)],
-            IC_OUTPUT_KEY * "/Float64/Float64" => [(h2, 1.0, 2.0); (h2, 3.0, 4.0)],
+            IC_OUTPUT_KEY * "/Int64/Int64" => [(h2, 1, 2), (h2, 3, 4)],
+            IC_OUTPUT_KEY * "/Float64/Float64" => [(h2, 1.0, 2.0), (h2, 3.0, 4.0)],
         ),
     )
-    @test RAITest.filter_ic_results(arrow, IC_OUTPUT_KEY, h2) ==
-          [(1, 2), (3, 4), (1.0, 2.0), (3.0, 4.0)]
+    @test filter_ic_results(arrow, IC_OUTPUT_KEY, h2) ==
+          [[1, 2], [3, 4], [1.0, 2.0], [3.0, 4.0]]
 
     # Differentiate mixed hash results
     arrow = generate_arrow(
         Dict(
             IC_LINE_KEY => [(h, 1), (h2, 2)],
-            IC_OUTPUT_KEY * "/Int64/Int64" => [(h2, 1, 2); (h2, 3, 4)],
-            IC_OUTPUT_KEY * "/Float64/Float64" => [(h2, 1.0, 2.0); (h2, 3.0, 4.0)],
+            IC_OUTPUT_KEY * "/Int64/Int64" => [(h2, 1, 2), (h2, 3, 4)],
+            IC_OUTPUT_KEY * "/Float64/Float64" => [(h2, 1.0, 2.0), (h2, 3.0, 4.0)],
         ),
     )
-    @test RAITest.filter_ic_results(arrow, IC_OUTPUT_KEY, h2) ==
-          [(1, 2), (3, 4), (1.0, 2.0), (3.0, 4.0)]
+    @test filter_ic_results(arrow, IC_OUTPUT_KEY, h2) ==
+          [[1, 2], [3, 4], [1.0, 2.0], [3.0, 4.0]]
 
     # Differentiate mixed hash/mixed type results
     arrow = generate_arrow(
         Dict(
             IC_LINE_KEY => [(h, 1), (h2, 2)],
-            IC_OUTPUT_KEY * "/Int64/Int64" => [(h, 1, 2); (h, 3, 4)],
-            IC_OUTPUT_KEY * "/Float64/Float64" => [(h2, 1.0, 2.0); (h2, 3.0, 4.0)],
+            IC_OUTPUT_KEY * "/Int64/Int64" => [(h, 1, 2), (h, 3, 4)],
+            IC_OUTPUT_KEY * "/Float64/Float64" => [(h2, 1.0, 2.0), (h2, 3.0, 4.0)],
         ),
     )
-    @test RAITest.filter_ic_results(arrow, IC_OUTPUT_KEY, h) == [(1.0, 2.0), (3.0, 4.0)]
+    @test filter_ic_results(arrow, IC_OUTPUT_KEY, h) == [[1.0, 2.0], [3.0, 4.0]]
+
+    # Limit results
+    arrow = generate_arrow(
+        Dict(
+            IC_LINE_KEY => [(h, 1)],
+            IC_OUTPUT_KEY * "/Int64/Int64" =>
+                [(h, 1, 2), (h, 3, 4), (h, 5, 6), (h, 7, 8), (h, 9, 10)],
+        ),
+    )
+    @test filter_ic_results(arrow, IC_OUTPUT_KEY, h, 2) == [[1, 2], [3, 4]]
 end

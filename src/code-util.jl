@@ -304,7 +304,7 @@ end
 # Extract the IC results for a given hash
 # These are stored in the form:
 # /:rel/:catalog/:ic_violation/:xxxx/HashValue/Type[/Type]*
-function filter_ic_results(results::Dict, path::String, h)
+function filter_ic_results(results::Dict, path::String, h, limit::Int = 10)
     ics = []
 
     # Find all the rows with the given path prefix in the key
@@ -316,7 +316,10 @@ function filter_ic_results(results::Dict, path::String, h)
 
             # Now that we have a match, extract all the values and construct a tuple
             values = row[2:end]
-            push!(ics, (values...,))
+            push!(ics, values)
+            if length(ics) >= limit
+                return ics
+            end
         end
     end
 
@@ -328,8 +331,9 @@ function extract_ics(results::Nothing)
     return []
 end
 
-function extract_ics(results)
+function extract_ics(results, limit::Int = 10)
     ics = []
+    limit = limit < 2 ? 2 : limit
 
     if !haskey(results, IC_LINE_KEY)
         return ics
@@ -341,12 +345,14 @@ function extract_ics(results)
 
         # IC Diagnostic values are indexed by hash and type so we extract them separately
         h = extract_detail(results, IC_LINE_KEY, 1, i)
-        vs = filter_ic_results(results, IC_OUTPUT_KEY, h)
-        if length(vs) > 11
-            vs = vcat(vs[1:9], "...", last(vs))
+        # Bump the limit by one to see if there are more results than we are showing
+        vs = filter_ic_results(results, IC_OUTPUT_KEY, h, limit + 1)
+        pretty_vs = [(v...,) for v in vs]
+        if length(pretty_vs) > limit
+            pretty_vs = vcat(pretty_vs[1:limit], "...")
         end
 
-        values = join(vs, "; ")
+        values = join(pretty_vs, "; ")
         if isempty(values)
             ic = (; line, report)
         else
