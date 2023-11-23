@@ -7,6 +7,7 @@ const REL_SEVERITY_KEY = "/:rel/:catalog/:diagnostic/:severity/Int64/String"
 const REL_MESSAGE_KEY = "/:rel/:catalog/:diagnostic/:message/Int64/String"
 
 const IC_LINE_KEY = "/:rel/:catalog/:ic_violation/:range/:start/:line/HashValue/Int64"
+const IC_OUTPUT_KEY = "/:rel/:catalog/:ic_violation/:output/HashValue/"
 const IC_REPORT_KEY = "/:rel/:catalog/:ic_violation/:report/HashValue/String"
 
 # Convert accepted install source types to Dict{String, String}
@@ -269,25 +270,93 @@ function extract_problems(results)
     return problems
 end
 
+function filter_by_prefix(results::Dict{String, Arrow.Table}, path::String)
+    filtered = Dict()
+
+    for (key, value) in results
+        if !startswith(key, path)
+            continue
+        end
+
+        filtered[key] = value
+    end
+
+    return filtered
+end
+
+function table_to_rows(table::Arrow.Table)
+    rows = []
+    if isempty(table)
+        return rows
+    end
+
+    for i in eachindex(table[1])
+        row = []
+        for j in eachindex(table)
+            push!(row, table[j][i])
+        end
+        push!(rows, row)
+    end
+
+    return rows
+end
+
+# Extract the IC results for a given hash
+# These are stored in the form:
+# /:rel/:catalog/:ic_violation/:xxxx/HashValue/Type[/Type]*
+function filter_ic_results(results::Dict, path::String, h, limit::Int = 10)
+    ics = []
+
+    # Find all the rows with the given path prefix in the key
+    for arrow in values(filter_by_prefix(results, path))
+        for row in table_to_rows(arrow)
+            if row[1] != h
+                continue
+            end
+
+            # Now that we have a match, extract all the values and construct a tuple
+            values = row[2:end]
+            push!(ics, values)
+            if length(ics) >= limit
+                return ics
+            end
+        end
+    end
+
+    return ics
+end
+
 # In some error cases the results may be nothing, rather than empty
 function extract_ics(results::Nothing)
     return []
 end
 
-function extract_ics(results)
+function extract_ics(results, limit::Int = 10)
     ics = []
 
     if !haskey(results, IC_LINE_KEY)
         return ics
     end
 
-    # Diagnostic categories have identical ordering so we can use row to find matches
-    # across categories, starting with row 1
     for i in 1:length(results[IC_LINE_KEY][1])
         line = extract_detail(results, IC_LINE_KEY, 2, i)
         report = extract_detail(results, IC_REPORT_KEY, 2, i)
 
-        ic = (; line, report)
+        # IC Diagnostic values are indexed by hash and type so we extract them separately
+        h = extract_detail(results, IC_LINE_KEY, 1, i)
+        # Bump the limit by one to see if there are more results than we are showing
+        vs = filter_ic_results(results, IC_OUTPUT_KEY, h, limit + 1)
+        pretty_vs = [(v...,) for v in vs]
+        if length(pretty_vs) > limit
+            pretty_vs = vcat(pretty_vs[1:limit], "...")
+        end
+
+        values = join(pretty_vs, "; ")
+        if isempty(values)
+            ic = (; line, report)
+        else
+            ic = (; line, values, report)
+        end
         push!(ics, ic)
     end
 

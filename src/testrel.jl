@@ -705,7 +705,7 @@ function _test_rel_step(
                 )
             end
 
-            ics = extract_ics(results_dict)
+            ics = extract_ics(results_dict, 2)
             if !isempty(ics)
                 for ic in ics
                     @info "Integrity constraint violated: $ic"
