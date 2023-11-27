@@ -19,7 +19,7 @@ Arrow = "2"
 RAI = "0.2.2"
 ReTestItems = "1.4.2"
 julia = "1.8.2"
-HTTP = "~1.9"
+HTTP = "1 - 1.9"
 
 [extras]
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
