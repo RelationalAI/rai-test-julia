@@ -357,8 +357,9 @@ function test_rel_steps(;
         # We use the native `rel_primitive_neq` directly, since `!=` is defined in the stdlib.
         config_query *= """
         def delete:rel:catalog:model(srcname, src) =
-        rel:catalog:model(srcname, src) and
-        rel_primitive_neq(srcname, \"rel/core-intrinsics\")\n"""
+            rel:catalog:model(srcname, src) and
+            rel_primitive_neq(srcname, "rel/core-intrinsics")
+        """
     end
 
     if debug && !debug_trace
