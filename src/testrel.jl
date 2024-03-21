@@ -353,7 +353,10 @@ function test_rel_steps(;
     # Setup steps that run before the first testing Step
     config_query = ""
     if !include_stdlib
-        config_query *= """def delete:rel:catalog:model = rel:catalog:model\n"""
+        config_query *= """
+        def delete:rel:catalog:model(srcname, src) =
+        rel:catalog:model(srcname, src) and
+        srcname != \"rel/core-intrinsics\"\n"""
     end
 
     if debug && !debug_trace
