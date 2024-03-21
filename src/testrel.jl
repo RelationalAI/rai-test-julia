@@ -356,7 +356,7 @@ function test_rel_steps(;
         config_query *= """
         def delete:rel:catalog:model(srcname, src) =
         rel:catalog:model(srcname, src) and
-        srcname != \"rel/core-intrinsics\"\n"""
+        rel_primitive_neq(srcname, \"rel/core-intrinsics\")\n"""
     end
 
     if debug && !debug_trace
