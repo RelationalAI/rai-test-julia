@@ -353,7 +353,13 @@ function test_rel_steps(;
     # Setup steps that run before the first testing Step
     config_query = ""
     if !include_stdlib
-        config_query *= """def delete:rel:catalog:model = rel:catalog:model\n"""
+        # Delete all but the core-intrinsics file, which would cause an error on deletion.
+        # We use the native `rel_primitive_neq` directly, since `!=` is defined in the stdlib.
+        config_query *= """
+        def delete:rel:catalog:model(srcname, src) =
+            rel:catalog:model(srcname, src) and
+            rel_primitive_neq(srcname, "rel/core-intrinsics")
+        """
     end
 
     if debug && !debug_trace
