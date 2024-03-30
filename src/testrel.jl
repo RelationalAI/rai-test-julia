@@ -44,8 +44,25 @@ function create_test_database_name()::String
     return gen_safe_name(basename)
 end
 
-function create_test_database(name::String, clone_db::Option{String}=nothing)
-    return create_database(get_context(), name; source=clone_db, readtimeout=30).database
+function create_test_database(name::String, clone_db::Option{String}=nothing; retries_remaining=3)
+    try
+        create_database(get_context(), name; source=clone_db, readtimeout=30).database
+        return name
+    catch e
+        # If the status code is 409 and we have retries remaining then let's try a new name
+        if e isa HTTPError && e.status_code == 409 && retries_remaining > 0
+            new_name = create_test_database_name()
+            @warn "[DB CONFLICT] Conflict when creating database $name. Trying again with new name $new_name."
+            return create_test_database(
+                new_name,
+                clone_db;
+                retries_remaining = retries_remaining - 1,
+                )
+        else
+            rethrow()
+        end
+    end
+
 end
 
 function delete_test_database(name::String)
@@ -430,7 +447,7 @@ function _test_rel_steps(;
     try
         stats = @timed Logging.with_logger(logger) do
             @testset TestRelTestSet nested = nested "$name" begin
-                create_test_database(schema, clone_db)
+                schema = create_test_database(schema, clone_db)
                 for (index, step) in enumerate(steps)
                     inner_ts = _test_rel_step(
                         index,
