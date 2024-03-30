@@ -521,10 +521,12 @@ function _test_rel_steps(;
 
         @error msg database = schema engine_name = test_engine test_name = name
     finally
-        try
-            delete_test_database(schema)
-        catch
-            @warn("Could not delete test database: ", schema)
+        if !all_steps_readonly
+            try
+                delete_test_database(schema)
+            catch
+                @warn("Could not delete test database: ", schema)
+            end
         end
         user_engine === nothing && release_test_engine(test_engine)
     end
