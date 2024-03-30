@@ -65,6 +65,21 @@ function create_test_database(name::String, clone_db::Option{String}=nothing; re
 
 end
 
+function ensure_database_exists(name::String, clone_db::Option{String}; retry=false)
+    try
+        db = get_database(get_context(), name)
+        return name
+    catch e
+        # SDK returns 404 if the database doesn't exist
+        if e isa HTTPError && e.status_code = 404
+            # create this database since it doesn't exist
+            return create_test_database(name, clone_db; retries_remaining = (retry ? 3 : 0))
+        end
+
+        rethrow()
+    end
+end
+
 function delete_test_database(name::String)
     return delete_database(get_context(), name; readtimeout=30)
 end
@@ -435,19 +450,24 @@ function _test_rel_steps(;
     clone_db::Option{String}=nothing,
     user_engine::Option{String}=nothing,
 )
-    # Generate a name for the test database
-    schema = create_test_database_name()
-    @debug("$name: Using database name $schema")
-
     test_engine = user_engine === nothing ? get_test_engine() : user_engine
     @debug("$name: using test engine: $test_engine")
+
+    # Generate a name for the test database
+    all_steps_readonly = all(s -> s.readonly && isempty(s.install), steps)
+    schema = if all_steps_readonly
+        "$test_engine-readonly-db"
+    else
+        create_test_database_name()
+    end
+    @debug("$name: Using database name $schema")
 
     logger = TestLogger(; catch_exceptions=true)
 
     try
         stats = @timed Logging.with_logger(logger) do
             @testset TestRelTestSet nested = nested "$name" begin
-                schema = create_test_database(schema, clone_db)
+                schema = ensure_database_exists(schema, clone_db; retry=!all_steps_readonly)
                 for (index, step) in enumerate(steps)
                     inner_ts = _test_rel_step(
                         index,
