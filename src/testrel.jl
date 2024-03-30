@@ -52,7 +52,7 @@ function create_test_database(name::String, clone_db::Option{String}=nothing; re
         # If the status code is 409 and we have retries remaining then let's try a new name
         if e isa HTTPError && e.status_code == 409 && retries_remaining > 0
             new_name = create_test_database_name()
-            @warn "Conflict when creating database $name. Trying again with new name $new_name."
+            @warn "[DB CONFLICT] Conflict when creating database $name. Trying again with new name $new_name."
             return create_test_database(
                 new_name,
                 clone_db;
