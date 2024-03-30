@@ -71,7 +71,7 @@ function ensure_database_exists(name::String, clone_db::Option{String}; retry=fa
         return name
     catch e
         # SDK returns 404 if the database doesn't exist
-        if e isa HTTPError && e.status_code = 404
+        if e isa HTTPError && e.status_code == 404
             # create this database since it doesn't exist
             return create_test_database(name, clone_db; retries_remaining = (retry ? 3 : 0))
         end
