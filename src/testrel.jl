@@ -198,7 +198,7 @@ function Step(;
     allow_unexpected::Symbol=default_allowed(),
     expect_abort::Bool=false,
     timeout_sec::Int64=default_timeout(),
-    readonly::Bool=false,
+    readonly::Bool=true,
 )
     return Step(
         query,
