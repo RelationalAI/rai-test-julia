@@ -140,6 +140,8 @@ const AcceptedSourceTypes =
 Transaction Step used for `test_rel`
 
   - `query::String`: The query to use for the test
+  - `name::String`: An optional name for the step. If this is not set a default name will
+    be generated
   - `expected::AbstractDict`: Expected values in the form
     `Dict("/:output/:a/Int64" => [1, 2])` or
     `Dict(:a => p1, 2])`
@@ -161,6 +163,7 @@ Transaction Step used for `test_rel`
   - `readonly`: If true, run the query as readonly
 """
 struct Step
+    name::Option{String}
     query::Option{String}
     install::Dict{String, String}
     broken::Bool
@@ -174,6 +177,7 @@ struct Step
 end
 
 function Step(;
+    name::Option{String}=nothing,
     query::Option{String}=nothing,
     install::AcceptedSourceTypes=Dict{String, String}(),
     broken::Bool=false,
@@ -186,6 +190,7 @@ function Step(;
     readonly::Bool=false,
 )
     return Step(
+        name,
         query,
         convert_to_install_kv(install),
         broken,
@@ -305,10 +310,10 @@ function test_rel(;
 
     # Perform all inserts before other tests
     if !isempty(install)
-        insert!(steps, 1, Step(; install=convert_to_install_kv(install)))
+        insert!(steps, 1, Step(; name="install", install=convert_to_install_kv(install)))
     end
     if !isempty(inputs)
-        insert!(steps, 1, Step(; inputs=inputs))
+        insert!(steps, 1, Step(; name="inputs", inputs=inputs))
     end
 
     debug_env = get(ENV, "JULIA_DEBUG", "")
@@ -394,7 +399,7 @@ function test_rel_steps(;
     end
 
     if config_query != ""
-        insert!(steps, 1, Step(; query=config_query))
+        insert!(steps, 1, Step(; name="configuration", query=config_query))
     end
 
     parent = Test.get_testset()
@@ -643,8 +648,12 @@ function _test_rel_step(
     program *= generate_output_string_from_expected(step.expected)
 
     @debug("$name: generated program", program)
-    step_postfix = steps_length > 1 ? " - step$index" : ""
-    name = "$(string(name))$step_postfix"
+    name = if isnothing(step.name)
+        step_postfix = steps_length > 1 ? " - step$index" : ""
+        "$(string(name))$step_postfix"
+    else
+        step.name
+    end
 
     @testset TestRelTestSet "$name" broken = step.broken begin
         if !isempty(step.install)
