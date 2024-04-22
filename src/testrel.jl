@@ -310,10 +310,10 @@ function test_rel(;
 
     # Perform all inserts before other tests
     if !isempty(install)
-        insert!(steps, 1, Step(; name="install", install=convert_to_install_kv(install)))
+        pushfirst!(steps, Step(; name="install", install=convert_to_install_kv(install)))
     end
     if !isempty(inputs)
-        insert!(steps, 1, Step(; name="inputs", inputs=inputs))
+        pushfirst!(steps, Step(; name="inputs", inputs=inputs))
     end
 
     debug_env = get(ENV, "JULIA_DEBUG", "")
