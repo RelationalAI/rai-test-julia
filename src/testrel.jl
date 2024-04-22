@@ -650,7 +650,7 @@ function _test_rel_step(
     @debug("$name: generated program", program)
     name = if isnothing(step.name)
         step_postfix = steps_length > 1 ? " - step$index" : ""
-        "$(string(name))$step_postfix"
+        string(name, step_postfix)
     else
         step.name
     end
