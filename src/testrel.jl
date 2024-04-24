@@ -44,7 +44,11 @@ function create_test_database_name()::String
     return gen_safe_name(basename)
 end
 
-function create_test_database(name::String, clone_db::Option{String}=nothing; retries_remaining=3)
+function create_test_database(
+    name::String,
+    clone_db::Option{String}=nothing;
+    retries_remaining=3,
+)
     try
         create_database(get_context(), name; source=clone_db, readtimeout=30).database
         return name
@@ -56,13 +60,12 @@ function create_test_database(name::String, clone_db::Option{String}=nothing; re
             return create_test_database(
                 new_name,
                 clone_db;
-                retries_remaining = retries_remaining - 1,
-                )
+                retries_remaining=retries_remaining - 1,
+            )
         else
             rethrow()
         end
     end
-
 end
 
 function delete_test_database(name::String)
@@ -378,24 +381,24 @@ function test_rel_steps(;
         # Delete all but the core-intrinsics file, which would cause an error on deletion.
         # We use the native `rel_primitive_neq` directly, since `!=` is defined in the stdlib.
         config_query *= """
-        def delete:rel:catalog:model(srcname, src) =
-            rel:catalog:model(srcname, src) and
+        def delete(:rel, :catalog, :model, srcname, src):
+            rel(:catalog, :model, srcname, src) and
             rel_primitive_neq(srcname, "rel/core-intrinsics")
         """
     end
 
     if debug && !debug_trace
-        config_query *= """def insert:rel:config:debug = "basic"\n"""
+        config_query *= """def insert[:rel, :config, :debug]: "basic" \n"""
     end
 
     if debug_trace
         # Also set debug for its use in tracing test_rel execution
         debug = true
-        config_query *= """def insert:rel:config:debug = "trace"\n"""
+        config_query *= """def insert[:rel, :config, :debug]: "trace"\n"""
     end
 
     if abort_on_error
-        config_query *= """def insert:rel:config:abort_on_error = true\n"""
+        config_query *= """def insert[:rel, :config, :abort_on_error]: true\n"""
     end
 
     if config_query != ""

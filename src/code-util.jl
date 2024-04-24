@@ -47,28 +47,12 @@ function convert_input_dict_to_string(inputs::AbstractDict)
     for input in inputs
         name = string(input.first)
 
-        program *= "\ndef insert:" * name * " = "
+        program *= "\ndef insert[:" * name * "] { "
 
-        first = true
+        values = to_vector_of_tuples(input.second)
+        program *= join([input_element_to_string(v) for v in values], "; ")
 
-        values = input.second
-
-        if isempty(values)
-            program *= "{ }"
-            continue
-        end
-
-        values = to_vector_of_tuples(values)
-
-        for i in values
-            if first
-                first = false
-            else
-                program *= "; "
-            end
-
-            program *= input_element_to_string(i)
-        end
+        program *= " }"
     end
     return program
 end
@@ -111,7 +95,7 @@ function generate_output_string_from_expected(expected::AbstractDict)
         is_special_symbol(e.first) && continue
 
         name = string(e.first)
-        program *= "\ndef output:" * name * " = " * name
+        program *= "\ndef output[:" * name * "]: " * name
     end
     return program
 end
