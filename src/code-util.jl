@@ -49,21 +49,9 @@ function convert_input_dict_to_string(inputs::AbstractDict)
 
         program *= "\ndef insert[:" * name * "] { "
 
-        first = true
+        values = to_vector_of_tuples(input.second)
+        program *= join([input_element_to_string(v) for v in values], "; ")
 
-        values = input.second
-
-        values = to_vector_of_tuples(values)
-
-        for i in values
-            if first
-                first = false
-            else
-                program *= "; "
-            end
-
-            program *= input_element_to_string(i)
-        end
         program *= " }"
     end
     return program
