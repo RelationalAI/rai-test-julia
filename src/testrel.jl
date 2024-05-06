@@ -276,6 +276,7 @@ Note that `test_rel` creates a new schema for each test.
     results), then `broken` can be used to mark the tests as broken and prevent the test
     from failing.
   - `engine::String` (optional): the name of an existing engine where tests will be executed
+  - `disable_corerel_deprecations::Bool`: control CoreRel deprecations
 """
 function test_rel(;
     query::Option{String}=nothing,
@@ -296,6 +297,7 @@ function test_rel(;
     broken::Bool=false,
     clone_db::Option{String}=nothing,
     engine::Option{String}=nothing,
+    disable_corerel_deprecations::Bool=false,
 )
     query !== nothing && insert!(
         steps,
@@ -335,6 +337,7 @@ function test_rel(;
             debug_trace=debug_trace,
             clone_db=clone_db,
             engine=engine,
+            disable_corerel_deprecations=disable_corerel_deprecations,
         )
     end
 end
@@ -363,7 +366,8 @@ Note that `test_rel` creates a new schema for each test.
   - `debug::Bool`: boolean that specifies debugging mode.
   - `debug_trace::Bool`: boolean that specifies printing out the debug_trace
   - `engine::String` (optional): the name of an existing engine where tests will be executed
-"""
+  - `disable_corerel_deprecations::Bool`: control CoreRel deprecations
+  """
 function test_rel_steps(;
     steps::Vector{Step},
     name::Option{String}=nothing,
@@ -374,6 +378,7 @@ function test_rel_steps(;
     debug_trace::Bool=false,
     clone_db::Option{String}=nothing,
     engine::Option{String}=nothing,
+    disable_corerel_deprecations::Bool=false,
 )
     # Setup steps that run before the first testing Step
     config_query = ""
@@ -398,7 +403,11 @@ function test_rel_steps(;
     end
 
     if abort_on_error
-        config_query *= """def insert[:rel, :config, :abort_on_error]: true\n"""
+        config_query *= """def insert(:rel, :config, :abort_on_error): true\n"""
+    end
+
+    if disable_corerel_deprecations
+        config_query *= """def insert[:rel, :config, :corerel_deprecations]: "disable"\n"""
     end
 
     if config_query != ""
