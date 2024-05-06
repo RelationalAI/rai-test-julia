@@ -164,7 +164,6 @@ Transaction Step used for `test_rel`
     results), then `broken` can be used to mark the tests as broken and prevent the test
     from failing.
   - `readonly`: If true, run the query as readonly
-  - `disable_corerel_deprecations::Bool`: control CoreRel deprecations
 """
 struct Step
     name::Option{String}
@@ -178,7 +177,6 @@ struct Step
     expect_abort::Bool
     timeout_sec::Int64
     readonly::Bool
-    disable_corerel_deprecations::Bool
 end
 
 function Step(;
@@ -193,7 +191,6 @@ function Step(;
     expect_abort::Bool=false,
     timeout_sec::Int64=default_timeout(),
     readonly::Bool=false,
-    disable_corerel_deprecations::Bool=false,
 )
     return Step(
         name,
@@ -207,7 +204,6 @@ function Step(;
         expect_abort,
         timeout_sec,
         readonly,
-        disable_corerel_deprecations,
     )
 end
 
@@ -314,7 +310,6 @@ function test_rel(;
             expect_abort=expect_abort,
             timeout_sec=timeout_sec,
             broken=broken,
-            disable_corerel_deprecations=disable_corerel_deprecations,
         ),
     )
 
