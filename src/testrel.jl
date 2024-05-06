@@ -407,7 +407,7 @@ function test_rel_steps(;
     end
 
     if disable_corerel_deprecations
-        config_query *= """def insert[:rel, :config, :disable_corerel_deprecations]: "disable"\n"""
+        config_query *= """def insert[:rel, :config, :corerel_deprecations]: "disable"\n"""
     end
 
     if config_query != ""
