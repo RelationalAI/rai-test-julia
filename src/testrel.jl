@@ -337,7 +337,7 @@ function test_rel(;
             debug_trace=debug_trace,
             clone_db=clone_db,
             engine=engine,
-            disable_corerel_deprecation=disable_corerel_deprecations,
+            disable_corerel_deprecations=disable_corerel_deprecations,
         )
     end
 end
