@@ -48,7 +48,11 @@ function create_default_engine(name::String; size::String="XS")
 end
 
 # Get test engine.
-get_test_engine()::String = get_free_test_engine_name()
+get_test_engine()::String = if isnothing(get_default_test_engine())
+    get_free_test_engine_name()
+else
+    get_default_test_engine()
+end
 
 # Release test engine. Notifies the provider that this engine is no longer in use.
 release_test_engine(name::String) = release_pooled_test_engine(name)

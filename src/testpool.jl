@@ -77,7 +77,7 @@ end
 function replace_engine(name::String)
     delete_test_engine!(name)
     new_name = TEST_ENGINE_POOL.name_generator(_get_new_id())
-    add_test_engine!(new_name)
+    return add_test_engine!(new_name)
 end
 
 function list_test_engines()
@@ -168,7 +168,7 @@ function resize_test_engine_pool!(size::Int64, name_generator::Option{Function}=
     _create_and_add_engines!(size)
     _validate_engine_pool!()
     # Remove engines if size < length
-    _trim_engine_pool!(size)
+    return _trim_engine_pool!(size)
 end
 
 # Test all engines and remove if they are unavailable or not successfully provisioned

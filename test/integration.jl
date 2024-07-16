@@ -1,18 +1,13 @@
 # Basic Rel
 # --------------------------------------------------------
 
-@test_rel(
-    name = "No input, expected, or output",
-    query = """
-    def result { 1 }
-    """,)
+@test_rel(name = "No input, expected, or output", query = """
+                                                  def result { 1 }
+                                                  """,)
 
-@test_rel(
-    name = "No input or expected, has output",
-    query = """
-    def output { 1 }
-    """,
-)
+@test_rel(name = "No input or expected, has output", query = """
+                                                     def output { 1 }
+                                                     """,)
 
 @test_rel(
     name = "Input, no expected or output",
@@ -73,23 +68,15 @@
     broken = true,
 )
 
-@test_rel(
-    name = "Expected abort",
-    query = """
-    def result { 1 }
-    ic () requires result = 2
-    """,
-    expect_abort = true,
-)
+@test_rel(name = "Expected abort", query = """
+                                   def result { 1 }
+                                   ic () requires result = 2
+                                   """, expect_abort = true,)
 
-@test_rel(
-    name = "Broken abort",
-    query = """
-    def result { 1 }
-    ic () requires result = 2
-    """,
-    broken = true,
-)
+@test_rel(name = "Broken abort", query = """
+                                 def result { 1 }
+                                 ic () requires result = 2
+                                 """, broken = true,)
 
 @test_rel(
     name = "Expected problem",
@@ -139,13 +126,9 @@
     allow_unexpected = :error,
 )
 
-@test_rel(
-    name = "Unexpected problem, broken",
-    query = """
-    def output { a }
-    """,
-    broken = true,
-)
+@test_rel(name = "Unexpected problem, broken", query = """
+                                               def output { a }
+                                               """, broken = true,)
 
 @test_rel(
     name = "abort_on_error",

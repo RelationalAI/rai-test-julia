@@ -15,7 +15,7 @@ export resize_test_engine_pool!
 export provision_all_test_engines
 export add_test_engine!
 
-export set_context!
+export set_context!, set_test_engine!, set_clone_db!
 
 export set_engine_creater!
 

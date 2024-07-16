@@ -49,7 +49,7 @@ if isnothing(RAITest.get_context())
     @warn "No RAI config provided. Skipping integration tests"
 else
     try
-        resize_test_engine_pool!(2, (i)->"RAITest-test-$i")
+        resize_test_engine_pool!(2, (i) -> "RAITest-test-$i")
 
         @testset RAITestSet "Basic Integration" begin
             include("integration.jl")
