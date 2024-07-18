@@ -16,10 +16,23 @@ function gen_safe_name(basename)
     return name[1:min(sizeof(name), 63)]
 end
 
-const TEST_CONTEXT = Ref{Option{Context}}(nothing)
+mutable struct TestDefaults
+    context::Option{Context}
+    engine::Option{AbstractString}
+    clone_db::Option{AbstractString}
+end
+const TEST_DEFAULTS = Ref{TestDefaults}(TestDefaults(nothing, nothing, nothing))
 
 function get_context()
-    return TEST_CONTEXT[]
+    return TEST_DEFAULTS[].context
+end
+
+function get_default_test_engine()
+    return TEST_DEFAULTS[].engine
+end
+
+function get_default_clone_db()
+    return TEST_DEFAULTS[].clone_db
 end
 
 """
@@ -36,7 +49,59 @@ set_context!(Context(RAI.load_config(fname="/Users/testing/.rai")))
 ```
 """
 function set_context!(new_context::Context)
-    return TEST_CONTEXT[] = new_context
+    return TEST_DEFAULTS[].context = new_context
+end
+
+"""
+    set_test_engine!(new_engine::Option{AbstractString})
+
+Set the engine to be used by the testing framework.
+
+If the engine is `nothing` and no `engine` is passed to a `@test_rel` call, the testing
+framework will take engines from the engine pool.
+
+# Examples
+
+To use a specific engine on tests:
+
+```
+set_test_engine!("my_engine")
+```
+
+To use the engine pool:
+
+```
+set_test_engine!(nothing)
+```
+"""
+function set_test_engine!(new_engine::Option{AbstractString})
+    return TEST_DEFAULTS[].engine = new_engine
+end
+
+"""
+    set_clone_db!(new_clone_db::Option{AbstractString})
+
+Set the name of the database to be cloned by the testing framework.
+
+If the clone_db is `nothing` and no `clone_db` is passed to a `@test_rel` call, the testing
+framework will create an empty new databases to run tests.
+
+# Examples
+
+To clone a specific database on tests:
+
+```
+set_clone_db!("my_prototype_db")
+```
+
+To create empty databases on tests.
+
+```
+set_clone_db!(nothing)
+```
+"""
+function set_clone_db!(new_clone_db::Option{AbstractString})
+    return TEST_DEFAULTS[].clone_db = new_clone_db
 end
 
 function create_test_database_name()::String
@@ -49,8 +114,10 @@ function create_test_database(
     clone_db::Option{String}=nothing;
     retries_remaining=3,
 )
+    db = isnothing(clone_db) ? get_default_clone_db() : clone_db
+    !isnothing(db) && @debug("Cloning '$name' from '$db'")
     try
-        create_database(get_context(), name; source=clone_db, readtimeout=30).database
+        create_database(get_context(), name; source=db, readtimeout=30).database
         return name
     catch e
         # If the status code is 409 and we have retries remaining then let's try a new name
@@ -59,7 +126,7 @@ function create_test_database(
             @warn "[DB CONFLICT] Conflict when creating database $name. Trying again with new name $new_name."
             return create_test_database(
                 new_name,
-                clone_db;
+                db;
                 retries_remaining=retries_remaining - 1,
             )
         else
@@ -367,7 +434,7 @@ Note that `test_rel` creates a new schema for each test.
   - `debug_trace::Bool`: boolean that specifies printing out the debug_trace
   - `engine::String` (optional): the name of an existing engine where tests will be executed
   - `disable_corerel_deprecations::Bool`: control CoreRel deprecations
-  """
+"""
 function test_rel_steps(;
     steps::Vector{Step},
     name::Option{String}=nothing,

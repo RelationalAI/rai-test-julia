@@ -116,11 +116,11 @@ end
 # Vectors.
 
 # :a => [3, 4, 5]
-type_string(::Vector{T}) where T = type_string(T)
+type_string(::Vector{T}) where {T} = type_string(T)
 
 # :a => [(1, 2)]
 # :a => (1, 2)
-function type_string(::Union{T, Vector{T}}) where { T <: Tuple }
+function type_string(::Union{T, Vector{T}}) where {T <: Tuple}
     result = ""
     for e_type in fieldtypes(T)
         result *= type_string(e_type)
@@ -134,10 +134,10 @@ type_string(::Type{Any}) = ""
 
 # Generate a string representing the Rel type for single values
 # :a => 1
-type_string(::Union{T, Type{T}}) where T = "/" * string(T)
+type_string(::Union{T, Type{T}}) where {T} = "/" * string(T)
 
 # The value tuple contains an inner tuple. Recurse into it.
-function type_string(::Type{T}) where { T <: Tuple }
+function type_string(::Type{T}) where {T <: Tuple}
     result = "/("
     for e_type in fieldtypes(T)
         result *= type_string(e_type)
@@ -288,7 +288,7 @@ end
 # Extract the IC results for a given hash
 # These are stored in the form:
 # /:rel/:catalog/:ic_violation/:xxxx/HashValue/Type[/Type]*
-function filter_ic_results(results::Dict, path::String, h, limit::Int = 10)
+function filter_ic_results(results::Dict, path::String, h, limit::Int=10)
     ics = []
 
     # Find all the rows with the given path prefix in the key
@@ -315,7 +315,7 @@ function extract_ics(results::Nothing)
     return []
 end
 
-function extract_ics(results, limit::Int = 10)
+function extract_ics(results, limit::Int=10)
     ics = []
 
     if !haskey(results, IC_LINE_KEY)
