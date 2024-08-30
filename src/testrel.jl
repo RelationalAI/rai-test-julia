@@ -13,7 +13,11 @@ using UUIDs
 # is not guaranteed
 function gen_safe_name(basename)
     name = "$(basename)-$(UUIDs.uuid4(MersenneTwister()))"
-    return name[1:min(sizeof(name), 63)]
+    name = name[1:min(sizeof(name), 63)]
+    if last(name) == '-'
+        name = name[1:(end - 1)]
+    end
+    return name
 end
 
 mutable struct TestDefaults
