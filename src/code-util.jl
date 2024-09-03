@@ -41,13 +41,13 @@ build_path(name::Any, ::Any) = string(name)
 
 # Extract relation names from the inputs and adds them to the program
 # Turns a dict of name=>vector, with names of form :othername/Type,
-# into a series of def name = list of tuples
+# into a series of def name { list of tuples }
 function convert_input_dict_to_string(inputs::AbstractDict)
     program = ""
     for input in inputs
         name = string(input.first)
 
-        program *= "\ndef insert[:" * name * "] { "
+        program *= "\ndef insert[:" * name * "]: { "
 
         values = to_vector_of_tuples(input.second)
         program *= join([input_element_to_string(v) for v in values], "; ")

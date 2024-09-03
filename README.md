@@ -11,7 +11,7 @@ using RAITest
 
 @test_rel(
     name = "Descriptive name",
-    query = "def output = 1 ic {output = 1}",
+    query = "def output { 1 } ic () requires output = 1",
     engine = "Name of my pre-existing compute engine",
 )
 ```
@@ -24,11 +24,11 @@ using RAITest
 
 resize_test_engine_pool!(2)
 
-@test_rel("def output = 1 ic {output = 1}")
+@test_rel("def output { 1 } ic () requires output = 1")
 
 @test_rel(
     name = "Descriptive name",
-    query = "def output = 1 ic {output = 1}",
+    query = "def output { 1 } ic () requires output = 1",
 )
 
 destroy_test_engines!()
@@ -41,7 +41,7 @@ using RAITest
 
 add_test_engine!("<Your engine name>")
 
-@test_rel("def output = 1 ic {output = 1}")
+@test_rel("def output { 1 } ic () requires output = 1")
 
 ```
 
@@ -58,7 +58,7 @@ provision_all_test_engines()
 
 @testset RAITestSet "My tests" begin
     for i in 1:10
-        query = "def output = $i ic { output = $i }"
+        query = "def output { $i } ic () requires output = $i"
         @test_rel(query = query, debug = true)
     end
 end
@@ -75,7 +75,7 @@ using Test
 set_engine_creater!((name)->create_default_engine(name, "M"))
 @testset "My tests" begin
     for i in 1:10
-        query = "def output = $i ic { output = $i }"
+        query = "def output { $i } ic () requires output = $i"
         @test_rel(query = query, debug = true)
     end
 end
