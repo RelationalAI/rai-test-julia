@@ -336,6 +336,7 @@ Note that `test_rel` creates a new schema for each test.
   - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
   - `install::Dict{String, String}`: source files to install in the database.
   - `inputs::AbstractDict`: input data to the transaction
+  - `relconfig`: configuration options to be inserted into rel[:config, :key]: value
   - `abort_on_error::Bool`: boolean that specifies whether to abort on any
     triggered error.
   - `debug::Bool`: boolean that specifies debugging mode.
@@ -356,6 +357,7 @@ function test_rel(;
     location::Option{LineNumberNode}=nothing,
     include_stdlib::Bool=true,
     install::AcceptedSourceTypes=Dict{String, String}(),
+    relconfig::Option{Dict{Symbol, <:Any}}=nothing,
     abort_on_error::Bool=false,
     debug::Bool=false,
     debug_trace::Bool=false,
@@ -403,6 +405,7 @@ function test_rel(;
             name=name,
             location=location,
             include_stdlib=include_stdlib,
+            relconfig=relconfig,
             abort_on_error=abort_on_error,
             debug=debug,
             debug_trace=debug_trace,
@@ -432,6 +435,7 @@ Note that `test_rel` creates a new schema for each test.
   - `name::String`: name of the testcase
   - `location::LineNumberNode`: Sourcecode location
   - `include_stdlib::Bool`: boolean that specifies whether to include the stdlib
+  - `relconfig`: configuration options to be inserted into rel[:config, :key]: value
   - `abort_on_error::Bool`: boolean that specifies whether to abort on any
     triggered error.
   - `debug::Bool`: boolean that specifies debugging mode.
@@ -444,6 +448,7 @@ function test_rel_steps(;
     name::Option{String}=nothing,
     location::Option{LineNumberNode}=nothing,
     include_stdlib::Bool=true,
+    relconfig::Option{Dict{Symbol, <:Any}}=nothing,
     abort_on_error::Bool=false,
     debug::Bool=false,
     debug_trace::Bool=false,
@@ -479,6 +484,16 @@ function test_rel_steps(;
 
     if disable_corerel_deprecations
         config_query *= """def insert[:rel, :config, :corerel_deprecations]: "disable"\n"""
+    end
+
+    if !isnothing(relconfig)
+        rel(v::AbstractString) = "\"$v\""
+        rel(v::Int64) = string(v)
+        rel(v::Float64) = string(v)
+        rel(v::Bool) = string(v)
+        for (k, v) in relconfig
+            config_query *= "def insert[:rel, :config, :$(string(k))]: $(rel(v))\n"
+        end
     end
 
     if config_query != ""
