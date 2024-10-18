@@ -157,7 +157,7 @@
 @test_rel(
     name = "relconfig abort_on_error",
     query = "def output { a }",
-    relconfig = Dict(:abort_on_error, true),
+    relconfig = Dict(:abort_on_error => true),
     expect_abort = true,
 )
 

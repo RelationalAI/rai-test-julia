@@ -488,9 +488,7 @@ function test_rel_steps(;
 
     if !isnothing(relconfig)
         rel(v::AbstractString) = "\"$v\""
-        rel(v::Int64) = string(v)
-        rel(v::Float64) = string(v)
-        rel(v::Bool) = string(v)
+        rel(v::Union{Int64,Float64,Bool}) = string(v)
         for (k, v) in relconfig
             config_query *= "def insert[:rel, :config, :$(string(k))]: $(rel(v))\n"
         end
