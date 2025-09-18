@@ -57,6 +57,21 @@ function convert_input_dict_to_string(inputs::AbstractDict)
     return program
 end
 
+function convert_install_dict_to_string(inputs::AbstractDict{String, String})
+    program = ""
+    for input in inputs
+        name = string(input.first)
+        src = input.second
+
+        program *= """
+            def delete[:rel, :catalog, :model, "$(name)"]: rel[:catalog, :model, "$(name)"]
+            def insert[:rel, :catalog, :model, "$(name)"]: raw\"""$(src)\"""
+        """
+    end
+
+    return program
+end
+
 function input_element_to_string(input)
     return repr(input)
 end
