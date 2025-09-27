@@ -753,20 +753,13 @@ function _test_rel_step(
 
     @testset TestRelTestSet "$name" broken = step.broken begin
         if !isempty(step.install)
-            install_query = convert_install_dict_to_string(step.install)
-
-            # Install sources
-            response = _execute_test(
-                name,
+            load_models(
                 get_context(),
                 schema,
                 engine,
-                install_query,
-                step.timeout_sec,
-                false,
+                step.install;
+                readtimeout=step.timeout_sec,
             )
-            state = response.transaction.state
-            @debug("Install query response state:", state)
         end
 
         # Don't test empty strings
