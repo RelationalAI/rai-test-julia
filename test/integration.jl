@@ -161,6 +161,15 @@
     expect_abort = true,
 )
 
+@test_rel(
+    name = "Install",
+    query = """
+    def output { install_test }
+    """,
+    install = Dict("install_test" => "def install_test { 21 }"),
+    expected = Dict(:output => [21]),
+)
+
 # `setup` and `tags` keywords ignored
 # --------------------------------------------------------
 
